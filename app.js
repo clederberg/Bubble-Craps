@@ -2,7 +2,7 @@
 'use strict';
 var C = window.Craps, LY = window.CrapsLayout;
 var START = 100000, KEY = 'bubblecraps.v1';
-var CHIPS = [1, 5, 25, 100, 500, 1000];
+var CHIPS = [1, 5, 25, 100, 500, 1000, 5000, 25000];
 var SVGNS = 'http://www.w3.org/2000/svg';
 
 function fresh(mode, chip, sound, voice) {
@@ -28,6 +28,8 @@ function money(c, sign) {
 }
 function chipText(c) { var d = c / 100; if (d >= 1000) return (Math.round(d / 100) / 10) + 'k'; return d % 1 ? d.toFixed(2).replace(/0$/, '') : String(d); }
 function chipColor(c) {
+  if (c >= 2500000) return ['#8fb8d8', '#0d2233'];
+  if (c >= 500000) return ['#e0701f', '#fff'];
   if (c >= 100000) return ['#d1a12f', '#221a03'];
   if (c >= 50000) return ['#6b3fa0', '#fff'];
   if (c >= 10000) return ['#1d1d1f', '#fff'];

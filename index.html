@@ -8,7 +8,7 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect x='8' y='8' width='84' height='84' rx='18' fill='%23c0261f'/><circle cx='30' cy='30' r='9' fill='white'/><circle cx='50' cy='50' r='9' fill='white'/><circle cx='70' cy='70' r='9' fill='white'/></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Oswald:wght@500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Inter:wght@400;500;600;700&family=Oswald:wght@500;600&display=swap" rel="stylesheet">
 <style>
 :root{
   --bg:#08170f; --felt:#0e5a36; --felt-2:#0b4a2c; --rail:#3a2217; --rail-2:#5b3524;
@@ -132,7 +132,7 @@ details.fair p{margin:10px 0}
 .chips{display:flex;gap:7px}
 .chip{width:46px;height:46px;border-radius:50%;border:3px dashed rgba(255,255,255,.85);font-weight:700;font-size:12px;cursor:pointer;color:#fff;box-shadow:0 2px 6px rgba(0,0,0,.45);transition:transform .08s;flex:none;padding:0}
 .chip[aria-pressed=true]{transform:translateY(-5px);outline:3px solid var(--gold);outline-offset:2px}
-.c1{background:#ece6d6;color:#222;border-color:#7d7768}.c5{background:#c9392f}.c25{background:#2f8a4f}.c100{background:#1d1d1f}.c500{background:#6b3fa0}.c1000{background:#d1a12f;color:#221a03}
+.c1{background:#ece6d6;color:#222;border-color:#7d7768}.c5{background:#c9392f}.c25{background:#2f8a4f}.c100{background:#1d1d1f}.c500{background:#6b3fa0}.c1000{background:#d1a12f;color:#221a03}.c5000{background:#e0701f}.c25000{background:#8fb8d8;color:#0d2233}
 .tools{display:flex;gap:6px}
 .tool{border:1px solid #3d6a54;background:rgba(0,0,0,.3);border-radius:10px;padding:0 12px;height:40px;cursor:pointer;font-weight:600;font-size:13px;white-space:nowrap}
 .tool[aria-pressed=true]{background:var(--red);border-color:var(--red)}
@@ -158,33 +158,35 @@ details.fair p{margin:10px 0}
 .toast{position:fixed;left:50%;bottom:110px;transform:translateX(-50%) translateY(10px);background:#111;border:1px solid #3d6a54;color:#fff;padding:9px 14px;border-radius:10px;opacity:0;pointer-events:none;transition:.18s;z-index:30;max-width:calc(100% - 32px);text-align:center}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
-@media (max-width:1060px) and (min-width:761px){
-  .dock .wrap{gap:8px}
-  .dockstats{min-width:0;gap:10px}
-  .dockstats .stat b{font-size:19px}
-  .chips{gap:5px}
-  .chip{width:40px;height:40px;font-size:11px}
-  .tool{padding:0 8px;font-size:12px}
-  .roll{padding:0 18px}
+@media (max-width:1199px){
+  body{padding-bottom:140px}
+  .dock .wrap{flex-wrap:wrap;gap:8px}
+  .chips{order:1;width:100%;justify-content:flex-start;gap:12px}
+  .dockstats{order:2;min-width:0;gap:14px}
+  .dockstats .stat b{font-size:20px}
+  .tools{order:3;margin-left:auto}
+  .roll{order:4;height:46px}
+  .toast{bottom:150px}
 }
 @media (max-width:760px){
   body{padding-bottom:170px}
   header{gap:10px}
   .bank{margin-left:auto}
-  .dockstats{order:2;min-width:0;gap:12px}
-  .dockstats .stat b{font-size:19px}
+  .dockstats{order:3;min-width:0;gap:12px}
+  .dockstats .stat b{font-size:18px}
   .dockstats .stat small{font-size:10px}
-  .tools{order:3;margin-left:auto}
+  .tools{order:2;margin-left:0;width:100%}
+  .tools .tool{flex:1}
   .tool{padding:0 9px;height:36px;font-size:12px}
-  .roll{order:4;flex:1 1 100%!important}
+  .roll{order:4}
   details.rules ul{padding-left:18px}
   .hist{justify-content:flex-start}
   .rail{border-radius:24px;padding:8px;margin:0 -8px}
   .table-wrap{border-radius:18px}
   .dock .wrap{flex-wrap:wrap;gap:8px}
-  .chips{order:1;width:100%;justify-content:space-between}
-  .chip{width:44px;height:44px;font-size:11px}
-  .roll{flex:1;margin-left:0;height:50px}
+  .chips{order:1;width:100%;justify-content:space-between;gap:0}
+  .chip{width:40px;height:40px;font-size:11px;border-width:2.5px}
+  .roll{flex:1;margin-left:0;height:50px;padding:0 12px}
   .toast{bottom:180px}
 }
 </style>

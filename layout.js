@@ -25,6 +25,33 @@
   }
   function pair(cx, cy, s, a, b) { return dieIcon(cx - s * 0.6, cy, s, a) + dieIcon(cx + s * 0.6, cy, s, b); }
 
+  // CML monogram medallion printed on the felt
+  function monogram(cx, cy, right) {
+    var G = 'url(#cmlGold)', h = '';
+    h += '<defs><linearGradient id="cmlGold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fbe9a6"/><stop offset=".5" stop-color="#e8bf57"/><stop offset="1" stop-color="#a8761f"/></linearGradient>'
+      + '<radialGradient id="cmlFelt" cx=".5" cy=".4" r=".6"><stop offset="0" stop-color="#127a4c"/><stop offset="1" stop-color="#083a24"/></radialGradient></defs>';
+    h += '<g transform="translate(' + cx + ' ' + cy + ')">';
+    // flanking rules and words
+    [-1, 1].forEach(function (sd) {
+      h += '<line x1="' + (sd * 44) + '" y1="7" x2="' + (sd * 124) + '" y2="7" stroke="' + G + '" stroke-width="1.5"/>'
+        + '<line x1="' + (sd * 44) + '" y1="11" x2="' + (sd * 104) + '" y2="11" stroke="#e8bf57" stroke-opacity=".5" stroke-width=".8"/>'
+        + '<path d="M' + (sd * 128) + ' 3 l4 4 -4 4 -4 -4z" fill="#e8bf57"/>';
+    });
+    h += T(-84, -7, 'BUBBLE', 12, { f: OSW, ls: 4, fill: '#e8bf57' }) + T(84, -7, right, 12, { f: OSW, ls: right.length > 6 ? 2.5 : 4, fill: '#e8bf57' });
+    // medallion
+    h += '<circle r="37" fill="rgba(0,0,0,.35)" cy="2"/>'
+      + '<circle r="36" fill="url(#cmlFelt)" stroke="' + G + '" stroke-width="2.5"/>'
+      + '<circle r="30.5" fill="none" stroke="#e8bf57" stroke-width="1.6" stroke-dasharray="0.1 4.2" stroke-linecap="round"/>'
+      + '<circle r="26.5" fill="none" stroke="#e8bf57" stroke-opacity=".55" stroke-width=".8"/>';
+    [0, 90, 180, 270].forEach(function (a) {
+      h += '<path transform="rotate(' + a + ')" d="M0 -36 l3 3 -3 3 -3 -3z" fill="#fbe9a6" stroke="#6b4a12" stroke-width=".5"/>';
+    });
+    h += '<text x="0" y="1.5" text-anchor="middle" dominant-baseline="central" font-family="Cinzel, Georgia, serif" font-weight="700" font-size="17" letter-spacing="0.5"'
+      + ' fill="' + G + '" stroke="#5a3d0c" stroke-width=".5" paint-order="stroke">CML</text>';
+    h += '<path d="M-12 14 h24" stroke="#e8bf57" stroke-width=".8" stroke-opacity=".8"/><path d="M-12 -12 h24" stroke="#e8bf57" stroke-width=".8" stroke-opacity=".8"/>';
+    return h + '</g>';
+  }
+
   function build(mode, wide) {
     var m = C.MODES[mode], dont = m.dont;
     var L = { mode: mode, wide: wide, spots: [], decor: '', anchors: {}, odds: [], puck: {}, tracker: [] };
@@ -194,10 +221,10 @@
 
     if (wide) {
       L.H = 648;
-      L.decor += T(PX + PW / 2, 600, 'BUBBLE CRAPS', 26, { f: OSW, w: 600, ls: 5, fill: 'rgba(255,248,230,.28)' });
-      L.decor += T(PX + PW / 2, 624, mode === 'craps' ? 'ODDS 3X · 4X · 5X' : 'CRAPLESS · ODDS 3X · 4X · 5X', 11, { ls: 2, fill: 'rgba(255,248,230,.35)' });
+      L.decor += monogram(PX + PW / 2, 602, mode === 'craps' ? 'CRAPS' : 'CRAPLESS');
     } else {
-      L.H = py + 14;
+      L.decor += monogram(L.W / 2, py + 44, mode === 'craps' ? 'CRAPS' : 'CRAPLESS');
+      L.H = py + 96;
     }
     L.house = { x: wide ? 450 : L.W / 2, y: -30 };
     L.mainBottom = mainBottom;
