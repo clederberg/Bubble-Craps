@@ -478,7 +478,7 @@ function clickBet(k, forceRemove) {
     return;
   }
   var c = Math.min(S.chip, S.bank);
-  if (c <= 0) return toast('Out of chips. Take bets down or reset your bankroll.');
+  if (c <= 0) return toast('Out of chips. Take bets down or tap Reset bankroll.');
   var a = C.add(t, k, c);
   if (!a.ok) return toast(a.reason);
   S.bank -= a.added;
@@ -550,13 +550,45 @@ $('sound').addEventListener('click', function () {
   save(); render();
   if (S.sound) { chipClick(); if (S.voice) { unlockVoice(); say('Voice on'); } }
 });
-$('reset').addEventListener('click', function () {
+// Reset bankroll to any amount
+var MAX_BANK = 100000000; // $1,000,000
+function parseDollars(v) {
+  var n = parseFloat(String(v).replace(/[$,\s]/g, ''));
+  return isFinite(n) ? Math.round(n * 100) : NaN;
+}
+function openReset() {
   if (rolling) return;
+  var d = $('resetDlg'), inp = $('resetAmt');
+  var sa = (S.startAmt || START) / 100;
+  inp.value = sa.toLocaleString('en-US', { minimumFractionDigits: sa % 1 ? 2 : 0, maximumFractionDigits: 2 });
+  $('resetErr').textContent = '';
+  var onTable = C.onTable(S.tables.craps) + C.onTable(S.tables.crapless);
+  $('resetNote').textContent = onTable ? 'Bets on both tables (' + money(onTable) + ') will be cleared.' : 'Both tables start fresh. Your roll stats are kept.';
+  if (d.showModal) d.showModal(); else d.setAttribute('open', '');
+  setTimeout(function () { inp.focus(); inp.select(); }, 30);
+}
+function closeReset() { var d = $('resetDlg'); if (d.close) d.close(); else d.removeAttribute('open'); }
+function doReset() {
+  var c = parseDollars($('resetAmt').value);
+  if (isNaN(c) || c < 100) { $('resetErr').textContent = 'Enter an amount of at least $1.'; return; }
+  if (c > MAX_BANK) { $('resetErr').textContent = 'The most you can start with is ' + money(MAX_BANK) + '.'; return; }
   var keepStats = S.stats;
   S = fresh(S.mode, S.chip, S.sound, S.voice);
   S.stats = keepStats;
-  removeMode = false; save(); render(); toast('Bankroll reset to $1,000');
+  S.bank = c; S.startAmt = c;
+  removeMode = false; closeReset(); save(); render();
+  $('reset').textContent = 'Reset bankroll';
+  toast('Bankroll reset to ' + money(c));
+  if (!play('stack', 0, 0.8)) chipClick();
+}
+$('reset').addEventListener('click', openReset);
+$('resetForm').addEventListener('submit', function (e) { e.preventDefault(); doReset(); });
+$('resetCancel').addEventListener('click', closeReset);
+$('resetPresets').addEventListener('click', function (e) {
+  var b = e.target.closest('[data-amt]'); if (!b) return;
+  $('resetAmt').value = (+b.dataset.amt).toLocaleString('en-US'); $('resetErr').textContent = '';
 });
+$('resetDlg').addEventListener('click', function (e) { if (e.target === this) closeReset(); });
 $('roll').addEventListener('click', doRoll);
 $('fair').addEventListener('click', function (e) {
   if (e.target.id !== 'resetStats') return;

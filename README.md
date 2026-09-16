@@ -1,6 +1,6 @@
 # Bubble Craps
 
-Free-play craps and crapless craps on a real table layout, with 3D dice. Play money only, no accounts, no purchases. Your bankroll is saved in your browser and you can reset it to $1,000 anytime.
+Free-play craps and crapless craps on a real table layout, with 3D dice. Play money only, no accounts, no purchases. Your bankroll is saved in your browser, and **Reset bankroll** starts you over with any amount up to $1,000,000.
 
 **Play:** open `index.html`, or turn on GitHub Pages (below).
 
