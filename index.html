@@ -28,7 +28,13 @@ h1 span{color:var(--gold)}
 .tab{border:0;background:none;padding:7px 16px;border-radius:999px;cursor:pointer;font-weight:600;color:var(--ink-2)}
 .tab[aria-selected=true]{background:var(--gold);color:var(--gold-ink)}
 .bank{margin-left:auto;display:flex;gap:16px;align-items:center}
-.stat{text-align:right}
+.stat{text-align:left}
+.dockstats{display:flex;gap:16px;flex:none;min-width:190px}
+.dockstats .stat b{font-size:24px}
+.stat b.bump{animation:bump .5s ease-out}
+@keyframes bump{30%{transform:scale(1.12);color:var(--win)}}
+.stat b.dip{animation:dip .5s ease-out}
+@keyframes dip{30%{color:var(--lose)}}
 .stat b{display:block;font:600 21px/1.1 Oswald,sans-serif;letter-spacing:.02em}
 .stat small{color:var(--ink-3);font-size:11px;text-transform:uppercase;letter-spacing:.08em}
 .ghost{background:none;border:1px solid #3d6a54;border-radius:8px;padding:6px 10px;cursor:pointer;color:var(--ink-2);font-size:13px}
@@ -100,9 +106,24 @@ h1 span{color:var(--gold)}
 .f2{transform:rotateX(90deg) translateZ(calc(var(--ds)/2))}
 .f5{transform:rotateX(-90deg) translateZ(calc(var(--ds)/2))}
 
-details.rules{margin:16px 0 28px;background:rgba(0,0,0,.25);border:1px solid var(--line);border-radius:16px;padding:12px 16px;color:var(--ink-2)}
+details.rules{margin:12px 0;background:rgba(0,0,0,.25);border:1px solid var(--line);border-radius:16px;padding:12px 16px;color:var(--ink-2)}
 details.rules summary{cursor:pointer;color:var(--ink);font-weight:600}
 details.rules li{margin:4px 0}
+details.fair{border-color:#3d6a54}
+details.fair p{margin:10px 0}
+.fairlink{color:var(--gold);text-decoration:none;font-weight:600;white-space:nowrap}
+.fairlink:hover{text-decoration:underline}
+.fgrid{display:grid;gap:4px;max-width:560px;margin:8px 0 12px}
+.fr{display:grid;grid-template-columns:44px 1fr 56px 64px;gap:10px;align-items:center;font-size:13px}
+.fr b{color:var(--ink)}
+.fr span{text-align:right;font-variant-numeric:tabular-nums}
+.fr.fh{color:var(--ink-3);font-size:11px;text-transform:uppercase;letter-spacing:.06em}
+.fr.fh b{color:var(--ink-3);font-weight:600}
+.fexp{color:var(--ink-3)}
+.fbar{position:relative;height:12px;background:rgba(0,0,0,.3);border-radius:6px}
+.fbar i{position:absolute;left:0;top:0;bottom:0;background:var(--gold);border-radius:6px;transition:width .3s}
+.fbar em{position:absolute;top:-3px;bottom:-3px;width:2px;margin-left:-1px;background:#fff}
+.fhead{font-size:13px}
 .hint{color:var(--ink-3);font-size:12px;margin:10px 2px 0}
 
 /* dock */
@@ -121,19 +142,34 @@ details.rules li{margin:4px 0}
 .toast{position:fixed;left:50%;bottom:110px;transform:translateX(-50%) translateY(10px);background:#111;border:1px solid #3d6a54;color:#fff;padding:9px 14px;border-radius:10px;opacity:0;pointer-events:none;transition:.18s;z-index:30;max-width:calc(100% - 32px);text-align:center}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
+@media (max-width:1060px) and (min-width:761px){
+  .dock .wrap{gap:8px}
+  .dockstats{min-width:0;gap:10px}
+  .dockstats .stat b{font-size:19px}
+  .chips{gap:5px}
+  .chip{width:40px;height:40px;font-size:11px}
+  .tool{padding:0 8px;font-size:12px}
+  .roll{padding:0 18px}
+}
 @media (max-width:760px){
-  body{padding-bottom:150px}
+  body{padding-bottom:170px}
   header{gap:10px}
-  .bank{margin-left:0;width:100%;justify-content:space-between}
-  .stat{text-align:left}
+  .bank{margin-left:auto}
+  .dockstats{order:2;min-width:0;gap:12px}
+  .dockstats .stat b{font-size:19px}
+  .dockstats .stat small{font-size:10px}
+  .tools{order:3;margin-left:auto}
+  .tool{padding:0 9px;height:36px;font-size:12px}
+  .roll{order:4;flex:1 1 100%!important}
+  details.rules ul{padding-left:18px}
   .hist{justify-content:flex-start}
   .rail{border-radius:24px;padding:8px;margin:0 -8px}
   .table-wrap{border-radius:18px}
   .dock .wrap{flex-wrap:wrap;gap:8px}
-  .chips{width:100%;justify-content:space-between}
+  .chips{order:1;width:100%;justify-content:space-between}
   .chip{width:44px;height:44px;font-size:11px}
   .roll{flex:1;margin-left:0;height:50px}
-  .toast{bottom:160px}
+  .toast{bottom:180px}
 }
 </style>
 </head>
@@ -146,8 +182,6 @@ details.rules li{margin:4px 0}
       <button class="tab" role="tab" data-mode="crapless">Crapless</button>
     </div>
     <div class="bank">
-      <div class="stat"><small>Bankroll</small><b id="bank">$0</b></div>
-      <div class="stat"><small>On table</small><b id="ontable">$0</b></div>
       <button class="ghost" id="reset">Reset to $1,000</button>
     </div>
   </header>
@@ -170,13 +204,18 @@ details.rules li{margin:4px 0}
       <div class="call" id="call"></div>
     </div>
   </div>
-  <p class="hint">Tap a spot to bet the selected chip. Right-click, long-press, or switch on Take down to remove chips. Space or R rolls.</p>
+  <p class="hint">Tap a spot to bet the selected chip. Right-click, long-press, or switch on Take down to remove chips. Space or R rolls. <a href="#fair" class="fairlink" id="fairLink">Fair dice: how rolls work</a></p>
 
+  <details class="rules fair" id="fair"></details>
   <details class="rules" id="rules"></details>
 </div>
 
 <div class="dock">
   <div class="wrap">
+    <div class="dockstats">
+      <div class="stat"><small>Bankroll</small><b id="bank">$0</b></div>
+      <div class="stat"><small>On table</small><b id="ontable">$0</b></div>
+    </div>
     <div class="chips" id="chips"></div>
     <div class="tools">
       <button class="tool" id="removeMode" aria-pressed="false">Take down</button>

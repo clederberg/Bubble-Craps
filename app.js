@@ -7,11 +7,13 @@ var SVGNS = 'http://www.w3.org/2000/svg';
 
 function fresh(mode, chip, sound) {
   return { bank: START, mode: mode || 'craps', chip: chip || 500, sound: sound !== false,
-    tables: { craps: C.newTable('craps'), crapless: C.newTable('crapless') }, last: {}, dice: {} };
+    tables: { craps: C.newTable('craps'), crapless: C.newTable('crapless') }, last: {}, dice: {},
+    stats: { n: 0, totals: [0,0,0,0,0,0,0,0,0,0,0,0,0], faces: [0,0,0,0,0,0,0] } };
 }
 var S = load() || fresh();
 if (!S.dice) S.dice = {};
 if (S.sound === undefined) S.sound = true;
+if (!S.stats) S.stats = { n: 0, totals: [0,0,0,0,0,0,0,0,0,0,0,0,0], faces: [0,0,0,0,0,0,0] };
 var removeMode = false, rolling = false, L = null, hidden = {}, fresher = {};
 
 function load() { try { var s = JSON.parse(localStorage.getItem(KEY)); return s && s.tables ? s : null; } catch (e) { return null; } }
@@ -35,7 +37,13 @@ function chipColor(c) {
 function esc(s) { return String(s).replace(/[&<>"]/g, function (ch) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]; }); }
 var toastTimer;
 function toast(msg) { var el = $('toast'); el.textContent = msg; el.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(function () { el.classList.remove('show'); }, 1900); }
-function rnd() { var a = new Uint32Array(1); crypto.getRandomValues(a); return 1 + (a[0] % 6); }
+// Unbiased 1-6 from the browser's cryptographic RNG (rejection sampling avoids modulo bias)
+var RNG_LIMIT = 4294967292; // largest multiple of 6 below 2^32
+function rnd() {
+  var a = new Uint32Array(1);
+  do { crypto.getRandomValues(a); } while (a[0] >= RNG_LIMIT);
+  return 1 + (a[0] % 6);
+}
 function rand(a, b) { return a + Math.random() * (b - a); }
 
 /* ---------------- sound ---------------- */
@@ -330,6 +338,29 @@ function summarize(res) {
   }).join('');
   return { head: head, sub: sub, ev: ev };
 }
+var WAYS = [0,0,1,2,3,4,5,6,5,4,3,2,1];
+function fairHTML() {
+  var st = S.stats, n = st.n, max = 0, rows = '';
+  for (var s = 2; s <= 12; s++) max = Math.max(max, WAYS[s] / 36, n ? st.totals[s] / n : 0);
+  for (s = 2; s <= 12; s++) {
+    var exp = WAYS[s] / 36, got = n ? st.totals[s] / n : 0;
+    rows += '<div class="fr"><b>' + s + '</b><div class="fbar"><i style="width:' + (got / max * 100) + '%"></i><em style="left:' + (exp / max * 100) + '%"></em></div>'
+      + '<span>' + (n ? (got * 100).toFixed(1) + '%' : '-') + '</span><span class="fexp">' + (exp * 100).toFixed(1) + '%</span></div>';
+  }
+  var faces = n ? [1,2,3,4,5,6].map(function (f) { return f + ': ' + (st.faces[f] / (2 * n) * 100).toFixed(1) + '%'; }).join(' · ') : '';
+  return '<summary>Fair dice: how every roll works</summary>'
+    + '<p>Every roll is random, and nothing you do at the table can change it.</p><ul>'
+    + '<li><b>True randomness.</b> Each die comes from your browser\u2019s built-in cryptographic random number generator, the same source used to create encryption keys. Every face from 1 to 6 has exactly the same chance.</li>'
+    + '<li><b>Decided before the throw.</b> Both dice are rolled independently the moment you press Roll. The tumbling animation only shows that result.</li>'
+    + '<li><b>No thumb on the scale.</b> Your bets, bankroll and past rolls are never used to pick a number. There are no built-in hot or cold streaks.</li>'
+    + '<li><b>Standard casino rules.</b> Every payout is printed on the table and matches common Las Vegas paytables.</li>'
+    + '<li><b>Open for anyone to check.</b> The full code is public on GitHub, including an automated test suite for every payout.</li>'
+    + '<li><b>Play money only.</b> Nothing is bought, wagered or paid out in real money.</li></ul>'
+    + '<p class="fhead">Your rolls so far: <b>' + n.toLocaleString() + '</b> ' + (n === 1 ? 'roll' : 'rolls') + '. Bars show how often each total came up, and the line marks the mathematical expectation. The more you roll, the closer they get.</p>'
+    + '<div class="fgrid"><div class="fr fh"><b>Total</b><div></div><span>Yours</span><span class="fexp">Expected</span></div>' + rows + '</div>'
+    + (faces ? '<p class="fhead">Each face (expected 16.7%): ' + faces + '</p>' : '')
+    + '<button class="ghost" id="resetStats" type="button">Reset roll stats</button>';
+}
 function rulesHTML() {
   if (S.mode === 'craps') return '<summary>How Craps works here</summary><ul>'
     + '<li><b>Come-out:</b> 7 or 11 wins Pass, 2, 3 or 12 loses. Don’t Pass wins on 2 or 3 and pushes on 12. Any other number becomes the point.</li>'
@@ -348,7 +379,13 @@ function rulesHTML() {
 function render() {
   var t = T();
   document.querySelectorAll('.tab').forEach(function (b) { b.setAttribute('aria-selected', b.dataset.mode === S.mode); });
-  $('bank').textContent = money(S.bank);
+  var bk = $('bank'), prevBank = +bk.dataset.v;
+  bk.textContent = money(S.bank);
+  if (!isNaN(prevBank) && bk.dataset.v !== undefined && S.bank !== prevBank && !rolling) {
+    var cls = S.bank > prevBank ? 'bump' : 'dip';
+    bk.classList.remove('bump', 'dip'); void bk.offsetWidth; bk.classList.add(cls);
+  }
+  bk.dataset.v = S.bank;
   $('ontable').textContent = money(C.onTable(t));
   var Ls = S.last[S.mode];
   if (Ls) { $('headline').textContent = Ls.head; $('subline').innerHTML = Ls.sub; $('events').innerHTML = Ls.ev; }
@@ -365,6 +402,7 @@ function render() {
   $('removeMode').textContent = removeMode ? 'Taking down' : 'Take down';
   $('sound').textContent = S.sound ? 'Sound on' : 'Sound off';
   $('rules').innerHTML = rulesHTML();
+  $('fair').innerHTML = fairHTML();
   renderTable();
 }
 
@@ -404,6 +442,7 @@ function doRoll() {
     var t = T(), prev = JSON.parse(JSON.stringify(t.bets));
     var res = C.roll(t, d1, d2);
     S.bank += res.back;
+    S.stats.n++; S.stats.totals[res.s]++; S.stats.faces[d1]++; S.stats.faces[d2]++;
     S.last[S.mode] = summarize(res);
     var c = callFor(res, S.mode);
     save();
@@ -447,10 +486,20 @@ $('clear').addEventListener('click', function () {
 $('sound').addEventListener('click', function () { S.sound = !S.sound; save(); render(); if (S.sound) chipClick(); });
 $('reset').addEventListener('click', function () {
   if (rolling) return;
+  var keepStats = S.stats;
   S = fresh(S.mode, S.chip, S.sound);
+  S.stats = keepStats;
   removeMode = false; save(); render(); toast('Bankroll reset to $1,000');
 });
 $('roll').addEventListener('click', doRoll);
+$('fair').addEventListener('click', function (e) {
+  if (e.target.id !== 'resetStats') return;
+  S.stats = { n: 0, totals: [0,0,0,0,0,0,0,0,0,0,0,0,0], faces: [0,0,0,0,0,0,0] };
+  save(); render();
+});
+$('fairLink').addEventListener('click', function (e) {
+  e.preventDefault(); var f = $('fair'); f.open = true; f.scrollIntoView({ behavior: 'smooth', block: 'start' });
+});
 document.addEventListener('keydown', function (e) {
   if (e.metaKey || e.ctrlKey || e.altKey) return;
   if (e.code === 'Space' || e.key === 'r' || e.key === 'R') { e.preventDefault(); doRoll(); }
