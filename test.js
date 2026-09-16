@@ -48,7 +48,8 @@ for (const [n,lay] of [[4,12000],[10,12000],[5,9000],[9,9000],[6,7200],[8,7200]]
   eq(C.add(t,'place:6',3000000).added,2500000); eq(C.add(t,'buy:4',2600000).added,2500000);
   eq(C.add(t,'lay:4',9e9).added,5000000,'lay 4 to win 25k'); eq(C.add(t,'lay:6',9e9).added,3000000); eq(C.add(t,'lay:9',9e9).added,3750000);
   eq(C.add(t,'passOdds',9e9).added,2500000,'5x of 5k on 6');
-  eq(C.add(t,'field',9e9).added,9e9,'field unlimited'); }
+  eq(C.add(t,'field',9e9).added,500000); eq(C.add(t,'hard:8',9e9).added,100000); eq(C.add(t,'prop:horn',9e9).added,100000); eq(C.add(t,'prop:any7',9e9).added,100000); eq(C.add(t,'prop:ce',9e9).added,100000); }
+{ const t=T('craps',{}); eq(C.add(t,'ats:all',9e9).added,100000); eq(C.add(t,'ats:small',150000).capped!=='',true); }
 { const t=T('crapless',{},4); eq(C.add(t,'lay:2',9e9).added,15000000); eq(C.add(t,'lay:11',9e9).added,7500000); eq(C.add(t,'place:12',9e9).added,2500000); }
 // field & props
 t=T('craps',{field:1000,'prop:twelve':100,'prop:horn':400,'prop:ce':200,'prop:anyCraps':100}); r=C.roll(t,6,6);

@@ -427,13 +427,13 @@ function rulesHTML() {
     + '<li><b>Odds (3-4-5x):</b> 3x on 4 and 10, 4x on 5 and 9, 5x on 6 and 8, paid at true odds. Don’t bettors can lay enough to win 6x their flat bet. Come odds are off on the come-out.</li>'
     + '<li><b>Place</b> pays 9:5 on 4/10, 7:5 on 5/9, 7:6 on 6/8. <b>Buy</b> and <b>Lay</b> pay true odds minus 5%.</li>'
     + '<li>Place, Buy and Hardways stay up after a win and are off on the come-out. Pass and Don’t Pass flats also stay up.</li>'
-    + '<li><b>Table limits:</b> Pass, Don’t Pass, Come and Don’t Come up to $5,000. Place and Buy up to $25,000. Lay up to what wins $25,000 ($50,000 on 4/10, $37,500 on 5/9, $30,000 on 6/8).</li></ul>';
+    + '<li><b>Table limits:</b> Pass, Don’t Pass, Come and Don’t Come up to $5,000. Place and Buy up to $25,000. Lay up to what wins $25,000 ($50,000 on 4/10, $37,500 on 5/9, $30,000 on 6/8). Field up to $5,000. Hardways, one-roll bets and Small/Tall/All up to $1,000.</li></ul>';
   return '<summary>How Crapless Craps works here</summary><ul>'
     + '<li><b>Come-out:</b> only 7 wins. Nothing loses. 2, 3, 11 and 12 become points along with 4 through 10.</li>'
     + '<li><b>Point on:</b> roll the point before a 7 to win. No Don’t Pass or Don’t Come.</li>'
     + '<li><b>Odds (3-4-5x):</b> 3x on 2, 3, 4, 10, 11, 12 · 4x on 5 and 9 · 5x on 6 and 8. True odds pay 6:1 on 2/12, 3:1 on 3/11, 2:1 on 4/10, 3:2 on 5/9, 6:5 on 6/8.</li>'
     + '<li><b>Place</b> 2/12 pays 11:2 and 3/11 pays 11:4, plus the usual 9:5, 7:5 and 7:6.</li>'
-    + '<li><b>Table limits:</b> Pass and Come up to $5,000. Place and Buy up to $25,000. Lay up to what wins $25,000 ($150,000 on 2/12, $75,000 on 3/11).</li>'
+    + '<li><b>Table limits:</b> Pass and Come up to $5,000. Place and Buy up to $25,000. Lay up to what wins $25,000 ($150,000 on 2/12, $75,000 on 3/11). Field up to $5,000. Hardways, one-roll bets and Small/Tall/All up to $1,000.</li>'
     + '<li>Everything else works like the Craps tab.</li></ul>';
 }
 function render() {

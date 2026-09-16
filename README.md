@@ -35,6 +35,9 @@ Place, Buy, Hardways and Come odds are off on the come-out roll.
 | Place, Buy | $25,000 |
 | Lay | whatever wins $25,000 ($50,000 on 4/10, $37,500 on 5/9, $30,000 on 6/8, $75,000 on 3/11, $150,000 on 2/12) |
 | Odds | 3-4-5x of the flat bet |
+| Field | $5,000 |
+| Hardways, one-roll bets, Horn, C & E | $1,000 |
+| All Small, All Tall, Make 'Em All | $1,000 |
 
 Reset bankroll goes up to $100,000. Lay and Don't odds always work.
 

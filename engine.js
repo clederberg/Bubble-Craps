@@ -79,13 +79,15 @@
     return 'Unknown bet';
   }
   // Table limits (cents). Lay bets are capped by what they win.
-  var LIMITS = { line: 500000, place: 2500000, layWin: 2500000 };
+  var LIMITS = { line: 500000, place: 2500000, layWin: 2500000, field: 500000, side: 100000 };
   function dollars(c) { return '$' + (c / 100).toLocaleString('en-US', { maximumFractionDigits: 2 }); }
   function maxFor(t, k) {
     var p = parse(k);
     switch (p.type) {
       case 'pass': case 'dp': case 'come': case 'dc': return LIMITS.line;
       case 'place': case 'buy': return LIMITS.place;
+      case 'field': return LIMITS.field;
+      case 'hard': case 'prop': case 'ats': return LIMITS.side;
       case 'lay': return mul(LIMITS.layWin, TRUE[p.n]);
       case 'passOdds': return amt(t, 'pass') * ODDS_X[t.point];
       case 'dpOdds': return mul(amt(t, 'dp') * LAY_WIN_X, TRUE[t.point]);
@@ -99,6 +101,8 @@
     switch (p.type) {
       case 'pass': case 'dp': case 'come': case 'dc': return 'Table max on ' + label(k) + ' is ' + dollars(LIMITS.line);
       case 'place': case 'buy': return 'Table max on ' + label(k) + ' is ' + dollars(LIMITS.place);
+      case 'field': return 'Table max on the Field is ' + dollars(LIMITS.field);
+      case 'hard': case 'prop': case 'ats': return 'Table max on ' + label(k) + ' is ' + dollars(LIMITS.side);
       case 'lay': return 'Table max on ' + label(k) + ' is ' + dollars(maxFor(t, k)) + ' (to win ' + dollars(LIMITS.layWin) + ')';
       case 'dpOdds': case 'dcOdds': return 'Lay odds max: win ' + LAY_WIN_X + 'x your flat bet';
     }
