@@ -77,12 +77,12 @@
       var fs = (n === 6 || n === 9) ? Math.min(wide ? 34 : 28, cw * 0.36) : Math.min(wide ? 50 : 42, cw * 0.55);
       spot('lay:' + n, x, yy, cw, lh, T(x + cw / 2, yy + lh / 2, 'LAY ' + ratio(lay), wide ? 11 : 10, { ls: 0.5 }),
         'Lay ' + n + ' · ' + to(lay) + ' minus 5%', { x: x + R + 5, y: yy + lh / 2 });
-      spot('place:' + n, x, yy + lh, cw, bh,
+      spot('buy:' + n, x, yy + lh, cw, bh,
         T(x + cw / 2, yy + lh + bh * 0.52, big, fs, { f: OSW, w: 600, ls: 1 })
-        + T(x + 6, yy + lh + bh - 9, ratio(C.PLACE[n]), 10, { a: 'start', fill: GOLD }),
-        'Place ' + n + ' · ' + to(C.PLACE[n]), { x: x + cw / 2, y: yy + lh + bh - R - 5 });
-      spot('buy:' + n, x, yy + lh + bh, cw, lh, T(x + cw / 2, yy + lh + bh + lh / 2, 'BUY ' + ratio(tr), wide ? 11 : 10, { ls: 0.5 }),
-        'Buy ' + n + ' · ' + to(tr) + ' minus 5%', { x: x + R + 5, y: yy + lh + bh + lh / 2 });
+        + T(x + 6, yy + lh + bh - 9, 'BUY ' + ratio(tr), 10, { a: 'start', fill: GOLD }),
+        'Buy ' + n + ' · ' + to(tr) + ' minus 5%', { x: x + cw / 2, y: yy + lh + bh - R - 5 });
+      spot('place:' + n, x, yy + lh + bh, cw, lh, T(x + cw / 2, yy + lh + bh + lh / 2, 'PLACE ' + ratio(C.PLACE[n]), wide ? 11 : 10, { ls: 0.5 }),
+        'Place ' + n + ' · ' + to(C.PLACE[n]), { x: x + R + 5, y: yy + lh + bh + lh / 2 });
       L.anchors['comeOn:' + n] = { x: x + R + 5, y: yy + lh + R + 5 };
       L.odds.push({ k: 'comeOdds:' + n, base: 'comeOn:' + n, x: x + cw - R - 5, y: yy + lh + R + 5 });
       L.anchors['comeOdds:' + n] = { x: x + cw - R - 5, y: yy + lh + R + 5 };

@@ -71,7 +71,7 @@ h1 span{color:var(--gold)}
 .oddsT .ring{fill:rgba(0,0,0,.25);stroke:var(--gold);stroke-width:2;stroke-dasharray:4 3}
 .oddsT:hover .ring{fill:rgba(242,199,92,.25)}
 .chipg{pointer-events:none}
-.chipg.newchip{animation:drop .22s ease-out}
+.chipg.newchip{animation:drop .22s ease-out;transform-box:fill-box;transform-origin:center}
 @keyframes drop{from{transform:translateY(-14px) scale(1.25);opacity:.2}}
 .chipg.hidden{opacity:0}
 .trk circle{fill:rgba(0,0,0,.2);stroke:rgba(255,248,230,.55)}
