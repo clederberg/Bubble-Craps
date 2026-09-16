@@ -38,10 +38,15 @@ Each die is drawn from the browser's cryptographic random number generator (`cry
 - Right-click, long-press, or switch on **Take down** to remove chips.
 - **Space** or **R** rolls.
 
+## Sound
+
+Dice and chip sounds are real recordings from Kenney's [Casino Audio](https://kenney.nl/assets/casino-audio) pack (public domain, CC0). The stickman calls use your device's built-in text-to-speech voice. The **Audio** button cycles between All, FX (no voice) and Off.
+
 ## Files
 
 - `index.html` page and styles
 - `app.js` table drawing, dice, animations, sound
 - `layout.js` table layouts (desktop and phone)
+- `sounds.js` recorded dice and chip sounds
 - `engine.js` rules and payouts
 - `test.js` rules tests (`node test.js`)

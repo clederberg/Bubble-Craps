@@ -5,14 +5,15 @@ var START = 100000, KEY = 'bubblecraps.v1';
 var CHIPS = [1, 5, 25, 100, 500, 1000];
 var SVGNS = 'http://www.w3.org/2000/svg';
 
-function fresh(mode, chip, sound) {
-  return { bank: START, mode: mode || 'craps', chip: chip || 500, sound: sound !== false,
+function fresh(mode, chip, sound, voice) {
+  return { bank: START, mode: mode || 'craps', chip: chip || 500, sound: sound !== false, voice: voice !== false,
     tables: { craps: C.newTable('craps'), crapless: C.newTable('crapless') }, last: {}, dice: {},
     stats: { n: 0, totals: [0,0,0,0,0,0,0,0,0,0,0,0,0], faces: [0,0,0,0,0,0,0] } };
 }
 var S = load() || fresh();
 if (!S.dice) S.dice = {};
 if (S.sound === undefined) S.sound = true;
+if (S.voice === undefined) S.voice = true;
 if (!S.stats) S.stats = { n: 0, totals: [0,0,0,0,0,0,0,0,0,0,0,0,0], faces: [0,0,0,0,0,0,0] };
 var removeMode = false, rolling = false, L = null, hidden = {}, fresher = {};
 
@@ -47,10 +48,45 @@ function rnd() {
 function rand(a, b) { return a + Math.random() * (b - a); }
 
 /* ---------------- sound ---------------- */
-var actx = null;
+// Recorded effects (sounds.js) play through Web Audio; a synthesized click is the fallback while they load.
+var actx = null, sfx = {}, sfxLoading = false;
 function ac() {
   if (!S.sound) return null;
-  try { if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)(); if (actx.state === 'suspended') actx.resume(); return actx; } catch (e) { return null; }
+  try {
+    if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
+    if (actx.state === 'suspended') actx.resume();
+    loadSfx();
+    return actx;
+  } catch (e) { return null; }
+}
+function loadSfx() {
+  if (sfxLoading || !actx || !window.CRAPS_SOUNDS) return;
+  sfxLoading = true;
+  Object.keys(window.CRAPS_SOUNDS).forEach(function (name) {
+    try {
+      var bin = atob(window.CRAPS_SOUNDS[name]), u = new Uint8Array(bin.length);
+      for (var i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+      var group = name.replace(/\d+$/, '');
+      var ok = function (buf) { (sfx[group] = sfx[group] || []).push(buf); };
+      var p = actx.decodeAudioData(u.buffer, ok, function () {});
+      if (p && p.catch) p.catch(function () {});
+    } catch (e) {}
+  });
+}
+var lastPick = {};
+function play(group, delay, vol, rate) {
+  var a = ac(); if (!a) return false;
+  var list = sfx[group]; if (!list || !list.length) return false;
+  var i = Math.floor(Math.random() * list.length);
+  if (list.length > 1 && i === lastPick[group]) i = (i + 1) % list.length;
+  lastPick[group] = i;
+  var src = a.createBufferSource(), g = a.createGain();
+  src.buffer = list[i];
+  src.playbackRate.value = rate || rand(0.94, 1.06);
+  g.gain.value = vol === undefined ? 0.8 : vol;
+  src.connect(g); g.connect(a.destination);
+  src.start(a.currentTime + (delay || 0));
+  return true;
 }
 function clack(delay, vol) {
   var a = ac(); if (!a) return;
@@ -62,23 +98,40 @@ function clack(delay, vol) {
   var g = a.createGain(); g.gain.value = vol || 0.5;
   src.connect(f); f.connect(g); g.connect(a.destination); src.start(t);
 }
-function chipClick() {
-  var a = ac(); if (!a) return;
-  [0, 0.035].forEach(function (dt, i) {
-    var o = a.createOscillator(), g = a.createGain(), t = a.currentTime + dt;
-    o.type = 'triangle'; o.frequency.value = i ? 2900 : 2300;
-    g.gain.setValueAtTime(0.12, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
-    o.connect(g); g.connect(a.destination); o.start(t); o.stop(t + 0.06);
-  });
+function chipClick() { if (!play('lay', 0, 0.75)) clack(0, 0.3); }
+function diceSounds(dur) {
+  var hit = dur * 0.4 / 1000;
+  play('shake', 0, 0.45);
+  if (play('throw', hit, 0.95)) { play('roll', hit + rand(0.04, 0.09), 0.55); return; }
+  clack(hit, 0.7); clack(hit + 0.01, 0.4); clack(dur * 0.64 / 1000, 0.45); clack(dur * 0.8 / 1000, 0.3);
 }
-function winChime() {
-  var a = ac(); if (!a) return;
-  [660, 880, 1320].forEach(function (fr, i) {
-    var o = a.createOscillator(), g = a.createGain(), t = a.currentTime + i * 0.07;
-    o.type = 'sine'; o.frequency.value = fr;
-    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.12, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.35);
-    o.connect(g); g.connect(a.destination); o.start(t); o.stop(t + 0.4);
-  });
+
+// Stickman voice (browser speech). Unlocked on the Roll tap so iPhones allow it later.
+var voicePick = null;
+function pickVoice() {
+  if (voicePick || !window.speechSynthesis) return voicePick;
+  var vs = speechSynthesis.getVoices().filter(function (v) { return /^en/i.test(v.lang); });
+  var pref = ['Daniel', 'Aaron', 'Alex', 'Fred', 'Google US English', 'Microsoft Guy', 'Microsoft David', 'Arthur', 'Samantha'];
+  for (var i = 0; i < pref.length && !voicePick; i++) voicePick = vs.filter(function (v) { return v.name.indexOf(pref[i]) >= 0; })[0] || null;
+  voicePick = voicePick || vs.filter(function (v) { return /en-US/i.test(v.lang); })[0] || vs[0] || null;
+  return voicePick;
+}
+if (window.speechSynthesis && speechSynthesis.addEventListener) speechSynthesis.addEventListener('voiceschanged', function () { voicePick = null; });
+function unlockVoice() {
+  if (!S.voice || !window.speechSynthesis || unlockVoice.done) return;
+  unlockVoice.done = true;
+  try { var u = new SpeechSynthesisUtterance(' '); u.volume = 0; speechSynthesis.speak(u); } catch (e) {}
+}
+function say(main, small) {
+  if (!S.voice || !S.sound || !window.speechSynthesis) return;
+  var text = (main + (small ? (/[!.?]$/.test(main) ? ' ' : '. ') + small : '')).replace(/Yo-leven/gi, 'Yo eleven').replace(/Ace-deuce/gi, 'Ace deuce');
+  try {
+    speechSynthesis.cancel();
+    var u = new SpeechSynthesisUtterance(text), v = pickVoice();
+    if (v) u.voice = v;
+    u.rate = 1.08; u.pitch = 0.9; u.volume = 0.95;
+    speechSynthesis.speak(u);
+  } catch (e) {}
 }
 
 /* ---------------- table rendering ---------------- */
@@ -227,8 +280,7 @@ function animateDice(v1, v2, done) {
     ], { duration: dur, easing: 'cubic-bezier(.25,.7,.35,1)', fill: 'forwards' }));
     d.z[i] = zf;
   });
-  clack(dur * 0.42 / 1000, 0.7); clack(dur * 0.43 / 1000, 0.4);
-  clack(dur * 0.64 / 1000, 0.45); clack(dur * 0.8 / 1000, 0.3); clack(dur * 0.9 / 1000, 0.15);
+  diceSounds(dur);
   setTimeout(function () {
     d.v = vals; d.pos = ends;
     rolling = false;
@@ -278,10 +330,11 @@ function showCall(main, small) {
   el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
 }
 function playEffects(res, prevBets) {
-  var house = L.house, bank = bankPoint(), anyWin = false;
+  var house = L.house, bank = bankPoint(), anyWin = false, anyLoss = false, anyMove = false;
   res.ev.forEach(function (e) {
     var an = L.anchors[e.k]; if (!an) return;
     if (e.r === 'lose') {
+      anyLoss = true;
       fxChip(-e.net, an, house, { fadeOut: true, dur: 620 });
       fxText(money(e.net), an, 'lose');
     } else if (e.r === 'win') {
@@ -295,6 +348,7 @@ function playEffects(res, prevBets) {
     } else if (e.r === 'move') {
       var dest = L.anchors[e.to];
       if (dest) {
+        anyMove = true;
         hidden[e.to] = true;
         fxChip(prevBets[e.k], an, dest, { dur: 600, delay: 150, after: function () { delete hidden[e.to]; renderTable(); } });
       }
@@ -302,7 +356,9 @@ function playEffects(res, prevBets) {
       fxChip(prevBets[e.k] || 0, an, bank, { dur: 560, delay: 200, fadeOut: true });
     }
   });
-  if (anyWin) setTimeout(winChime, 260);
+  if (anyLoss) play('collide', 0.08, 0.7);
+  if (anyMove) play('lay', 0.72, 0.7);
+  if (anyWin) { play('stack', 0.72, 0.9); play('handle', 1.3, 0.55); }
 }
 
 /* ---------------- status + page ---------------- */
@@ -400,7 +456,8 @@ function render() {
   $('chips').innerHTML = CHIPS.map(function (d) { var c = d * 100; return '<button class="chip c' + d + '" data-chip="' + c + '" aria-pressed="' + (S.chip === c) + '" aria-label="$' + d + ' chip">' + chipText(c) + '</button>'; }).join('');
   $('removeMode').setAttribute('aria-pressed', removeMode);
   $('removeMode').textContent = removeMode ? 'Taking down' : 'Take down';
-  $('sound').textContent = S.sound ? 'Sound on' : 'Sound off';
+  $('sound').textContent = !S.sound ? 'Audio: Off' : S.voice ? 'Audio: All' : 'Audio: FX';
+  $('sound').title = !S.sound ? 'All sound is muted' : S.voice ? 'Sound effects and stickman voice' : 'Sound effects only, no voice';
   $('rules').innerHTML = rulesHTML();
   $('fair').innerHTML = fairHTML();
   renderTable();
@@ -414,7 +471,7 @@ function clickBet(k, forceRemove) {
     var r = C.remove(t, k, S.chip);
     if (!r.ok) return toast(r.reason);
     S.bank += r.removed;
-    chipClick();
+    if (!play('handle', 0, 0.6)) chipClick();
     var an = L.anchors[k] || oddsAnchor(k);
     save(); render();
     if (an) fxChip(r.removed, an, bankPoint(), { dur: 450, fadeOut: true });
@@ -436,7 +493,7 @@ function doRoll() {
   if (rolling) return;
   rolling = true;
   $('roll').disabled = true;
-  ac();
+  ac(); unlockVoice();
   var d1 = rnd(), d2 = rnd();
   animateDice(d1, d2, function () {
     var t = T(), prev = JSON.parse(JSON.stringify(t.bets));
@@ -449,6 +506,7 @@ function doRoll() {
     playEffects(res, prev);
     render();
     showCall(c[0], c[1]);
+    say(c[0], c[1]);
     $('roll').disabled = false;
   });
 }
@@ -480,14 +538,22 @@ $('removeMode').addEventListener('click', function () { removeMode = !removeMode
 $('clear').addEventListener('click', function () {
   if (rolling) return;
   var back = C.removeAll(T());
+  if (back) play('handle', 0, 0.7);
   S.bank += back; save(); render();
   toast(back ? 'Returned ' + money(back) + '. Contract bets stay up.' : 'Nothing to take down');
 });
-$('sound').addEventListener('click', function () { S.sound = !S.sound; save(); render(); if (S.sound) chipClick(); });
+$('sound').addEventListener('click', function () {
+  // cycle: All -> FX only -> Off -> All
+  if (S.sound && S.voice) { S.voice = false; }
+  else if (S.sound) { S.sound = false; if (window.speechSynthesis) speechSynthesis.cancel(); }
+  else { S.sound = true; S.voice = true; }
+  save(); render();
+  if (S.sound) { chipClick(); if (S.voice) { unlockVoice(); say('Voice on'); } }
+});
 $('reset').addEventListener('click', function () {
   if (rolling) return;
   var keepStats = S.stats;
-  S = fresh(S.mode, S.chip, S.sound);
+  S = fresh(S.mode, S.chip, S.sound, S.voice);
   S.stats = keepStats;
   removeMode = false; save(); render(); toast('Bankroll reset to $1,000');
 });
@@ -508,6 +574,7 @@ var rz;
 window.addEventListener('resize', function () { clearTimeout(rz); rz = setTimeout(function () { if (!rolling) renderTable(); }, 120); });
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { if (!rolling) renderTable(); });
 
+document.addEventListener('pointerdown', function () { ac(); }, { once: true });
 buildDice();
 render();
 })();
