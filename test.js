@@ -41,6 +41,15 @@ for (const [mode,n,x] of [['craps',4,3],['craps',10,3],['craps',5,4],['craps',9,
   eq(C.add(t,'passOdds',100).ok,false);
 }
 for (const [n,lay] of [[4,12000],[10,12000],[5,9000],[9,9000],[6,7200],[8,7200]]) { const t=T('craps',{dp:1000},n); eq(C.add(t,'dpOdds',100000).added,lay,'dp lay on '+n); }
+// table limits
+{ const t=T('craps',{}); let a=C.add(t,'pass',600000); eq([a.added, !!a.capped],[500000,true]); eq(C.add(t,'pass',100).ok,false);
+  eq(C.add(t,'dp',900000).added,500000);
+  t.point=6; eq(C.add(t,'come',700000).added,500000); eq(C.add(t,'dc',500001).added,500000);
+  eq(C.add(t,'place:6',3000000).added,2500000); eq(C.add(t,'buy:4',2600000).added,2500000);
+  eq(C.add(t,'lay:4',9e9).added,5000000,'lay 4 to win 25k'); eq(C.add(t,'lay:6',9e9).added,3000000); eq(C.add(t,'lay:9',9e9).added,3750000);
+  eq(C.add(t,'passOdds',9e9).added,2500000,'5x of 5k on 6');
+  eq(C.add(t,'field',9e9).added,9e9,'field unlimited'); }
+{ const t=T('crapless',{},4); eq(C.add(t,'lay:2',9e9).added,15000000); eq(C.add(t,'lay:11',9e9).added,7500000); eq(C.add(t,'place:12',9e9).added,2500000); }
 // field & props
 t=T('craps',{field:1000,'prop:twelve':100,'prop:horn':400,'prop:ce':200,'prop:anyCraps':100}); r=C.roll(t,6,6);
 eq(r.back,3000+3000+2700+600+700,'field 3x, twelve 30, horn 27u, ce 3x, craps 7x');

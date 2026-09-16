@@ -78,26 +78,40 @@
     }
     return 'Unknown bet';
   }
+  // Table limits (cents). Lay bets are capped by what they win.
+  var LIMITS = { line: 500000, place: 2500000, layWin: 2500000 };
+  function dollars(c) { return '$' + (c / 100).toLocaleString('en-US', { maximumFractionDigits: 2 }); }
   function maxFor(t, k) {
     var p = parse(k);
-    if (p.type === 'passOdds') return amt(t, 'pass') * ODDS_X[t.point];
-    if (p.type === 'dpOdds') return mul(amt(t, 'dp') * LAY_WIN_X, TRUE[t.point]);
-    if (p.type === 'comeOdds') return amt(t, 'comeOn:' + p.n) * ODDS_X[p.n];
-    if (p.type === 'dcOdds') return mul(amt(t, 'dcOn:' + p.n) * LAY_WIN_X, TRUE[p.n]);
+    switch (p.type) {
+      case 'pass': case 'dp': case 'come': case 'dc': return LIMITS.line;
+      case 'place': case 'buy': return LIMITS.place;
+      case 'lay': return mul(LIMITS.layWin, TRUE[p.n]);
+      case 'passOdds': return amt(t, 'pass') * ODDS_X[t.point];
+      case 'dpOdds': return mul(amt(t, 'dp') * LAY_WIN_X, TRUE[t.point]);
+      case 'comeOdds': return amt(t, 'comeOn:' + p.n) * ODDS_X[p.n];
+      case 'dcOdds': return mul(amt(t, 'dcOn:' + p.n) * LAY_WIN_X, TRUE[p.n]);
+    }
     return Infinity;
   }
-  function oddsLimitText(t, k) {
+  function limitText(t, k) {
     var p = parse(k), n = p.n !== null ? p.n : t.point;
-    if (p.type === 'dpOdds' || p.type === 'dcOdds') return 'Lay odds max: win ' + LAY_WIN_X + 'x your flat bet';
+    switch (p.type) {
+      case 'pass': case 'dp': case 'come': case 'dc': return 'Table max on ' + label(k) + ' is ' + dollars(LIMITS.line);
+      case 'place': case 'buy': return 'Table max on ' + label(k) + ' is ' + dollars(LIMITS.place);
+      case 'lay': return 'Table max on ' + label(k) + ' is ' + dollars(maxFor(t, k)) + ' (to win ' + dollars(LIMITS.layWin) + ')';
+      case 'dpOdds': case 'dcOdds': return 'Lay odds max: win ' + LAY_WIN_X + 'x your flat bet';
+    }
     return 'Odds max on ' + n + ' is ' + ODDS_X[n] + 'x';
   }
   function add(t, k, c) {
     var r = canAdd(t, k);
     if (r) return { ok: false, reason: r };
-    var a = Math.min(c, maxFor(t, k) - amt(t, k));
-    if (a <= 0) return { ok: false, reason: oddsLimitText(t, k) };
+    var room = maxFor(t, k) - amt(t, k);
+    var a = Math.min(c, room);
+    if (a <= 0) return { ok: false, reason: limitText(t, k) };
     t.bets[k] = amt(t, k) + a;
-    return { ok: true, added: a };
+    return { ok: true, added: a, capped: a < c ? limitText(t, k) : '' };
   }
   function canRemove(t, k) {
     var p = parse(k);
@@ -277,7 +291,7 @@
   }
 
   var api = {
-    TRUE: TRUE, PLACE: PLACE, HARD: HARD, PROPS: PROPS, ATS: ATS, MODES: MODES, ODDS_X: ODDS_X, LAY_WIN_X: LAY_WIN_X, maxFor: maxFor,
+    TRUE: TRUE, PLACE: PLACE, HARD: HARD, PROPS: PROPS, ATS: ATS, MODES: MODES, ODDS_X: ODDS_X, LIMITS: LIMITS, LAY_WIN_X: LAY_WIN_X, maxFor: maxFor,
     parse: parse, label: label, newTable: newTable, amt: amt, canAdd: canAdd, add: add,
     canRemove: canRemove, remove: remove, removeAll: removeAll, onTable: onTable, roll: roll
   };

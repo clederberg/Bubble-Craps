@@ -426,12 +426,14 @@ function rulesHTML() {
     + '<li><b>Come / Don’t Come</b> work the same way starting on the next roll, then travel to their own number. Tap the gold ODDS circle next to a traveled bet to add odds.</li>'
     + '<li><b>Odds (3-4-5x):</b> 3x on 4 and 10, 4x on 5 and 9, 5x on 6 and 8, paid at true odds. Don’t bettors can lay enough to win 6x their flat bet. Come odds are off on the come-out.</li>'
     + '<li><b>Place</b> pays 9:5 on 4/10, 7:5 on 5/9, 7:6 on 6/8. <b>Buy</b> and <b>Lay</b> pay true odds minus 5%.</li>'
-    + '<li>Place, Buy and Hardways stay up after a win and are off on the come-out. Pass and Don’t Pass flats also stay up.</li></ul>';
+    + '<li>Place, Buy and Hardways stay up after a win and are off on the come-out. Pass and Don’t Pass flats also stay up.</li>'
+    + '<li><b>Table limits:</b> Pass, Don’t Pass, Come and Don’t Come up to $5,000. Place and Buy up to $25,000. Lay up to what wins $25,000 ($50,000 on 4/10, $37,500 on 5/9, $30,000 on 6/8).</li></ul>';
   return '<summary>How Crapless Craps works here</summary><ul>'
     + '<li><b>Come-out:</b> only 7 wins. Nothing loses. 2, 3, 11 and 12 become points along with 4 through 10.</li>'
     + '<li><b>Point on:</b> roll the point before a 7 to win. No Don’t Pass or Don’t Come.</li>'
     + '<li><b>Odds (3-4-5x):</b> 3x on 2, 3, 4, 10, 11, 12 · 4x on 5 and 9 · 5x on 6 and 8. True odds pay 6:1 on 2/12, 3:1 on 3/11, 2:1 on 4/10, 3:2 on 5/9, 6:5 on 6/8.</li>'
     + '<li><b>Place</b> 2/12 pays 11:2 and 3/11 pays 11:4, plus the usual 9:5, 7:5 and 7:6.</li>'
+    + '<li><b>Table limits:</b> Pass and Come up to $5,000. Place and Buy up to $25,000. Lay up to what wins $25,000 ($150,000 on 2/12, $75,000 on 3/11).</li>'
     + '<li>Everything else works like the Craps tab.</li></ul>';
 }
 function render() {
@@ -484,7 +486,8 @@ function clickBet(k, forceRemove) {
   var a = C.add(t, k, c);
   if (!a.ok) return toast(a.reason);
   S.bank -= a.added;
-  if (a.added < S.chip) toast(a.added < c ? 'Max odds reached: ' + money(a.added) + ' added' : 'Added your last ' + money(a.added));
+  if (a.capped) toast(a.capped + ' · ' + money(a.added) + ' added');
+  else if (a.added < S.chip) toast('Added your last ' + money(a.added));
   chipClick();
   fresher[k] = true;
   save(); render();
@@ -553,7 +556,7 @@ $('sound').addEventListener('click', function () {
   if (S.sound) { chipClick(); if (S.voice) { unlockVoice(); say('Voice on'); } }
 });
 // Reset bankroll to any amount
-var MAX_BANK = 100000000; // $1,000,000
+var MAX_BANK = 10000000; // $100,000
 function parseDollars(v) {
   var n = parseFloat(String(v).replace(/[$,\s]/g, ''));
   return isFinite(n) ? Math.round(n * 100) : NaN;

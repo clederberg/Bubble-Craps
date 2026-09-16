@@ -1,6 +1,6 @@
 # Bubble Craps
 
-Free-play craps and crapless craps on a real table layout, with 3D dice. Play money only, no accounts, no purchases. Your bankroll is saved in your browser, and **Reset bankroll** starts you over with any amount up to $1,000,000.
+Free-play craps and crapless craps on a real table layout, with 3D dice. Play money only, no accounts, no purchases. Your bankroll is saved in your browser, and **Reset bankroll** starts you over with any amount up to $100,000.
 
 **Play:** open `index.html`, or turn on GitHub Pages (below).
 
@@ -25,7 +25,18 @@ Free-play craps and crapless craps on a real table layout, with 3D dice. Play mo
 
 Odds limits: 3x on 2, 3, 4, 10, 11, 12 · 4x on 5 and 9 · 5x on 6 and 8. Don't bettors can lay enough to win 6x their flat bet.
 
-Place, Buy, Hardways and Come odds are off on the come-out roll. Lay and Don't odds always work.
+Place, Buy, Hardways and Come odds are off on the come-out roll.
+
+## Table limits
+
+| Bet | Max |
+|---|---|
+| Pass, Don't Pass, Come, Don't Come | $5,000 |
+| Place, Buy | $25,000 |
+| Lay | whatever wins $25,000 ($50,000 on 4/10, $37,500 on 5/9, $30,000 on 6/8, $75,000 on 3/11, $150,000 on 2/12) |
+| Odds | 3-4-5x of the flat bet |
+
+Reset bankroll goes up to $100,000. Lay and Don't odds always work.
 
 ## Fair dice
 
