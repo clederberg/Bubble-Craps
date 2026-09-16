@@ -1,0 +1,431 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bubble Craps</title>
+<meta name="description" content="Free-play craps and crapless craps. Play money, no purchases.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect x='8' y='8' width='84' height='84' rx='18' fill='%23f4efe3'/><circle cx='30' cy='30' r='9' fill='%23b3261e'/><circle cx='50' cy='50' r='9' fill='%23b3261e'/><circle cx='70' cy='70' r='9' fill='%23b3261e'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Oswald:wght@500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0b1f17; --felt:#0f3325; --felt-2:#134130; --line:#2a5c47; --line-2:#3c7a5f;
+  --ink:#eef4ef; --ink-2:#a9c2b5; --ink-3:#6f8f80;
+  --gold:#e3b94f; --gold-ink:#1d1606; --red:#e0584f; --win:#5fd08a; --lose:#ef7a6f;
+  --chip-1:#e9e4d6; --chip-5:#c9392f; --chip-25:#2f8a4f; --chip-100:#1d1d1f; --chip-500:#6b3fa0; --chip-1000:#d1a12f;
+  --r:12px;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:radial-gradient(1200px 600px at 50% -10%, #17503a 0%, var(--bg) 60%) fixed, var(--bg);color:var(--ink);font:15px/1.4 Inter,system-ui,sans-serif;-webkit-tap-highlight-color:transparent;padding-bottom:132px}
+button{font:inherit;color:inherit}
+.wrap{max-width:1120px;margin:0 auto;padding:0 16px}
+
+/* header */
+header{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:14px 0 10px}
+h1{font:600 24px/1 Oswald,sans-serif;letter-spacing:.04em;margin:0;text-transform:uppercase}
+h1 span{color:var(--gold)}
+.tabs{display:flex;background:rgba(0,0,0,.28);border:1px solid var(--line);border-radius:999px;padding:3px}
+.tab{border:0;background:none;padding:7px 16px;border-radius:999px;cursor:pointer;font-weight:600;color:var(--ink-2)}
+.tab[aria-selected=true]{background:var(--gold);color:var(--gold-ink)}
+.bank{margin-left:auto;display:flex;gap:14px;align-items:center}
+.stat{text-align:right}
+.stat b{display:block;font:600 20px/1.1 Oswald,sans-serif;letter-spacing:.02em}
+.stat small{color:var(--ink-3);font-size:11px;text-transform:uppercase;letter-spacing:.08em}
+.ghost{background:none;border:1px solid var(--line-2);border-radius:8px;padding:6px 10px;cursor:pointer;color:var(--ink-2);font-size:13px}
+.ghost:hover{border-color:var(--gold);color:var(--ink)}
+
+/* stage */
+.stage{display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:center;background:linear-gradient(180deg,var(--felt-2),var(--felt));border:1px solid var(--line);border-radius:16px;padding:16px 18px;margin-bottom:14px}
+.dicebox{display:flex;align-items:center;gap:14px}
+.dice{display:flex;gap:10px}
+.die{width:64px;height:64px;border-radius:13px;background:linear-gradient(145deg,#fffdf7,#e7e0cf);box-shadow:0 6px 14px rgba(0,0,0,.35), inset 0 -3px 0 rgba(0,0,0,.12);display:grid;grid-template:repeat(3,1fr)/repeat(3,1fr);padding:9px}
+.pip{width:12px;height:12px;border-radius:50%;background:#b3261e;align-self:center;justify-self:center;opacity:0}
+.pip.on{opacity:1}
+.rolling .die{animation:shake .12s infinite alternate}
+@keyframes shake{from{transform:rotate(-8deg) translateY(-2px)}to{transform:rotate(8deg) translateY(2px)}}
+.puck{width:62px;height:62px;border-radius:50%;display:grid;place-items:center;font:600 13px/1 Oswald,sans-serif;letter-spacing:.06em;border:3px solid #fff;flex:none}
+.puck.off{background:#111;color:#fff}
+.puck.on{background:#fff;color:#111}
+.puck.on span{display:block;text-align:center;line-height:1.05}
+.puck.on em{font-style:normal;font-size:20px;display:block}
+.status{min-width:0}
+.status .big{font:600 22px/1.15 Oswald,sans-serif;letter-spacing:.02em}
+.status .sub{color:var(--ink-2);margin-top:2px}
+.net{font-weight:700}
+.net.pos{color:var(--win)} .net.neg{color:var(--lose)}
+.hist{display:flex;gap:5px;margin-top:10px;flex-wrap:wrap}
+.hist span{min-width:26px;height:26px;border-radius:7px;display:grid;place-items:center;font-weight:600;font-size:12px;background:rgba(0,0,0,.3);border:1px solid var(--line);color:var(--ink-2)}
+.hist span.seven{background:#5a1b17;border-color:#8a2a24;color:#ffd6d2}
+.hist span.hardx{border-color:var(--gold);color:var(--gold)}
+.hist span:first-child{outline:2px solid var(--gold);outline-offset:1px;color:var(--ink)}
+.events{margin-top:8px;display:flex;flex-wrap:wrap;gap:6px}
+.ev{font-size:12px;padding:3px 8px;border-radius:999px;background:rgba(0,0,0,.28);border:1px solid var(--line)}
+.ev.win{border-color:#2f7a4c;color:var(--win)}
+.ev.lose{border-color:#7a3530;color:var(--lose)}
+.ev.push,.ev.move{color:var(--ink-2)}
+
+/* board */
+.board{display:grid;gap:14px}
+.sec{background:rgba(0,0,0,.18);border:1px solid var(--line);border-radius:16px;padding:12px}
+.sec h2{font:600 13px/1 Oswald,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);margin:2px 2px 10px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.sec h2 small{font:500 11px Inter,sans-serif;letter-spacing:.02em;text-transform:none;color:var(--ink-3)}
+.grid{display:grid;gap:8px;grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+.bet{position:relative;text-align:left;border:1px solid var(--line-2);background:linear-gradient(180deg,#17503a,#11402e);border-radius:var(--r);padding:10px 12px;min-height:58px;cursor:pointer;display:flex;flex-direction:column;justify-content:center;gap:2px;transition:transform .06s, border-color .12s, background .12s}
+.bet:hover{border-color:var(--gold)}
+.bet:active{transform:scale(.98)}
+.bet .t{font-weight:600}
+.bet .p{font-size:12px;color:var(--ink-2)}
+.bet.na{opacity:.38;cursor:not-allowed}
+.bet.na:hover{border-color:var(--line-2)}
+.bet.has{padding-right:62px;border-color:var(--gold);background:linear-gradient(180deg,#1d5a42,#154a36)}
+.bet.off::after{content:"OFF";position:absolute;left:8px;bottom:6px;font-size:9px;font-weight:700;letter-spacing:.08em;background:#111;color:#fff;border-radius:4px;padding:1px 4px}
+.chipmark{position:absolute;top:50%;right:10px;transform:translateY(-50%);min-width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:700;color:#fff;background:var(--chip-25);border:3px dashed rgba(255,255,255,.75);box-shadow:0 2px 6px rgba(0,0,0,.4);padding:0 4px}
+.bet.wide{grid-column:span 2}
+
+.nums{display:grid;gap:8px;grid-template-columns:repeat(6,1fr)}
+.nums.ten{grid-template-columns:repeat(5,1fr)}
+.num{border:1px solid var(--line);border-radius:14px;padding:8px;background:rgba(0,0,0,.14);display:flex;flex-direction:column;gap:6px}
+.num.is-point{border-color:#fff;box-shadow:0 0 0 1px #fff inset}
+.num-h{display:flex;align-items:center;justify-content:space-between;padding:0 2px}
+.num-h b{font:600 30px/1 Oswald,sans-serif}
+.num-h .mini-puck{font:700 10px/1 Inter;background:#fff;color:#111;border-radius:999px;padding:4px 7px}
+.num .bet{min-height:46px;padding:7px 9px}
+.num .bet .t{font-size:13px}
+.num .bet .p{font-size:11px}
+.num .bet.has{padding-right:46px}
+.num .chipmark{min-width:36px;height:36px;font-size:11px;right:6px}
+.travel{font-size:12px;border:1px dashed var(--line-2);border-radius:10px;padding:6px 8px;color:var(--ink-2)}
+.travel b{color:var(--ink)}
+
+.tracker{display:flex;gap:5px;flex-wrap:wrap;margin-top:10px}
+.tracker span{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:13px;border:1px solid var(--line-2);color:var(--ink-3)}
+.tracker span.hit{background:var(--gold);color:var(--gold-ink);border-color:var(--gold)}
+
+details.rules{margin:14px 0 28px;background:rgba(0,0,0,.18);border:1px solid var(--line);border-radius:16px;padding:12px 16px;color:var(--ink-2)}
+details.rules summary{cursor:pointer;color:var(--ink);font-weight:600}
+details.rules li{margin:4px 0}
+
+/* dock */
+.dock{position:fixed;left:0;right:0;bottom:0;background:rgba(6,20,14,.94);backdrop-filter:blur(8px);border-top:1px solid var(--line);z-index:5}
+.dock .wrap{display:flex;align-items:center;gap:12px;padding-top:10px;padding-bottom:calc(10px + env(safe-area-inset-bottom))}
+.chips{display:flex;gap:7px;flex-wrap:wrap}
+.chip{width:46px;height:46px;border-radius:50%;border:3px dashed rgba(255,255,255,.8);font-weight:700;font-size:12px;cursor:pointer;color:#fff;box-shadow:0 2px 6px rgba(0,0,0,.45);transition:transform .08s}
+.chip[aria-pressed=true]{transform:translateY(-4px);outline:3px solid var(--gold);outline-offset:2px}
+.c1{background:var(--chip-1);color:#222;border-color:#8a8474}.c5{background:var(--chip-5)}.c25{background:var(--chip-25)}.c100{background:var(--chip-100)}.c500{background:var(--chip-500)}.c1000{background:var(--chip-1000);color:#221a03}
+.tools{display:flex;gap:6px;flex-wrap:wrap}
+.tool{border:1px solid var(--line-2);background:rgba(0,0,0,.3);border-radius:10px;padding:9px 12px;cursor:pointer;font-weight:600;font-size:13px}
+.tool[aria-pressed=true]{background:var(--red);border-color:var(--red)}
+.roll{margin-left:auto;border:0;border-radius:14px;padding:0 30px;height:54px;background:var(--gold);color:var(--gold-ink);font:600 22px/1 Oswald,sans-serif;letter-spacing:.1em;cursor:pointer;box-shadow:0 4px 0 #8f6f1f}
+.roll:active{transform:translateY(2px);box-shadow:0 2px 0 #8f6f1f}
+.roll:disabled{opacity:.6}
+
+.toast{position:fixed;left:50%;bottom:150px;transform:translateX(-50%) translateY(10px);background:#111;border:1px solid var(--line-2);color:#fff;padding:9px 14px;border-radius:10px;opacity:0;pointer-events:none;transition:.18s;z-index:6;max-width:calc(100% - 32px);text-align:center}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+@media (max-width:900px){
+  .nums{grid-template-columns:repeat(3,1fr)}
+  .nums.ten{grid-template-columns:repeat(2,1fr)}
+}
+@media (max-width:640px){
+  body{padding-bottom:178px}
+  header{gap:10px}
+  .bank{margin-left:0;width:100%;justify-content:space-between}
+  .stat{text-align:left}
+  .stage{grid-template-columns:1fr}
+  .die{width:54px;height:54px;padding:8px}.pip{width:10px;height:10px}
+  .puck{width:54px;height:54px}
+  .grid{grid-template-columns:repeat(2,1fr)}
+  .bet.wide{grid-column:span 2}
+  .nums,.nums.ten{grid-template-columns:repeat(2,1fr)}
+  .dock .wrap{flex-wrap:wrap;gap:8px}
+  .chip{width:42px;height:42px;font-size:11px}
+  .roll{flex:1;margin-left:0}
+  .toast{bottom:190px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Bubble <span>Craps</span></h1>
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" data-mode="craps">Craps</button>
+      <button class="tab" role="tab" data-mode="crapless">Crapless</button>
+    </div>
+    <div class="bank">
+      <div class="stat"><small>Bankroll</small><b id="bank">$0</b></div>
+      <div class="stat"><small>On table</small><b id="ontable">$0</b></div>
+      <button class="ghost" id="reset">Reset to $1,000</button>
+    </div>
+  </header>
+
+  <section class="stage">
+    <div class="dicebox">
+      <div class="dice" id="dice"></div>
+      <div id="puck"></div>
+    </div>
+    <div class="status">
+      <div class="big" id="headline">Place your bets</div>
+      <div class="sub" id="subline">Pick a chip, tap a bet, then roll.</div>
+      <div class="events" id="events"></div>
+      <div class="hist" id="hist"></div>
+    </div>
+  </section>
+
+  <main class="board" id="board"></main>
+
+  <details class="rules" id="rules"></details>
+</div>
+
+<div class="dock">
+  <div class="wrap">
+    <div class="chips" id="chips"></div>
+    <div class="tools">
+      <button class="tool" id="removeMode" aria-pressed="false">Take down</button>
+      <button class="tool" id="clear">Clear bets</button>
+    </div>
+    <button class="roll" id="roll">ROLL</button>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script src="engine.js"></script>
+<script>
+(function(){
+'use strict';
+var C = window.Craps;
+var START = 100000; // $1,000 in cents
+var CHIPS = [1,5,25,100,500,1000];
+var KEY = 'bubblecraps.v1';
+
+var S = load() || { bank: START, mode: 'craps', chip: 500, tables: { craps: C.newTable('craps'), crapless: C.newTable('crapless') }, last: {} };
+var removeMode = false, rolling = false;
+
+function load(){ try { var s = JSON.parse(localStorage.getItem(KEY)); return s && s.tables ? s : null; } catch(e){ return null; } }
+function save(){ try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e){} }
+function T(){ return S.tables[S.mode]; }
+function $(id){ return document.getElementById(id); }
+function money(c, sign){
+  var neg = c < 0, v = Math.abs(c) / 100;
+  var s = '$' + v.toLocaleString('en-US', { minimumFractionDigits: v % 1 ? 2 : 0, maximumFractionDigits: 2 });
+  return (neg ? '-' : (sign && c > 0 ? '+' : '')) + s;
+}
+function chipText(c){ var d = c/100; return d >= 1000 ? (d/1000).toFixed(d % 1000 ? 1 : 0) + 'k' : (d % 1 ? d.toFixed(2) : String(d)); }
+function ratio(r){ return r[0] + ':' + r[1]; }
+function esc(s){ return String(s).replace(/[&<>"]/g, function(ch){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]; }); }
+
+var toastTimer;
+function toast(msg){ var el = $('toast'); el.textContent = msg; el.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(function(){ el.classList.remove('show'); }, 1800); }
+
+/* ---------- dice ---------- */
+var PIPS = {1:[4],2:[0,8],3:[0,4,8],4:[0,2,6,8],5:[0,2,4,6,8],6:[0,2,3,5,6,8]};
+function dieHTML(v){ var h=''; for (var i=0;i<9;i++) h += '<i class="pip'+(PIPS[v].indexOf(i)>=0?' on':'')+'"></i>'; return '<div class="die" aria-label="'+v+'">'+h+'</div>'; }
+function drawDice(a,b){ $('dice').innerHTML = dieHTML(a) + dieHTML(b); }
+function rnd(){ var a = new Uint32Array(1); crypto.getRandomValues(a); return 1 + (a[0] % 6); }
+
+/* ---------- board ---------- */
+function btn(k, title, pay, cls){
+  var t = T(), a = C.amt(t, k);
+  var na = removeMode ? !!C.canRemove(t, k) : (!!C.canAdd(t, k) && !a);
+  var off = a && isOff(t, k);
+  return '<button class="bet'+(cls?' '+cls:'')+(a?' has':'')+(na?' na':'')+(off?' off':'')+'" data-k="'+k+'" title="'+esc(C.canAdd(t,k)||C.label(k))+'">'
+    + '<span class="t">'+esc(title)+'</span>' + (pay ? '<span class="p">'+esc(pay)+'</span>' : '')
+    + (a ? '<span class="chipmark">'+chipText(a)+'</span>' : '') + '</button>';
+}
+function isOff(t, k){
+  var p = C.parse(k);
+  if (t.point !== null) return false;
+  return p.type === 'place' || p.type === 'buy' || p.type === 'hard' || p.type === 'comeOdds';
+}
+
+function render(){
+  var t = T(), m = C.MODES[S.mode], on = t.point !== null;
+  document.querySelectorAll('.tab').forEach(function(b){ b.setAttribute('aria-selected', b.dataset.mode === S.mode); });
+  $('bank').textContent = money(S.bank);
+  $('ontable').textContent = money(C.onTable(t));
+  $('puck').innerHTML = on ? '<div class="puck on"><span>ON<em>'+t.point+'</em></span></div>' : '<div class="puck off">OFF</div>';
+
+  var h = '';
+  // Line bets
+  var po = on ? ratio(C.TRUE[t.point]) : 'true odds';
+  var dpo = on ? ratio([C.TRUE[t.point][1], C.TRUE[t.point][0]]) : 'true odds';
+  h += '<section class="sec"><h2>Line bets <small>'+(m.dont ? 'Odds up to 5x' : 'Every number but 7 is a point. Odds up to 5x')+'</small></h2><div class="grid">';
+  h += btn('pass', 'Pass Line', m.dont ? '1:1 · 7/11 win · 2,3,12 lose' : '1:1 · 7 wins on come-out');
+  h += btn('passOdds', 'Pass Odds', po);
+  if (m.dont){
+    h += btn('dp', "Don't Pass", '1:1 · 2,3 win · 12 push');
+    h += btn('dpOdds', "Don't Pass Odds", dpo);
+  }
+  h += btn('come', 'Come', m.dont ? '1:1 · 7/11 win' : '1:1 · 7 wins');
+  if (m.dont) h += btn('dc', "Don't Come", '1:1 · 2,3 win · 12 push');
+  h += btn('field', 'Field', '1:1 on 3,4,9,10,11 · 2 pays 2x · 12 pays 3x', 'wide');
+  h += '</div></section>';
+
+  // Numbers
+  h += '<section class="sec"><h2>Numbers <small>Place and Buy are off on the come-out · Buy and Lay charge 5% on wins</small></h2><div class="nums'+(m.points.length > 6 ? ' ten' : '')+'">';
+  m.points.forEach(function(n){
+    var tr = C.TRUE[n];
+    h += '<div class="num'+(t.point===n?' is-point':'')+'"><div class="num-h"><b>'+n+'</b>'+(t.point===n?'<span class="mini-puck">POINT</span>':'')+'</div>';
+    h += btn('place:'+n, 'Place', ratio(C.PLACE[n]));
+    h += btn('buy:'+n, 'Buy', ratio(tr));
+    h += btn('lay:'+n, 'Lay', ratio([tr[1], tr[0]]));
+    var cf = C.amt(t, 'comeOn:'+n), df = C.amt(t, 'dcOn:'+n);
+    if (cf){ h += '<div class="travel">Come <b>'+money(cf)+'</b></div>' + btn('comeOdds:'+n, 'Come Odds', ratio(tr)); }
+    if (df){ h += '<div class="travel">Don’t Come <b>'+money(df)+'</b></div>' + btn('dcOdds:'+n, 'DC Odds', ratio([tr[1], tr[0]])); }
+    h += '</div>';
+  });
+  h += '</div></section>';
+
+  // Hardways + props
+  h += '<section class="sec"><h2>Hardways <small>Off on the come-out · lose on 7 or the easy way</small></h2><div class="grid">';
+  [4,6,8,10].forEach(function(n){ h += btn('hard:'+n, 'Hard '+n+' ('+(n/2)+'-'+(n/2)+')', ratio(C.HARD[n])); });
+  h += '</div></section>';
+
+  h += '<section class="sec"><h2>One-roll bets</h2><div class="grid">';
+  Object.keys(C.PROPS).forEach(function(p){ h += btn('prop:'+p, C.PROPS[p].name, C.PROPS[p].pay); });
+  h += '</div></section>';
+
+  // ATS
+  h += '<section class="sec"><h2>Small · Tall · All <small>Bet after a 7, before any number rolls</small></h2><div class="grid">';
+  Object.keys(C.ATS).forEach(function(a){ var x = C.ATS[a]; h += btn('ats:'+a, x.name, x.pay+':1 · '+(a==='all'?'every number':x.nums.join(','))+' before 7'); });
+  h += '</div><div class="tracker">';
+  [2,3,4,5,6,8,9,10,11,12].forEach(function(n){ h += '<span class="'+(t.atsHits.indexOf(n)>=0?'hit':'')+'">'+n+'</span>'; });
+  h += '</div></section>';
+
+  $('board').innerHTML = h;
+
+  // history
+  $('hist').innerHTML = t.rolls.slice(0, 24).map(function(r){
+    return '<span class="'+(r.s===7?'seven':'')+(r.d1===r.d2 && r.s!==2 && r.s!==12 ? ' hardx' : '')+'" title="'+r.d1+'-'+r.d2+'">'+r.s+'</span>';
+  }).join('');
+
+  // chips + tools
+  $('chips').innerHTML = CHIPS.map(function(d){ var c = d*100; return '<button class="chip c'+d+'" data-chip="'+c+'" aria-pressed="'+(S.chip===c)+'" aria-label="$'+d+' chip">'+chipText(c)+'</button>'; }).join('');
+  $('removeMode').setAttribute('aria-pressed', removeMode);
+  $('removeMode').textContent = removeMode ? 'Taking down' : 'Take down';
+
+  // status
+  var L = S.last[S.mode];
+  if (L){
+    $('headline').innerHTML = L.head;
+    $('subline').innerHTML = L.sub;
+    $('events').innerHTML = L.ev;
+  } else {
+    $('headline').textContent = on ? 'Point is ' + t.point : 'Coming out';
+    $('subline').textContent = 'Pick a chip, tap a bet, then roll. Use Take down (or right-click) to remove chips.';
+    $('events').innerHTML = '';
+  }
+  $('rules').innerHTML = rulesHTML();
+}
+
+function rulesHTML(){
+  if (S.mode === 'craps') return '<summary>How Craps works here</summary><ul>'
+    + '<li><b>Come-out:</b> 7 or 11 wins Pass, 2, 3 or 12 loses. Don’t Pass wins on 2 or 3, pushes on 12. Any other number becomes the point.</li>'
+    + '<li><b>Point on:</b> roll the point before a 7 and Pass wins. A 7 first and Don’t Pass wins.</li>'
+    + '<li><b>Come / Don’t Come</b> work the same way, starting on the next roll, and travel to their own number.</li>'
+    + '<li><b>Odds</b> pay true odds with no house edge, up to 5x your flat bet (lay odds up to a 5x win). Come odds are off on the come-out.</li>'
+    + '<li><b>Place</b> pays 9:5 on 4/10, 7:5 on 5/9, 7:6 on 6/8. <b>Buy</b> and <b>Lay</b> pay true odds minus 5%.</li>'
+    + '<li>Place, Buy and Hardways stay up after a win and are off on the come-out. Pass and Don’t Pass flats also stay up.</li></ul>';
+  return '<summary>How Crapless Craps works here</summary><ul>'
+    + '<li><b>Come-out:</b> only 7 wins. Nothing loses. 2, 3, 11 and 12 become points along with 4-10.</li>'
+    + '<li><b>Point on:</b> roll the point before a 7 to win. No Don’t Pass or Don’t Come.</li>'
+    + '<li><b>Odds</b> on 2/12 pay 6:1, on 3/11 pay 3:1, up to 5x your flat bet.</li>'
+    + '<li><b>Place</b> 2/12 pays 11:2 and 3/11 pays 11:4, plus the usual 9:5, 7:5 and 7:6.</li>'
+    + '<li>Everything else works like the Craps tab.</li></ul>';
+}
+
+/* ---------- actions ---------- */
+function clickBet(k, forceRemove){
+  if (rolling) return;
+  var t = T();
+  if (removeMode || forceRemove){
+    var r = C.remove(t, k, S.chip);
+    if (!r.ok) return toast(r.reason);
+    S.bank += r.removed;
+  } else {
+    var c = Math.min(S.chip, S.bank);
+    if (c <= 0) return toast('Out of chips. Take bets down or reset your bankroll.');
+    var a = C.add(t, k, c);
+    if (!a.ok) return toast(a.reason);
+    S.bank -= a.added;
+    if (a.added < S.chip) toast(a.added < c ? 'Capped at max odds: ' + money(a.added) + ' added' : 'Added your last ' + money(a.added));
+  }
+  save(); render();
+}
+
+function doRoll(){
+  if (rolling) return;
+  rolling = true;
+  $('roll').disabled = true;
+  var box = document.querySelector('.dicebox');
+  box.classList.add('rolling');
+  var spin = setInterval(function(){ drawDice(rnd(), rnd()); }, 70);
+  setTimeout(function(){
+    clearInterval(spin);
+    box.classList.remove('rolling');
+    var d1 = rnd(), d2 = rnd();
+    drawDice(d1, d2);
+    var t = T(), res = C.roll(t, d1, d2);
+    S.bank += res.back;
+    S.lastDice = [d1, d2];
+    S.last[S.mode] = summarize(res);
+    rolling = false;
+    $('roll').disabled = false;
+    save(); render();
+  }, 650);
+}
+
+function summarize(res){
+  var s = res.s, head;
+  var name = {2:'Aces',3:'Ace-Deuce',11:'Yo-leven',12:'Boxcars'}[s];
+  var hard = res.hard && [4,6,8,10].indexOf(s) >= 0 ? ' the hard way' : '';
+  head = s + (name ? ' · ' + name : '') + hard;
+  var sub;
+  if (res.pointBefore === null && res.pointAfter !== null) sub = 'Point is ' + res.pointAfter + '.';
+  else if (res.pointBefore !== null && res.pointAfter === null) sub = s === 7 ? 'Seven out. New shooter coming out.' : 'Point made! Coming out again.';
+  else if (res.pointBefore === null) sub = s === 7 ? 'Winner on the come-out.' : (C.MODES[S.mode].dont ? 'Craps on the come-out.' : 'Coming out.');
+  else sub = 'Point is still ' + res.pointAfter + '.';
+  if (res.ev.length) sub += ' Roll result: <span class="net '+(res.net>0?'pos':res.net<0?'neg':'')+'">'+money(res.net, true)+'</span>';
+  var ev = res.ev.map(function(e){
+    var txt = C.label(e.k) + ' ';
+    if (e.r === 'win') txt += money(e.net, true);
+    else if (e.r === 'lose') txt += money(e.net);
+    else if (e.r === 'move') txt += '→ ' + e.to.split(':')[1];
+    else txt += e.why ? '(' + e.why + ')' : 'push';
+    return '<span class="ev '+e.r+'">'+esc(txt)+'</span>';
+  }).join('');
+  return { head: head, sub: sub, ev: ev };
+}
+
+/* ---------- wiring ---------- */
+$('board').addEventListener('click', function(e){ var b = e.target.closest('[data-k]'); if (b) clickBet(b.dataset.k); });
+$('board').addEventListener('contextmenu', function(e){ var b = e.target.closest('[data-k]'); if (b){ e.preventDefault(); clickBet(b.dataset.k, true); } });
+$('chips').addEventListener('click', function(e){ var b = e.target.closest('[data-chip]'); if (b){ S.chip = +b.dataset.chip; save(); render(); } });
+document.querySelector('.tabs').addEventListener('click', function(e){ var b = e.target.closest('[data-mode]'); if (b && !rolling){ S.mode = b.dataset.mode; removeMode = false; save(); render(); } });
+$('removeMode').addEventListener('click', function(){ removeMode = !removeMode; render(); });
+$('clear').addEventListener('click', function(){
+  if (rolling) return;
+  var back = C.removeAll(T());
+  S.bank += back; save(); render();
+  toast(back ? 'Returned ' + money(back) + '. Contract bets stay up.' : 'Nothing to take down');
+});
+$('reset').addEventListener('click', function(){
+  if (rolling) return;
+  S = { bank: START, mode: S.mode, chip: S.chip, tables: { craps: C.newTable('craps'), crapless: C.newTable('crapless') }, last: {} };
+  removeMode = false; save(); render(); drawDice(6, 6); toast('Bankroll reset to $1,000');
+});
+$('roll').addEventListener('click', doRoll);
+document.addEventListener('keydown', function(e){
+  if ((e.code === 'Space' || e.key === 'r') && !e.metaKey && !e.ctrlKey){ e.preventDefault(); doRoll(); }
+});
+
+var d = S.lastDice || [6, 6];
+drawDice(d[0], d[1]);
+render();
+})();
+</script>
+</body>
+</html>
