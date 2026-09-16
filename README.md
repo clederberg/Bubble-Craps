@@ -27,6 +27,10 @@ Odds limits: 3x on 2, 3, 4, 10, 11, 12 · 4x on 5 and 9 · 5x on 6 and 8. Don't 
 
 Place, Buy, Hardways and Come odds are off on the come-out roll. Lay and Don't odds always work.
 
+## Fair dice
+
+Each die is drawn from the browser's cryptographic random number generator (`crypto.getRandomValues`), using rejection sampling so 1 through 6 are exactly equally likely. Both dice are picked when you press Roll, before the animation, and bets, bankroll and past rolls are never used. The page shows your running roll distribution next to the expected odds.
+
 ## Controls
 
 - Pick a chip, tap a spot on the table to bet it.
