@@ -24,7 +24,7 @@ t=T('craps',{'hard:6':500,'hard:8':500},5); r=C.roll(t,3,3); eq(r.back,4500); r=
 // come bets
 t=T('craps',{come:1000},5); r=C.roll(t,5,6); eq(r.back,2000); eq(t.bets,{});
 t=T('craps',{come:1000},5); C.roll(t,4,4); eq(t.bets,{'comeOn:8':1000});
-C.add(t,'comeOdds:8',5000); r=C.roll(t,4,4); eq(r.back,1000+1000+5000+6000); eq(t.bets,{});
+eq(C.add(t,'comeOdds:8',9000).added,5000,'5x on 8'); r=C.roll(t,4,4); eq(r.back,1000+1000+5000+6000); eq(t.bets,{});
 // come odds off on come-out
 t=T('craps',{'comeOn:9':1000,'comeOdds:9':2000}); r=C.roll(t,5,2); eq(r.back,2000,'odds returned, flat lost'); eq(t.bets,{});
 t=T('craps',{'comeOn:9':1000,'comeOdds:9':2000}); r=C.roll(t,5,4); eq(r.back,2000+2000); eq(t.point,9);
@@ -32,15 +32,22 @@ t=T('craps',{'comeOn:9':1000,'comeOdds:9':2000}); r=C.roll(t,5,4); eq(r.back,200
 t=T('craps',{'comeOn:5':1000,come:1000},8); r=C.roll(t,2,3); eq(r.back,2000); eq(t.bets,{'comeOn:5':1000});
 // don't come
 t=T('craps',{dc:1000},5); C.roll(t,6,6); eq(t.bets,{dc:1000});
-C.roll(t,2,2); eq(t.bets,{'dcOn:4':1000}); C.add(t,'dcOdds:4',100000); eq(t.bets['dcOdds:4'],10000);
-r=C.roll(t,3,4); eq(r.back,1000+1000+10000+5000);
+C.roll(t,2,2); eq(t.bets,{'dcOn:4':1000}); C.add(t,'dcOdds:4',100000); eq(t.bets['dcOdds:4'],12000,'lay 4 to win 6x');
+r=C.roll(t,3,4); eq(r.back,1000+1000+12000+6000);
+// 3-4-5x caps
+for (const [mode,n,x] of [['craps',4,3],['craps',10,3],['craps',5,4],['craps',9,4],['craps',6,5],['crapless',2,3],['crapless',3,3],['crapless',11,3],['crapless',12,3],['crapless',5,4],['crapless',8,5]]) {
+  const t=T(mode,{pass:1000},n); eq(C.add(t,'passOdds',100000).added,1000*x,mode+' pass odds on '+n);
+  const u=T(mode,{['comeOn:'+n]:1000},4); eq(C.add(u,'comeOdds:'+n,100000).added,1000*x,mode+' come odds on '+n);
+  eq(C.add(t,'passOdds',100).ok,false);
+}
+for (const [n,lay] of [[4,12000],[10,12000],[5,9000],[9,9000],[6,7200],[8,7200]]) { const t=T('craps',{dp:1000},n); eq(C.add(t,'dpOdds',100000).added,lay,'dp lay on '+n); }
 // field & props
 t=T('craps',{field:1000,'prop:twelve':100,'prop:horn':400,'prop:ce':200,'prop:anyCraps':100}); r=C.roll(t,6,6);
 eq(r.back,3000+3000+2700+600+700,'field 3x, twelve 30, horn 27u, ce 3x, craps 7x');
 t=T('craps',{field:1000,'prop:any7':100}); r=C.roll(t,3,4); eq(r.back,400); eq(t.bets,{'prop:any7':100});
 t=T('craps',{'prop:ce':100,'prop:horn':400}); r=C.roll(t,5,6); eq(r.back,700+1200);
 // crapless
-t=T('crapless',{pass:1000}); C.roll(t,1,1); eq(t.point,2); C.add(t,'passOdds',1000); r=C.roll(t,1,1); eq(r.back,1000+1000+6000);
+t=T('crapless',{pass:1000}); C.roll(t,1,1); eq(t.point,2); eq(C.add(t,'passOdds',5000).added,3000); r=C.roll(t,1,1); eq(r.back,1000+3000+18000);
 t=T('crapless',{pass:1000}); r=C.roll(t,5,6); eq(t.point,11); eq(r.back,0);
 t=T('crapless',{come:1000},4); C.roll(t,6,6); eq(t.bets,{'comeOn:12':1000});
 t=T('crapless',{'place:3':400,'place:12':200,'buy:2':1000},6); r=C.roll(t,1,2); eq(r.back,1100); r=C.roll(t,1,1); eq(r.back,6000-50);

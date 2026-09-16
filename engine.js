@@ -24,7 +24,9 @@
     craps: { name: 'Craps', points: [4, 5, 6, 8, 9, 10], dont: true },
     crapless: { name: 'Crapless', points: [2, 3, 4, 5, 6, 8, 9, 10, 11, 12], dont: false }
   };
-  var MAX_ODDS = 5;
+  // 3-4-5x odds: 3x on 2,3,4,10,11,12 · 4x on 5,9 · 5x on 6,8. Lay odds may win up to 6x the flat bet.
+  var ODDS_X = { 2: 3, 3: 3, 4: 3, 10: 3, 11: 3, 12: 3, 5: 4, 9: 4, 6: 5, 8: 5 };
+  var LAY_WIN_X = 6;
   var NAMES = { pass: 'Pass Line', passOdds: 'Pass Odds', dp: "Don't Pass", dpOdds: "Don't Pass Odds", come: 'Come', dc: "Don't Come", field: 'Field' };
 
   function mul(c, r) { return Math.floor(c * r[0] / r[1]); }
@@ -78,17 +80,22 @@
   }
   function maxFor(t, k) {
     var p = parse(k);
-    if (p.type === 'passOdds') return amt(t, 'pass') * MAX_ODDS;
-    if (p.type === 'dpOdds') return mul(amt(t, 'dp') * MAX_ODDS, TRUE[t.point]);
-    if (p.type === 'comeOdds') return amt(t, 'comeOn:' + p.n) * MAX_ODDS;
-    if (p.type === 'dcOdds') return mul(amt(t, 'dcOn:' + p.n) * MAX_ODDS, TRUE[p.n]);
+    if (p.type === 'passOdds') return amt(t, 'pass') * ODDS_X[t.point];
+    if (p.type === 'dpOdds') return mul(amt(t, 'dp') * LAY_WIN_X, TRUE[t.point]);
+    if (p.type === 'comeOdds') return amt(t, 'comeOn:' + p.n) * ODDS_X[p.n];
+    if (p.type === 'dcOdds') return mul(amt(t, 'dcOn:' + p.n) * LAY_WIN_X, TRUE[p.n]);
     return Infinity;
+  }
+  function oddsLimitText(t, k) {
+    var p = parse(k), n = p.n !== null ? p.n : t.point;
+    if (p.type === 'dpOdds' || p.type === 'dcOdds') return 'Lay odds max: win ' + LAY_WIN_X + 'x your flat bet';
+    return 'Odds max on ' + n + ' is ' + ODDS_X[n] + 'x';
   }
   function add(t, k, c) {
     var r = canAdd(t, k);
     if (r) return { ok: false, reason: r };
     var a = Math.min(c, maxFor(t, k) - amt(t, k));
-    if (a <= 0) return { ok: false, reason: 'Odds are capped at ' + MAX_ODDS + 'x' };
+    if (a <= 0) return { ok: false, reason: oddsLimitText(t, k) };
     t.bets[k] = amt(t, k) + a;
     return { ok: true, added: a };
   }
@@ -270,7 +277,7 @@
   }
 
   var api = {
-    TRUE: TRUE, PLACE: PLACE, HARD: HARD, PROPS: PROPS, ATS: ATS, MODES: MODES, MAX_ODDS: MAX_ODDS,
+    TRUE: TRUE, PLACE: PLACE, HARD: HARD, PROPS: PROPS, ATS: ATS, MODES: MODES, ODDS_X: ODDS_X, LAY_WIN_X: LAY_WIN_X, maxFor: maxFor,
     parse: parse, label: label, newTable: newTable, amt: amt, canAdd: canAdd, add: add,
     canRemove: canRemove, remove: remove, removeAll: removeAll, onTable: onTable, roll: roll
   };
