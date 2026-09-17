@@ -446,6 +446,10 @@ function render() {
     bk.classList.remove('bump', 'dip'); void bk.offsetWidth; bk.classList.add(cls);
   }
   bk.dataset.v = S.bank;
+  var broke = S.bank < 100 && C.onTable(t) === 0 && !rolling;
+  $('broke').hidden = !broke;
+  document.body.classList.toggle('is-broke', broke);
+  if (broke) $('brokeReset').textContent = 'Reset to ' + money(lastAmt());
   $('ontable').textContent = money(C.onTable(t));
   var Ls = S.last[S.mode];
   if (Ls) { $('headline').textContent = Ls.head; $('subline').innerHTML = Ls.sub; $('events').innerHTML = Ls.ev; }
@@ -577,6 +581,11 @@ function doReset() {
   var c = parseDollars($('resetAmt').value);
   if (isNaN(c) || c < 100) { $('resetErr').textContent = 'Enter an amount of at least $1.'; return; }
   if (c > MAX_BANK) { $('resetErr').textContent = 'The most you can start with is ' + money(MAX_BANK) + '.'; return; }
+  applyReset(c);
+}
+function lastAmt() { return Math.min(S.startAmt || START, MAX_BANK); }
+function quickReset() { if (!rolling) applyReset(lastAmt()); }
+function applyReset(c) {
   var keepStats = S.stats;
   S = fresh(S.mode, S.chip, S.sound, S.voice);
   S.stats = keepStats;
@@ -587,6 +596,8 @@ function doReset() {
   if (!play('stack', 0, 0.8)) chipClick();
 }
 $('reset').addEventListener('click', openReset);
+$('bankBtn').addEventListener('click', openReset);
+$('brokeReset').addEventListener('click', quickReset);
 $('resetForm').addEventListener('submit', function (e) { e.preventDefault(); doReset(); });
 $('resetCancel').addEventListener('click', closeReset);
 $('resetPresets').addEventListener('click', function (e) {
@@ -605,6 +616,12 @@ $('fairLink').addEventListener('click', function (e) {
 });
 document.addEventListener('keydown', function (e) {
   if (e.metaKey || e.ctrlKey || e.altKey) return;
+  if ($('resetDlg').open || /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
+  if (e.key === 'b' || e.key === 'B') {
+    e.preventDefault();
+    if (e.shiftKey) quickReset(); else openReset();
+    return;
+  }
   if (e.code === 'Space' || e.key === 'r' || e.key === 'R') { e.preventDefault(); doRoll(); }
 });
 var rz;

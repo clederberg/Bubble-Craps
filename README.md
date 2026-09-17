@@ -51,6 +51,7 @@ Each die is drawn from the browser's cryptographic random number generator (`cry
 - After a Come or Don't Come bet travels to a number, tap the gold **ODDS** circle beside it to add odds.
 - Right-click, long-press, or switch on **Take down** to remove chips.
 - **Space** or **R** rolls.
+- **B** opens Reset bankroll, **Shift+B** resets straight to your last amount. You can also tap Bankroll on the bottom bar, and a one-tap reset appears when you run out of chips.
 
 ## Sound
 

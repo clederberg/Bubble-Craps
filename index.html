@@ -31,6 +31,12 @@ h1 span{color:var(--gold)}
 .stat{text-align:left}
 .dockstats{display:flex;gap:16px;flex:none;min-width:190px}
 .dockstats .stat b{font-size:24px}
+.bankbtn{background:none;border:0;padding:0;cursor:pointer;color:inherit;font:inherit;text-align:left}
+.bankbtn .rs{font-style:normal;color:var(--gold);font-size:12px;margin-left:2px}
+.bankbtn:hover b{color:var(--gold)}
+.broke{position:absolute;left:50%;bottom:calc(100% + 10px);transform:translateX(-50%);display:flex;align-items:center;gap:12px;background:#111;border:1px solid var(--gold);border-radius:14px;padding:8px 8px 8px 16px;box-shadow:0 10px 30px rgba(0,0,0,.6);white-space:nowrap;font-weight:600}
+.broke[hidden]{display:none}
+body.is-broke .toast{transform:translateX(-50%) translateY(-70px)}
 .stat b.bump{animation:bump .5s ease-out}
 @keyframes bump{30%{transform:scale(1.12);color:var(--win)}}
 .stat b.dip{animation:dip .5s ease-out}
@@ -222,16 +228,17 @@ details.fair p{margin:10px 0}
       <div class="call" id="call"></div>
     </div>
   </div>
-  <p class="hint">Tap a spot to bet the selected chip. Right-click, long-press, or switch on Take down to remove chips. Space or R rolls. <a href="#fair" class="fairlink" id="fairLink">Fair dice: how rolls work</a></p>
+  <p class="hint">Tap a spot to bet the selected chip. Right-click, long-press, or switch on Take down to remove chips. Space or R rolls. B resets your bankroll (Shift+B for your last amount). <a href="#fair" class="fairlink" id="fairLink">Fair dice: how rolls work</a></p>
 
   <details class="rules fair" id="fair"></details>
   <details class="rules" id="rules"></details>
 </div>
 
 <div class="dock">
+  <div class="broke" id="broke" hidden><span>You’re out of chips.</span><button type="button" class="go" id="brokeReset">Reset to $1,000</button></div>
   <div class="wrap">
     <div class="dockstats">
-      <div class="stat"><small>Bankroll</small><b id="bank">$0</b></div>
+      <button class="stat bankbtn" id="bankBtn" type="button" title="Reset bankroll (B)"><small>Bankroll <i class="rs">&#8635;</i></small><b id="bank">$0</b></button>
       <div class="stat"><small>On table</small><b id="ontable">$0</b></div>
     </div>
     <div class="chips" id="chips"></div>
@@ -260,6 +267,7 @@ details.fair p{margin:10px 0}
     </div>
     <p class="err" id="resetErr" role="alert"></p>
     <p class="note" id="resetNote"></p>
+    <p class="note">Shortcuts: <b>B</b> opens this · <b>Shift+B</b> resets to your last amount · tap Bankroll on the bottom bar.</p>
     <div class="dlg-actions">
       <button type="button" class="tool" id="resetCancel">Cancel</button>
       <button type="submit" class="go">Reset</button>
