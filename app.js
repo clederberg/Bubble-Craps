@@ -6,7 +6,7 @@ var CHIPS = [1, 5, 25, 100, 500, 1000, 5000, 25000];
 var SVGNS = 'http://www.w3.org/2000/svg';
 
 function fresh(mode, chip, sound, voice) {
-  return { bank: START, mode: mode || 'craps', chip: chip || 500, sound: sound !== false, voice: voice !== false,
+  return { bank: START, mode: mode || 'craps', chip: chip || 500, sound: sound !== false, voice: voice !== false, askMove: !S || S.askMove !== false,
     tables: { craps: C.newTable('craps'), crapless: C.newTable('crapless') }, last: {}, dice: {},
     stats: { n: 0, totals: [0,0,0,0,0,0,0,0,0,0,0,0,0], faces: [0,0,0,0,0,0,0] } };
 }
@@ -14,8 +14,9 @@ var S = load() || fresh();
 if (!S.dice) S.dice = {};
 if (S.sound === undefined) S.sound = true;
 if (S.voice === undefined) S.voice = true;
+if (S.askMove === undefined) S.askMove = true;
 if (!S.stats) S.stats = { n: 0, totals: [0,0,0,0,0,0,0,0,0,0,0,0,0], faces: [0,0,0,0,0,0,0] };
-var removeMode = false, rolling = false, L = null, hidden = {}, fresher = {};
+var removeMode = false, rolling = false, L = null, hidden = {}, fresher = {}, movePoint = null;
 
 function load() { try { var s = JSON.parse(localStorage.getItem(KEY)); return s && s.tables ? s : null; } catch (e) { return null; } }
 function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
@@ -464,12 +465,83 @@ function render() {
   $('chips').innerHTML = CHIPS.map(function (d) { var c = d * 100; return '<button class="chip c' + d + '" data-chip="' + c + '" aria-pressed="' + (S.chip === c) + '" aria-label="$' + d + ' chip">' + chipText(c) + '</button>'; }).join('');
   $('removeMode').setAttribute('aria-pressed', removeMode);
   $('removeMode').textContent = removeMode ? 'Taking down' : 'Take down';
+  document.body.classList.toggle('is-taking', removeMode);
+  $('modebar').hidden = !removeMode;
+  $('modeChip').textContent = money(S.chip);
   $('sound').textContent = !S.sound ? 'Audio: Off' : S.voice ? 'Audio: All' : 'Audio: FX';
   $('sound').title = !S.sound ? 'All sound is muted' : S.voice ? 'Sound effects and stickman voice' : 'Sound effects only, no voice';
   $('rules').innerHTML = rulesHTML();
   $('fair').innerHTML = fairHTML();
   renderTable();
 }
+
+/* ---------------- moving bets off the new point ---------------- */
+function pointBets(t, p) {
+  return ['place:' + p, 'buy:' + p].filter(function (k) { return C.amt(t, k) > 0; });
+}
+function renderMove(point) {
+  var t = T(), keys = pointBets(t, point), h = '';
+  keys.forEach(function (k) {
+    var kind = C.parse(k).type;
+    h += '<div class="movecard" data-card="' + k + '"><div class="mhead"><span>' + esc(C.label(k)) + '</span><span class="amt2">' + money(C.amt(t, k)) + '</span></div>';
+    h += '<div class="mrow"><span class="lbl">Move to</span>';
+    C.MODES[S.mode].points.forEach(function (n) {
+      if (n === point) return;
+      h += '<button type="button" data-move="' + k + '|' + kind + ':' + n + '"' + (n === S.prevPoint ? ' class="suggest"' : '') + '>' + n + '</button>';
+    });
+    h += '</div><div class="mrow"><button type="button" class="down" data-down="' + k + '">Take down</button>'
+      + '<button type="button" data-leave="' + k + '">Leave on ' + point + '</button></div></div>';
+  });
+  $('moveList').innerHTML = h;
+  $('moveSub').innerHTML = point + ' is the new point, and you have money on it. Move it to another number'
+    + (S.prevPoint && S.prevPoint !== point ? ' (' + S.prevPoint + ' just hit)' : '') + ', take it down, or leave it up.';
+  return keys.length;
+}
+function openMove(point) {
+  if (!S.askMove) return;
+  movePoint = point;
+  if (!renderMove(point)) return;
+  $('askMove').checked = true;
+  var d = $('moveDlg');
+  if (d.showModal) d.showModal(); else d.setAttribute('open', '');
+}
+function closeMove() { var d = $('moveDlg'); if (d.close) d.close(); else d.removeAttribute('open'); }
+function refreshMove() {
+  if (!renderMove(movePoint)) closeMove();
+}
+
+/* ---------------- bets sheet ---------------- */
+var BET_ORDER = ['pass', 'passOdds', 'dp', 'dpOdds', 'come', 'dc', 'field'];
+function betRows() {
+  var t = T(), keys = Object.keys(t.bets);
+  keys.sort(function (x, y) {
+    var ix = BET_ORDER.indexOf(x), iy = BET_ORDER.indexOf(y);
+    if (ix < 0) ix = 50; if (iy < 0) iy = 50;
+    return ix - iy || x.localeCompare(y);
+  });
+  return keys;
+}
+function renderBets() {
+  var t = T(), keys = betRows(), h = '';
+  keys.forEach(function (k) {
+    var lock = C.canRemove(t, k);
+    h += '<div class="betrow"><span class="nm">' + esc(C.label(k)) + '</span><span class="amt2">' + money(t.bets[k]) + '</span>'
+      + (lock ? '<span class="lock">' + esc(lock.replace(/ once a point is set| until they resolve/, '')) + '</span>'
+        : '<button type="button" data-take="' + k + '" data-amt="chip">&minus;' + money(Math.min(S.chip, t.bets[k])) + '</button>'
+          + '<button type="button" data-take="' + k + '" data-amt="all">All</button>')
+      + '</div>';
+  });
+  $('betList').innerHTML = h || '<p class="betempty">No bets on this table yet.</p>';
+  $('betsNote').textContent = keys.length ? 'Taking a bet down returns it to your bankroll. Contract bets stay until they resolve.' : '';
+  $('betsClear').disabled = !keys.length;
+}
+function openBets() {
+  if (rolling) return;
+  renderBets();
+  var d = $('betsDlg');
+  if (d.showModal) d.showModal(); else d.setAttribute('open', '');
+}
+function closeBets() { var d = $('betsDlg'); if (d.close) d.close(); else d.removeAttribute('open'); }
 
 /* ---------------- actions ---------------- */
 function clickBet(k, forceRemove) {
@@ -501,6 +573,8 @@ function oddsAnchor(k) { for (var i = 0; i < L.odds.length; i++) if (L.odds[i].k
 function doRoll() {
   if (rolling) return;
   rolling = true;
+  closeBets(); closeMove();
+  if (removeMode) { removeMode = false; render(); }
   $('roll').disabled = true;
   ac(); unlockVoice();
   var d1 = rnd(), d2 = rnd();
@@ -517,6 +591,11 @@ function doRoll() {
     showCall(c[0], c[1]);
     say(c[0], c[1]);
     $('roll').disabled = false;
+    if (res.pointBefore !== null && res.pointAfter === null) S.prevPoint = res.pointBefore;
+    if (res.pointBefore === null && res.pointAfter !== null && pointBets(t, res.pointAfter).length) {
+      setTimeout(function () { openMove(res.pointAfter); }, 700);
+    }
+    save();
   });
 }
 
@@ -541,9 +620,10 @@ host.addEventListener('pointermove', function (e) { if (press && !press.fired &&
 $('chips').addEventListener('click', function (e) { var b = e.target.closest('[data-chip]'); if (b) { S.chip = +b.dataset.chip; chipClick(); save(); render(); } });
 document.querySelector('.tabs').addEventListener('click', function (e) {
   var b = e.target.closest('[data-mode]'); if (!b || rolling) return;
-  S.mode = b.dataset.mode; removeMode = false; save(); render();
+  S.mode = b.dataset.mode; removeMode = false; closeBets(); save(); render();
 });
 $('removeMode').addEventListener('click', function () { removeMode = !removeMode; render(); });
+$('modeDone').addEventListener('click', function () { removeMode = false; render(); });
 $('clear').addEventListener('click', function () {
   if (rolling) return;
   var back = C.removeAll(T());
@@ -597,6 +677,54 @@ function applyReset(c) {
 }
 $('reset').addEventListener('click', openReset);
 $('bankBtn').addEventListener('click', openReset);
+$('betsBtn').addEventListener('click', openBets);
+$('moveClose').addEventListener('click', closeMove);
+$('moveDlg').addEventListener('click', function (e) { if (e.target === this) closeMove(); });
+$('askMove').addEventListener('change', function () { S.askMove = this.checked; save(); });
+$('moveDownAll').addEventListener('click', function () {
+  var t = T(), back = 0;
+  pointBets(t, movePoint).forEach(function (k) { var r = C.remove(t, k); if (r.ok) back += r.removed; });
+  if (back) { S.bank += back; play('handle', 0, 0.7); toast('Returned ' + money(back)); }
+  save(); render(); closeMove();
+});
+$('moveList').addEventListener('click', function (e) {
+  var t = T(), b = e.target.closest('[data-move],[data-down],[data-leave]');
+  if (!b) return;
+  if (b.dataset.leave) {
+    var card = b.closest('[data-card]');
+    if (card) card.remove();
+    if (!$('moveList').querySelector('[data-card]')) closeMove();
+    return;
+  }
+  if (b.dataset.down) {
+    var r = C.remove(t, b.dataset.down);
+    if (!r.ok) return toast(r.reason);
+    S.bank += r.removed;
+    if (!play('handle', 0, 0.6)) chipClick();
+    save(); render(); refreshMove();
+    return;
+  }
+  var parts = b.dataset.move.split('|'), m = C.moveBet(t, parts[0], parts[1]);
+  if (!m.ok) return toast(m.reason);
+  chipClick();
+  toast('Moved ' + money(m.moved) + ' to ' + C.parse(parts[1]).n + (m.left ? ' · ' + money(m.left) + ' left on ' + movePoint : ''));
+  save(); render(); refreshMove();
+});
+$('betsClose').addEventListener('click', closeBets);
+$('betsDlg').addEventListener('click', function (e) { if (e.target === this) closeBets(); });
+$('betsClear').addEventListener('click', function () {
+  var back = C.removeAll(T());
+  if (back) { play('handle', 0, 0.7); S.bank += back; save(); render(); renderBets(); toast('Returned ' + money(back)); }
+});
+$('betList').addEventListener('click', function (e) {
+  var b = e.target.closest('[data-take]'); if (!b) return;
+  var t = T(), k = b.dataset.take;
+  var r = C.remove(t, k, b.dataset.amt === 'all' ? Infinity : S.chip);
+  if (!r.ok) return toast(r.reason);
+  S.bank += r.removed;
+  if (!play('handle', 0, 0.6)) chipClick();
+  save(); render(); renderBets();
+});
 $('brokeReset').addEventListener('click', quickReset);
 $('resetForm').addEventListener('submit', function (e) { e.preventDefault(); doReset(); });
 $('resetCancel').addEventListener('click', closeReset);
@@ -616,7 +744,7 @@ $('fairLink').addEventListener('click', function (e) {
 });
 document.addEventListener('keydown', function (e) {
   if (e.metaKey || e.ctrlKey || e.altKey) return;
-  if ($('resetDlg').open || /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
+  if ($('resetDlg').open || $('betsDlg').open || $('moveDlg').open || /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
   if (e.key === 'b' || e.key === 'B') {
     e.preventDefault();
     if (e.shiftKey) quickReset(); else openReset();

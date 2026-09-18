@@ -137,6 +137,20 @@
     if (pair && !t.bets[k] && t.bets[pair]) { extra = t.bets[pair]; delete t.bets[pair]; }
     return { ok: true, removed: a + extra };
   }
+  // Move a bet to another number (same kind), respecting table limits
+  function moveBet(t, from, to) {
+    var a = amt(t, from);
+    if (!a) return { ok: false, reason: 'Nothing to move' };
+    var why = canAdd(t, to);
+    if (why) return { ok: false, reason: why };
+    var room = maxFor(t, to) - amt(t, to);
+    var m = Math.min(a, room);
+    if (m <= 0) return { ok: false, reason: limitText(t, to) };
+    t.bets[to] = amt(t, to) + m;
+    t.bets[from] = a - m;
+    if (!t.bets[from]) delete t.bets[from];
+    return { ok: true, moved: m, left: t.bets[from] || 0 };
+  }
   function removeAll(t) {
     var back = 0;
     Object.keys(t.bets).forEach(function (k) { if (!canRemove(t, k)) { back += t.bets[k]; delete t.bets[k]; } });
@@ -297,7 +311,7 @@
   var api = {
     TRUE: TRUE, PLACE: PLACE, HARD: HARD, PROPS: PROPS, ATS: ATS, MODES: MODES, ODDS_X: ODDS_X, LIMITS: LIMITS, LAY_WIN_X: LAY_WIN_X, maxFor: maxFor,
     parse: parse, label: label, newTable: newTable, amt: amt, canAdd: canAdd, add: add,
-    canRemove: canRemove, remove: remove, removeAll: removeAll, onTable: onTable, roll: roll
+    canRemove: canRemove, remove: remove, moveBet: moveBet, limitText: limitText, removeAll: removeAll, onTable: onTable, roll: roll
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.Craps = api;

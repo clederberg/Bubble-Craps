@@ -34,9 +34,14 @@ h1 span{color:var(--gold)}
 .bankbtn{background:none;border:0;padding:0;cursor:pointer;color:inherit;font:inherit;text-align:left}
 .bankbtn .rs{font-style:normal;color:var(--gold);font-size:12px;margin-left:2px}
 .bankbtn:hover b{color:var(--gold)}
-.broke{position:absolute;left:50%;bottom:calc(100% + 10px);transform:translateX(-50%);display:flex;align-items:center;gap:12px;background:#111;border:1px solid var(--gold);border-radius:14px;padding:8px 8px 8px 16px;box-shadow:0 10px 30px rgba(0,0,0,.6);white-space:nowrap;font-weight:600}
+.broke{max-width:calc(100vw - 20px);white-space:normal;text-align:left;position:absolute;left:50%;bottom:calc(100% + 10px);transform:translateX(-50%);display:flex;align-items:center;gap:12px;background:#111;border:1px solid var(--gold);border-radius:14px;padding:8px 8px 8px 16px;box-shadow:0 10px 30px rgba(0,0,0,.6);font-weight:600}
 .broke[hidden]{display:none}
-body.is-broke .toast{transform:translateX(-50%) translateY(-70px)}
+body.is-broke .toast,body.is-taking .toast{transform:translateX(-50%) translateY(-70px)}
+.modebar{border-color:var(--red);white-space:nowrap;font-size:13px;gap:10px;padding:6px 6px 6px 14px}
+.modebar .go{height:34px;padding:0 14px}
+.modebar .go{background:var(--red);color:#fff}
+body.is-taking .spot.has rect.hit{stroke:var(--red)}
+body.is-taking .chipg{filter:drop-shadow(0 0 4px rgba(217,68,58,.9))}
 .stat b.bump{animation:bump .5s ease-out}
 @keyframes bump{30%{transform:scale(1.12);color:var(--win)}}
 .stat b.dip{animation:dip .5s ease-out}
@@ -63,7 +68,7 @@ body.is-broke .toast{transform:translateX(-50%) translateY(-70px)}
 .rail{border-radius:34px;padding:14px;background:linear-gradient(180deg,var(--rail-2),var(--rail));box-shadow:0 18px 40px rgba(0,0,0,.55), inset 0 2px 0 rgba(255,255,255,.12), inset 0 -3px 0 rgba(0,0,0,.35)}
 .table-wrap{position:relative;border-radius:22px;overflow:hidden;background:radial-gradient(120% 90% at 50% 40%, #13744a 0%, var(--felt) 45%, var(--felt-2) 100%);box-shadow:inset 0 0 40px rgba(0,0,0,.45)}
 .table-wrap::before{content:"";position:absolute;inset:0;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .08 0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E");pointer-events:none}
-#svgHost svg{display:block;width:100%;height:auto;position:relative;user-select:none;-webkit-user-select:none}
+#svgHost svg{display:block;width:100%;height:auto;position:relative;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:manipulation}
 .spot{cursor:pointer}
 .spot rect.hit{fill:rgba(255,255,255,0);stroke:rgba(255,248,230,.8);stroke-width:2;transition:fill .12s}
 .spot:hover rect.hit{fill:rgba(255,255,255,.07)}
@@ -159,6 +164,26 @@ details.fair p{margin:10px 0}
 .dlg .err{color:var(--lose);font-size:13px;margin:10px 0 0;min-height:0}
 .dlg .err:empty{display:none}
 .dlg .note{color:var(--ink-3);font-size:13px;margin:12px 0 0}
+.betlist{display:grid;gap:6px;max-height:min(50vh,340px);overflow:auto;margin:4px -4px 0;padding:0 4px}
+.betrow{display:flex;align-items:center;gap:8px;background:rgba(0,0,0,.3);border:1px solid var(--line);border-radius:12px;padding:8px 10px}
+.betrow .nm{flex:1;min-width:0;font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.betrow .amt2{font:600 16px Oswald,sans-serif;color:var(--gold);flex:none}
+.betrow button{border:1px solid #3d6a54;background:rgba(0,0,0,.35);border-radius:9px;height:32px;padding:0 10px;cursor:pointer;font-size:12px;font-weight:600;flex:none}
+.betrow button:hover{border-color:var(--gold)}
+.betrow .lock{font-size:11px;color:var(--ink-3);flex:none}
+.movecard{background:rgba(0,0,0,.3);border:1px solid var(--line);border-radius:12px;padding:10px}
+.movecard+.movecard{margin-top:6px}
+.mhead{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-weight:600}
+.mhead .amt2{font:600 17px Oswald,sans-serif;color:var(--gold)}
+.mrow{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-top:8px}
+.mrow .lbl{font-size:12px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.06em;margin-right:2px}
+.mrow button{border:1px solid #3d6a54;background:rgba(0,0,0,.35);border-radius:9px;min-width:36px;height:34px;padding:0 10px;cursor:pointer;font-weight:600;font-size:13px}
+.mrow button:hover{border-color:var(--gold)}
+.mrow button.suggest{border-color:var(--gold);color:var(--gold)}
+.mrow button.down{border-color:#7a3530;color:var(--lose)}
+.ask{text-transform:none;letter-spacing:normal;display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink-2);margin-top:14px}
+.ask input{width:16px;height:16px;accent-color:var(--gold)}
+.betempty{color:var(--ink-3);font-size:14px;padding:6px 2px}
 .dlg-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
 .go{border:0;border-radius:10px;padding:0 20px;height:40px;background:var(--gold);color:var(--gold-ink);font-weight:700;cursor:pointer}
 .toast{position:fixed;left:50%;bottom:110px;transform:translateX(-50%) translateY(10px);background:#111;border:1px solid #3d6a54;color:#fff;padding:9px 14px;border-radius:10px;opacity:0;pointer-events:none;transition:.18s;z-index:30;max-width:calc(100% - 32px);text-align:center}
@@ -228,18 +253,19 @@ details.fair p{margin:10px 0}
       <div class="call" id="call"></div>
     </div>
   </div>
-  <p class="hint">Tap a spot to bet the selected chip. Right-click, long-press, or switch on Take down to remove chips. Space or R rolls. B resets your bankroll (Shift+B for your last amount). <a href="#fair" class="fairlink" id="fairLink">Fair dice: how rolls work</a></p>
+  <p class="hint">Tap a spot to bet the selected chip. Right-click, long-press, or switch on Take down to remove chips. Tap <b>On table</b> in the bottom bar to see every bet and take any of them down. Space or R rolls. B resets your bankroll (Shift+B for your last amount). <a href="#fair" class="fairlink" id="fairLink">Fair dice: how rolls work</a></p>
 
   <details class="rules fair" id="fair"></details>
   <details class="rules" id="rules"></details>
 </div>
 
 <div class="dock">
+  <div class="broke modebar" id="modebar" hidden><span>Tap a bet to take down <b id="modeChip">$25</b></span><button type="button" class="go" id="modeDone">Done</button></div>
   <div class="broke" id="broke" hidden><span>You’re out of chips.</span><button type="button" class="go" id="brokeReset">Reset to $1,000</button></div>
   <div class="wrap">
     <div class="dockstats">
       <button class="stat bankbtn" id="bankBtn" type="button" title="Reset bankroll (B)"><small>Bankroll <i class="rs">&#8635;</i></small><b id="bank">$0</b></button>
-      <div class="stat"><small>On table</small><b id="ontable">$0</b></div>
+      <button class="stat bankbtn" id="betsBtn" type="button" title="Bets on the table"><small>On table <i class="rs">&#9776;</i></small><b id="ontable">$0</b></button>
     </div>
     <div class="chips" id="chips"></div>
     <div class="tools">
@@ -251,6 +277,27 @@ details.fair p{margin:10px 0}
   </div>
 </div>
 <div class="toast" id="toast"></div>
+
+<dialog id="moveDlg" class="dlg" aria-labelledby="moveTitle">
+  <h2 id="moveTitle">New point</h2>
+  <p class="note" id="moveSub"></p>
+  <div class="betlist" id="moveList"></div>
+  <label class="ask"><input type="checkbox" id="askMove" checked> Ask me whenever a bet sits on the new point</label>
+  <div class="dlg-actions">
+    <button type="button" class="tool" id="moveDownAll">Take all down</button>
+    <button type="button" class="go" id="moveClose">Leave up</button>
+  </div>
+</dialog>
+
+<dialog id="betsDlg" class="dlg" aria-labelledby="betsTitle">
+  <h2 id="betsTitle">Bets on the table</h2>
+  <div class="betlist" id="betList"></div>
+  <p class="note" id="betsNote"></p>
+  <div class="dlg-actions">
+    <button type="button" class="tool" id="betsClear">Take all down</button>
+    <button type="button" class="go" id="betsClose">Done</button>
+  </div>
+</dialog>
 
 <dialog id="resetDlg" class="dlg" aria-labelledby="resetTitle">
   <form id="resetForm" method="dialog">

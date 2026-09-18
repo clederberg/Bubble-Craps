@@ -27,6 +27,10 @@ Odds limits: 3x on 2, 3, 4, 10, 11, 12 · 4x on 5 and 9 · 5x on 6 and 8. Don't 
 
 Place, Buy, Hardways and Come odds are off on the come-out roll.
 
+## Bets on the new point
+
+When a number you have a Place or Buy bet on becomes the point, a prompt offers to move that bet to another number (the number that just hit is highlighted), take it down, or leave it up. Uncheck the box in that prompt to stop being asked.
+
 ## Table limits
 
 | Bet | Max |
@@ -50,6 +54,7 @@ Each die is drawn from the browser's cryptographic random number generator (`cry
 - Pick a chip, tap a spot on the table to bet it.
 - After a Come or Don't Come bet travels to a number, tap the gold **ODDS** circle beside it to add odds.
 - Right-click, long-press, or switch on **Take down** to remove chips.
+- Tap **On table** in the bottom bar for a list of every bet, with buttons to take one chip or the whole bet down.
 - **Space** or **R** rolls.
 - **B** opens Reset bankroll, **Shift+B** resets straight to your last amount. You can also tap Bankroll on the bottom bar, and a one-tap reset appears when you run out of chips.
 

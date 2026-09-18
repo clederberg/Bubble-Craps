@@ -66,6 +66,12 @@ r=C.roll(t,6,6); eq(r.back,1100);
 t=T('craps',{'ats:small':100,'ats:all':100}); for (const [a,b] of [[1,1],[1,2],[2,2],[2,3],[3,3]]) r=C.roll(t,a,b);
 eq(r.back,100+3400); eq(C.canAdd(t,'ats:tall')!=='',true); eq(C.canRemove(t,'ats:all')!=='',true);
 r=C.roll(t,3,4); eq(t.bets,{}); eq(t.atsHits,[]); eq(C.canAdd(t,'ats:tall'),'');
+// moving bets between numbers
+{ const t=T('craps',{'place:9':600},4); let r=C.moveBet(t,'place:9','place:4'); eq([r.ok,r.moved],[true,600]); eq(t.bets,{'place:4':600});
+  eq(C.moveBet(t,'place:9','place:5').ok,false);
+  t.bets['place:5']=2500000; r=C.moveBet(t,'place:4','place:5'); eq(r.ok,false,'target at table max');
+  t.bets['place:5']=2499900; r=C.moveBet(t,'place:4','place:5'); eq([r.moved,r.left],[100,500],'partial move'); }
+{ const t=T('crapless',{'buy:12':1000},5); eq(C.moveBet(t,'buy:12','buy:2').moved,1000); eq(C.moveBet(t,'buy:2','buy:7').ok,false); }
 // removal
 t=T('craps',{pass:1000,passOdds:2000,'place:6':600},6); eq(C.remove(t,'pass').ok,false); eq(C.removeAll(t),2600); eq(t.bets,{pass:1000});
 t=T('craps',{pass:1000,passOdds:0}); eq(C.remove(t,'pass').removed,1000);
