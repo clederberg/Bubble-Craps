@@ -484,17 +484,24 @@ function renderMove(point) {
   keys.forEach(function (k) {
     var kind = C.parse(k).type;
     h += '<div class="movecard" data-card="' + k + '"><div class="mhead"><span>' + esc(C.label(k)) + '</span><span class="amt2">' + money(C.amt(t, k)) + '</span></div>';
-    h += '<div class="mrow"><span class="lbl">Move to</span>';
-    C.MODES[S.mode].points.forEach(function (n) {
-      if (n === point) return;
-      h += '<button type="button" data-move="' + k + '|' + kind + ':' + n + '"' + (n === S.prevPoint ? ' class="suggest"' : '') + '>' + n + '</button>';
+    ['place', 'buy'].forEach(function (as) {
+      h += '<div class="mrow"><span class="lbl">' + (as === 'place' ? 'Place on' : 'Buy on') + '</span>';
+      C.MODES[S.mode].points.forEach(function (n) {
+        if (n === point) return;
+        var best = as === 'place' ? (n === 6 || n === 8 || n === 5 || n === 9) : (n === 4 || n === 10 || n === 2 || n === 3 || n === 11 || n === 12);
+        var cls = (n === S.prevPoint && as === kind ? 'suggest' : '') + (best ? ' best' : '');
+        h += '<button type="button" data-move="' + k + '|' + as + ':' + n + '"' + (cls.trim() ? ' class="' + cls.trim() + '"' : '') + '>' + n + '</button>';
+      });
+      h += '</div>';
     });
-    h += '</div><div class="mrow"><button type="button" class="down" data-down="' + k + '">Take down</button>'
+    h += '<div class="mrow"><button type="button" class="down" data-down="' + k + '">Take down</button>'
       + '<button type="button" data-leave="' + k + '">Leave on ' + point + '</button></div></div>';
   });
   $('moveList').innerHTML = h;
-  $('moveSub').innerHTML = point + ' is the new point, and you have money on it. Move it to another number'
-    + (S.prevPoint && S.prevPoint !== point ? ' (' + S.prevPoint + ' just hit)' : '') + ', take it down, or leave it up.';
+  $('moveSub').innerHTML = point + ' is the new point, and you have money on it. Move it to another number as a Place or Buy bet'
+    + (S.prevPoint && S.prevPoint !== point ? ' (' + S.prevPoint + ' just hit)' : '') + ', take it down, or leave it up.'
+    + '<br><span class="tiny">Underlined numbers pay better for that kind of bet: Place on 5, 6, 8 and 9 \u00b7 Buy on 4 and 10'
+    + (C.MODES[S.mode].dont ? '' : ', 2, 3, 11 and 12') + '.</span>';
   return keys.length;
 }
 function openMove(point) {
@@ -707,7 +714,8 @@ $('moveList').addEventListener('click', function (e) {
   var parts = b.dataset.move.split('|'), m = C.moveBet(t, parts[0], parts[1]);
   if (!m.ok) return toast(m.reason);
   chipClick();
-  toast('Moved ' + money(m.moved) + ' to ' + C.parse(parts[1]).n + (m.left ? ' · ' + money(m.left) + ' left on ' + movePoint : ''));
+  var dest = C.parse(parts[1]);
+  toast('Moved ' + money(m.moved) + ' to ' + (dest.type === 'buy' ? 'Buy ' : 'Place ') + dest.n + (m.left ? ' · ' + money(m.left) + ' left on ' + movePoint : ''));
   save(); render(); refreshMove();
 });
 $('betsClose').addEventListener('click', closeBets);

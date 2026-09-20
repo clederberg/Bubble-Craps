@@ -29,7 +29,7 @@ Place, Buy, Hardways and Come odds are off on the come-out roll.
 
 ## Bets on the new point
 
-When a number you have a Place or Buy bet on becomes the point, a prompt offers to move that bet to another number (the number that just hit is highlighted), take it down, or leave it up. Uncheck the box in that prompt to stop being asked.
+When a number you have a Place or Buy bet on becomes the point, a prompt offers to move that bet to another number as either a Place or a Buy bet (the number that just hit is highlighted, and the numbers each bet type pays best on are underlined), take it down, or leave it up. Uncheck the box in that prompt to stop being asked.
 
 ## Table limits
 
