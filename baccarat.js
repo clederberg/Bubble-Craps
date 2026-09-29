@@ -79,6 +79,7 @@ function step() {
   if (reveal < cards) {
     reveal++;
     K.play('deal', 0, 0.75);
+    K.dealer.state('dealing');
     render();
     timer = setTimeout(step, reveal <= 4 ? 320 : 520);
     return;
@@ -94,8 +95,9 @@ function finish() {
   var said = round.result === 'T' ? 'Tie, ' + round.pt : (round.result === 'P' ? 'Player wins, ' + round.pt + ' to ' + round.bt : 'Banker wins, ' + round.bt + ' to ' + round.pt);
   if (round.dragon7 && ez()) said += '. Dragon seven, banker pushes';
   if (round.panda8) said += '. Panda eight';
-  K.say(said);
-  if (result.net > 0) K.play('stack', 0.1, 0.85);
+  K.dealer.speak(said);
+  K.dealer.state(result.net > 0 ? 'win' : result.net < 0 ? 'lose' : 'idle');
+  if (result.net > 0) { K.play('stack', 0.1, 0.85); K.winBanner(document.querySelector('.felt'), result.net); }
   else if (result.net < 0) K.play('collide', 0.1, 0.6);
   saveShoe(); render();
   setTimeout(function () {
@@ -237,12 +239,16 @@ function renderStatus() {
   $('rebet').disabled = phase !== 'bet' || !st.last;
   $('clear').disabled = phase !== 'bet' || !stake();
 }
+function mountDealer() {
+  if (document.querySelector('.dealer-stage')) return;
+  K.dealer.mount($('dealerStage'), K.load().dealerName || 'Dealer');
+}
 function renderGear() {
   $('shoeBox').innerHTML = K.shoeHTML(G.shoe, { label: '8 decks' });
   $('discardBox').innerHTML = K.discardHTML(G.shoe);
 }
 function render() {
-  renderCards(); renderSpots(); renderRoad(); renderStatus(); renderGear();
+  mountDealer(); renderCards(); renderSpots(); renderRoad(); renderStatus(); renderGear();
   K.renderChips($('chips'), K.load().chip, function (c) { K.load().chip = c; K.save(); K.play('lay', 0, 0.4); render(); });
   $('rules').innerHTML = rulesHTML();
 }

@@ -11,9 +11,27 @@
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Inter:wght@400;500;600;700&family=Oswald:wght@500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="casino.css">
 <style>
-.dealrow{display:grid;grid-template-columns:90px 1fr 92px;align-items:start;gap:10px;width:100%}
-.table-top{display:flex;flex-direction:column;align-items:center;gap:10px;position:relative;z-index:1}
-.dealer{display:flex;flex-direction:column;align-items:center;gap:4px;min-height:calc(var(--cw)*1.5)}
+.dealrow{display:grid;grid-template-columns:90px minmax(0,300px) 92px;align-items:center;justify-content:center;gap:14px;width:100%}
+.table-top{display:flex;flex-direction:column;align-items:center;gap:8px;position:relative;z-index:1}
+.studio{width:100%;display:flex;justify-content:center;margin-bottom:2px}
+.bookbtn{position:absolute;right:12px;bottom:10px;width:34px;height:34px;border-radius:50%;border:1px solid rgba(242,199,92,.7);background:rgba(0,0,0,.45);color:var(--gold);font:700 17px Inter;cursor:pointer;z-index:4}
+.bookbtn:hover{background:var(--gold);color:var(--gold-ink)}
+.actions{position:absolute;left:50%;bottom:calc(100% + 10px);transform:translateX(-50%);display:flex;gap:8px;flex-wrap:wrap;justify-content:center;background:rgba(6,18,12,.92);border:1px solid rgba(242,199,92,.45);border-radius:16px;padding:8px;box-shadow:0 12px 30px rgba(0,0,0,.6);z-index:25;max-width:calc(100vw - 20px)}
+.chart{width:100%;border-collapse:separate;border-spacing:2px;font:600 11px Inter;table-layout:fixed}
+.chart th{font:600 10px Oswald,sans-serif;letter-spacing:.06em;color:var(--ink-3);padding:2px 0}
+.chart td{text-align:center;padding:3px 0;border-radius:4px;color:#10160f}
+.chart td.rowlbl{background:rgba(0,0,0,.35);color:var(--ink-2);font-weight:700}
+.chart .H{background:#4f9c62;color:#06210f}
+.chart .S{background:#d9534f;color:#2a0705}
+.chart .D{background:#e8c25a}
+.chart .P{background:#9b7ad4;color:#150a26}
+.chart .R{background:#9aa5ad;color:#101416}
+.legend{display:flex;gap:10px;flex-wrap:wrap;font-size:11px;color:var(--ink-2);margin:10px 0 0}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:4px;vertical-align:-2px}
+.chartwrap{max-height:min(58vh,440px);overflow:auto;margin-top:6px}
+.chartwrap h3{font:600 12px Oswald,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:var(--gold);margin:12px 0 4px}
+.chartwrap h3:first-child{margin-top:0}
+.dealer{display:flex;flex-direction:column;align-items:center;gap:4px;min-height:calc(var(--cw)*1.5);margin-top:4px}
 .dealer .who{font:600 12px Oswald,sans-serif;letter-spacing:.22em;color:rgba(255,248,230,.65);text-transform:uppercase}
 .rulesline{font:600 11px Oswald,sans-serif;letter-spacing:.18em;color:rgba(255,248,230,.5);text-transform:uppercase;text-align:center}
 .spots{display:flex;gap:10px;justify-content:center;align-items:flex-start;width:100%;margin-top:6px}
@@ -41,7 +59,7 @@
 .res.win{color:var(--win)}.res.lose{color:var(--lose)}.res.push{color:var(--ink-2)}
 .felt{--cw:76px}
 @media (max-width:900px){.felt{--cw:62px}.circle.main{width:72px;height:72px}.circle.side{width:48px;height:48px}}
-@media (max-width:640px){.felt{--cw:46px;min-height:0;padding:10px 6px 8px}.dealrow{grid-template-columns:50px 1fr 62px;gap:4px}.dealer{min-height:calc(var(--cw)*1.5)}.rulesline{font-size:9px;letter-spacing:.1em}.spots{gap:4px}.spot{padding:6px 2px 8px}.circle.main{width:52px;height:52px;font-size:9px}.circle.side{width:38px;height:38px;font-size:8px}.circle .amt{font-size:11px}}
+@media (max-width:640px){.felt{--cw:46px;min-height:0;padding:10px 6px 8px}.dealrow{grid-template-columns:50px minmax(0,190px) 58px;gap:6px}.dealer{min-height:calc(var(--cw)*1.5)}.rulesline{font-size:9px;letter-spacing:.1em}.spots{gap:4px}.spot{padding:6px 2px 8px}.circle.main{width:52px;height:52px;font-size:9px}.circle.side{width:38px;height:38px;font-size:8px}.circle .amt{font-size:11px}}
 .insrow{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
 .insrow button{border:1px solid #3d6a54;background:rgba(0,0,0,.35);border-radius:10px;height:38px;padding:0 12px;cursor:pointer;font-weight:600}
 .insrow button:hover{border-color:var(--gold)}
@@ -73,12 +91,12 @@
       <div class="table-top">
         <div class="dealrow">
           <div class="gear-slot" id="discardBox"></div>
-          <div class="dealer">
-            <span class="who">Dealer</span>
-            <div class="hand" id="dealerHand"></div>
-            <div id="dealerTotal"></div>
-          </div>
+          <div class="studio" id="dealerStage"></div>
           <div class="gear-slot" id="shoeBox"></div>
+        </div>
+        <div class="dealer">
+          <div class="hand" id="dealerHand"></div>
+          <div id="dealerTotal"></div>
         </div>
         <svg class="felt-print" viewBox="0 0 1000 120" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
           <defs>
@@ -97,7 +115,7 @@
 
         <div class="spots" id="spots"></div>
       </div>
-      <div class="actions" id="actions" hidden></div>
+      <button class="bookbtn" id="bookBtn" type="button" title="Basic strategy chart" aria-label="Basic strategy chart">?</button>
       <div class="brand">CML</div>
     </div>
   </div>
@@ -106,6 +124,7 @@
 </div>
 
 <div class="dock">
+  <div class="actions" id="actions" hidden></div>
   <div class="wrap">
     <div class="chips" id="chips"></div>
     <div class="tools">
@@ -121,6 +140,20 @@
   </div>
 </div>
 <div class="toast" id="toast"></div>
+
+<dialog id="bookDlg" class="dlg" style="width:min(640px,calc(100% - 24px))">
+  <h2>The book &middot; basic strategy</h2>
+  <p class="note">Six decks, dealer stands on all 17s, double after split allowed, late surrender. This is the play that loses the least over time, not a promise about any one hand.</p>
+  <div class="chartwrap" id="chartWrap"></div>
+  <div class="legend">
+    <span><i class="H" style="background:#4f9c62"></i>Hit</span>
+    <span><i class="S" style="background:#d9534f"></i>Stand</span>
+    <span><i class="D" style="background:#e8c25a"></i>Double (hit if you can’t)</span>
+    <span><i class="P" style="background:#9b7ad4"></i>Split</span>
+    <span><i class="R" style="background:#9aa5ad"></i>Surrender (hit if you can’t)</span>
+  </div>
+  <div class="dlg-actions"><button type="button" class="go" id="bookClose">Close</button></div>
+</dialog>
 
 <dialog id="insDlg" class="dlg">
   <h2>Insurance?</h2>

@@ -14,7 +14,9 @@ Free-play craps and crapless craps on a real table layout, with 3D dice. Play mo
 - Double on any two cards, double after split, split to four hands, split aces get one card, late surrender, insurance 2:1, dealer peeks.
 - **Play up to three hands at once**, each with its own bets.
 - **Side bets:** Match the Dealer (each of your first two cards matching the dealer's up card pays 4:1, or 9:1 suited) and Buster Blackjack (dealer busts: 3-4 cards 2:1, 5 cards 4:1, 6 cards 18:1, 7 cards 50:1, 8+ cards 250:1, paid even if you busted).
-- Limits: $5,000 main bet, $1,000 each side bet. Keys: space deals, H hit, S stand, D double, P split, U surrender.
+- Cards are dealt one at a time in table order, the hole card flips after you act, and the dealer draws with a pause between cards.
+- An illustrated dealer deals from the shoe, calls the hand and reacts to the result. No play is ever suggested; the **?** button on the table opens the basic strategy chart ("the book").
+- Limits: $5,000 main bet, $1,000 each side bet. Keys: space deals, H hit, S stand, D double, P split, U surrender, ? opens the book.
 
 ## Baccarat (`baccarat.html`)
 

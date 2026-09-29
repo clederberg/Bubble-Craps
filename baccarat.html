@@ -17,8 +17,9 @@
     radial-gradient(circle at 12% 88%, rgba(242,199,92,.10) 0 22px, transparent 23px),
     radial-gradient(circle at 88% 88%, rgba(242,199,92,.10) 0 22px, transparent 23px);}
 .hanzi-bg{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);font:700 clamp(150px,34vw,360px)/1 "Noto Serif SC", Cinzel, serif;color:rgba(242,199,92,.07);pointer-events:none;user-select:none;z-index:0;letter-spacing:.1em}
-.topband{display:grid;grid-template-columns:92px 1fr 92px;align-items:center;gap:10px;position:relative;z-index:2}
-.title-cn{text-align:center}
+.studio{display:flex;justify-content:center;position:relative;z-index:2;margin-bottom:8px}
+.topband{display:grid;grid-template-columns:92px minmax(0,300px) 92px;align-items:center;justify-content:center;gap:14px;position:relative;z-index:2}
+.title-cn{text-align:center;position:relative;z-index:2;margin-top:6px}
 .title-cn .cn{font:700 26px/1 "Noto Serif SC", serif;color:#f2c75c;letter-spacing:.35em;text-shadow:0 2px 0 rgba(0,0,0,.5)}
 .title-cn .en{display:block;font:600 10px Oswald,sans-serif;letter-spacing:.4em;color:rgba(255,248,230,.5);margin-top:4px;text-transform:uppercase}
 .gear-slot{display:flex;justify-content:center}
@@ -77,7 +78,7 @@
 .tally b{font:600 14px Oswald,sans-serif}
 @media (max-width:760px){
   .felt{--cw:54px;padding:10px 8px}
-  .topband{grid-template-columns:56px 1fr 56px;gap:6px}
+  .topband{grid-template-columns:50px minmax(0,190px) 58px;gap:6px}
   .title-cn .cn{font-size:19px;letter-spacing:.25em}
   .title-cn .en{font-size:8px;letter-spacing:.24em}
   .sides{gap:8px}
@@ -125,9 +126,10 @@
       <div class="hanzi-bg">龍</div>
       <div class="topband">
         <div class="gear-slot" id="discardBox"></div>
-        <div class="title-cn"><span class="cn">百家樂</span><span class="en" id="modeLabel">Commission</span></div>
+        <div class="studio" id="dealerStage"></div>
         <div class="gear-slot" id="shoeBox"></div>
       </div>
+      <div class="title-cn"><span class="cn">百家樂</span><span class="en" id="modeLabel">Commission</span></div>
       <div class="sides">
         <div class="side player">
           <span class="who"><b>閒</b> Player</span>

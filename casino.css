@@ -148,7 +148,8 @@ details.rules li{margin:4px 0}
   .dockstats{order:3}
   .dockstats .stat b{font-size:18px}
   .go-btn{order:4;flex:1;margin-left:0;height:48px;padding:0 14px}
-  .act{height:42px;padding:0 13px;font-size:14px}
+  .act{height:38px;padding:0 10px;font-size:13px;letter-spacing:.04em}
+  .actions{gap:6px;padding:6px}
   .toast{bottom:190px}
 }
 
@@ -180,4 +181,46 @@ details.rules li{margin:4px 0}
   .chipstack{width:30px;height:24px}
   .chipstack i{width:26px;height:26px;bottom:calc(var(--n) * 3px)}
   .chipstack b{left:34px;font-size:11px}
+}
+
+/* ---------- the dealer's studio ---------- */
+.dealer-stage{position:relative;width:100%;max-width:300px;margin:0 auto;border-radius:14px 14px 10px 10px;overflow:hidden;box-shadow:0 12px 28px rgba(0,0,0,.55), inset 0 0 0 1px rgba(242,199,92,.35)}
+.dealer-svg{display:block;width:100%;height:auto;aspect-ratio:300/170}
+.dl-name{position:absolute;left:10px;bottom:8px;font:600 10px Oswald,sans-serif;letter-spacing:.2em;text-transform:uppercase;color:rgba(255,248,230,.75)}
+.dl-name::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:#ff4b3e;margin-right:6px;vertical-align:middle;animation:live 2s ease-in-out infinite}
+@keyframes live{50%{opacity:.25}}
+.dl-body{transform-origin:150px 150px;animation:breathe 4.2s ease-in-out infinite}
+@keyframes breathe{50%{transform:translateY(-1.2px) scaleY(1.012)}}
+.dl-head{transform-origin:150px 68px;animation:headsway 9s ease-in-out infinite}
+@keyframes headsway{0%,100%{transform:rotate(-1.2deg)}50%{transform:rotate(1.6deg)}}
+.dl-lid{transform-origin:center;transform:scaleY(0);animation:blink 6s ease-in-out infinite}
+.dl-lid:nth-of-type(2){animation-delay:.04s}
+@keyframes blink{0%,92%,100%{transform:scaleY(0)}94%,96%{transform:scaleY(1)}}
+.dl-arm{transition:transform .28s ease-out}
+.dl-arm-r{transform-origin:178px 96px}
+.dl-arm-l{transform-origin:122px 96px}
+.is-dealing .dl-arm-r{transform:rotate(-16deg) translate(6px,-8px)}
+.is-win .dl-arm-r{transform:rotate(-9deg) translateY(-5px)}
+.is-win .dl-arm-l{transform:rotate(9deg) translateY(-5px)}
+.is-lose .dl-arm-r{transform:rotate(4deg) translateY(3px)}
+.dl-bubble{position:absolute;left:50%;top:8px;transform:translate(-50%,-6px);background:rgba(8,20,14,.92);border:1px solid rgba(242,199,92,.6);color:var(--ink);border-radius:999px;padding:5px 12px;font:600 12px Inter;white-space:nowrap;max-width:92%;overflow:hidden;text-overflow:ellipsis;opacity:0;pointer-events:none}
+.dl-bubble.show{animation:bubble 2.6s ease-out forwards}
+@keyframes bubble{0%{opacity:0;transform:translate(-50%,2px) scale(.9)}12%{opacity:1;transform:translate(-50%,-6px) scale(1)}80%{opacity:1}100%{opacity:0;transform:translate(-50%,-14px)}}
+.dealer-off .dealer-stage{display:none}
+
+/* ---------- win banner ---------- */
+.winbanner{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);z-index:9;text-align:center;pointer-events:none;background:radial-gradient(ellipse at center, rgba(0,0,0,.82) 0%, rgba(0,0,0,.45) 55%, rgba(0,0,0,0) 75%);padding:26px 70px;animation:wbin .35s ease-out}
+.winbanner.out{animation:wbout .5s ease-in forwards}
+@keyframes wbin{from{opacity:0;transform:translate(-50%,-50%) scale(.82)}}
+@keyframes wbout{to{opacity:0;transform:translate(-50%,-62%) scale(1.04)}}
+.wb-lbl{display:block;font:600 15px Oswald,sans-serif;letter-spacing:.42em;color:#f7e3a8;text-transform:uppercase}
+.wb-amt{display:block;font:600 clamp(30px,6vw,52px)/1.1 Oswald,sans-serif;letter-spacing:.02em;background:linear-gradient(180deg,#fff6d2,#f2c75c 45%,#b9842a);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:0 2px 12px rgba(242,199,92,.35)}
+.winbanner .spark{position:absolute;width:14px;height:14px;background:radial-gradient(circle,#fff 0 20%,rgba(255,238,180,.9) 35%,transparent 70%);animation:sparkle 1.6s ease-out infinite}
+.winbanner .s1{left:8%;top:18%}.winbanner .s2{right:10%;top:26%;animation-delay:.25s}
+.winbanner .s3{left:16%;bottom:16%;animation-delay:.5s}.winbanner .s4{right:14%;bottom:22%;animation-delay:.75s}
+@keyframes sparkle{0%{transform:scale(.3) rotate(0);opacity:0}30%{transform:scale(1.2) rotate(45deg);opacity:1}100%{transform:scale(.4) rotate(120deg);opacity:0}}
+@media (max-width:760px){
+  .dealer-stage{max-width:215px}
+  .dl-bubble{font-size:11px;padding:4px 10px}
+  .winbanner{padding:18px 34px}
 }
