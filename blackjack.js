@@ -56,13 +56,14 @@ function clearBets() {
   st.bets.forEach(function (b) { b.bet = b.mtd = b.buster = 0; });
   K.play('handle', 0, 0.7); K.save(); render();
 }
-function rebet() {
+function rebet(andDeal) {
   if (phase !== 'bet') return;
   if (!st.last) return K.toast('No previous bet to repeat');
   var total = st.last.reduce(function (a, b) { return a + b.bet + b.mtd + b.buster; }, 0);
   if (total > bank()) return K.toast('Not enough in your bankroll to repeat that');
   st.bets = st.last.map(function (b) { return { bet: b.bet, mtd: b.mtd, buster: b.buster }; });
   K.play('stack', 0, 0.7); K.save(); render();
+  if (andDeal !== false) deal();
 }
 
 /* ---------- staged dealing ---------- */
@@ -236,19 +237,19 @@ function fresh(key, i) {
 function markSeen(key, n) { seen[key] = n; }
 function renderDealer() {
   var cards = G.dealer, h = '';
-  if (!cards.length) { $('dealerHand').innerHTML = ''; $('dealerTotal').innerHTML = ''; return; }
+  if (!cards.length) { K.setHTML($('dealerHand'), ''); K.setHTML($('dealerTotal'), ''); return; }
   var lim = limitFor('d', cards.length);
-  if (!lim) { $('dealerHand').innerHTML = ''; $('dealerTotal').innerHTML = ''; return; }
+  if (!lim) { K.setHTML($('dealerHand'), ''); K.setHTML($('dealerTotal'), ''); return; }
   var upTo = Math.min(lim, cards.length);
   h += K.cardHTML(cards[0], fresh('d', 0));
   if (G.dealerHole && upTo > 1) h += K.cardHTML(null, fresh('d', 1));
   else for (var i = 1; i < upTo; i++) h += K.cardHTML(cards[i], i === 1 && !G.dealerHole ? 'flip' : fresh('d', i));
   markSeen('d', upTo);
-  $('dealerHand').innerHTML = h;
+  K.setHTML($('dealerHand'), h);
   var visible = cards.slice(0, upTo);
-  $('dealerTotal').innerHTML = G.dealerHole
+  K.setHTML($('dealerTotal'), G.dealerHole
     ? '<span class="total">' + BJ.value([cards[0]]).total + ' showing</span>'
-    : totalPill(visible, { cards: visible, fromSplit: false });
+    : totalPill(visible, { cards: visible, fromSplit: false }));
 }
 function renderSpots() {
   var h = '';
@@ -291,7 +292,7 @@ function renderSpots() {
     }
     h += '</div>';
   }
-  $('spots').innerHTML = h;
+  K.setHTML($('spots'), h);
 }
 function circle(i, kind, label, amount, cls) {
   var chip = '';
@@ -311,9 +312,10 @@ function renderActions() {
     if (!o[a[0]]) return;
     h += '<button class="act" data-act="' + a[0] + '">' + a[1] + '</button>';
   });
-  el.innerHTML = h;
+  K.setHTML(el, h);
   el.hidden = false;
 }
+function setText(id, txt) { K.setText($(id), txt); }
 function renderStatus() {
   var bk = $('bank'), prev = +bk.dataset.v;
   bk.textContent = money(bank());
@@ -322,29 +324,30 @@ function renderStatus() {
     bk.classList.remove('bump', 'dip'); void bk.offsetWidth; bk.classList.add(cls);
   }
   bk.dataset.v = bank();
-  $('atstake').textContent = money(phase === 'bet' ? atStake() : liveStake());
+  setText('atstake', money(phase === 'bet' ? atStake() : liveStake()));
   var left = K.remaining(G.shoe), pct = Math.max(0, Math.min(100, (G.shoe.cut - G.shoe.pos) / G.shoe.cut * 100));
-  $('shoeCount').textContent = left + ' cards';
+  setText('shoeCount', left + ' cards');
   $('shoeBar').style.width = pct + '%';
   if (phase === 'bet') {
-    $('headline').textContent = lastResult ? 'Place your bets' : 'Place your bets';
-    $('subline').textContent = 'Six decks · 3:2 · dealer stands on all 17s · up to three hands';
+    setText('headline', 'Place your bets');
+    setText('subline', 'Six decks \u00b7 3:2 \u00b7 dealer stands on all 17s \u00b7 up to three hands');
   } else if (G.phase === 'player') {
     var sp = G.spots[G.active.spot];
-    $('headline').textContent = 'Seat ' + (sp.seat + 1) + ' to act' + (sp.hands.length > 1 ? ' · hand ' + (G.active.hand + 1) : '');
-    $('subline').textContent = 'Hit, stand, double' + (BJ.options(G).split ? ', split' : '') + (BJ.options(G).surrender ? ' or surrender' : '');
+    setText('headline', 'Seat ' + (sp.seat + 1) + ' to act' + (sp.hands.length > 1 ? ' \u00b7 hand ' + (G.active.hand + 1) : ''));
+    setText('subline', 'Hit, stand, double' + (BJ.options(G).split ? ', split' : '') + (BJ.options(G).surrender ? ' or surrender' : ''));
   } else if (lastResult) {
     var dt = BJ.total(G.dealer);
-    $('headline').textContent = BJ.dealerBlackjack(G) ? 'Dealer blackjack' : dt > 21 ? 'Dealer busts with ' + dt : 'Dealer has ' + dt;
-    $('subline').innerHTML = 'Round result: <b style="color:' + (lastResult.net > 0 ? 'var(--win)' : lastResult.net < 0 ? 'var(--lose)' : 'inherit') + '">' + money(lastResult.net, true) + '</b>';
+    setText('headline', BJ.dealerBlackjack(G) ? 'Dealer blackjack' : dt > 21 ? 'Dealer busts with ' + dt : 'Dealer has ' + dt);
+    K.setHTML($('subline'), 'Round result: <b style="color:' + (lastResult.net > 0 ? 'var(--win)' : lastResult.net < 0 ? 'var(--lose)' : 'inherit') + '">' + money(lastResult.net, true) + '</b>');
   }
-  $('events').innerHTML = lastResult ? lastResult.rows.map(function (r) {
+  K.setHTML($('events'), lastResult ? lastResult.rows.map(function (r) {
     return '<span class="ev ' + r.kind + '">' + K.esc('Seat ' + (G.spots[r.spot].seat + 1) + ': ' + r.label) + ' ' + money(r.net, true) + '</span>';
-  }).join('') : '';
+  }).join('') : '');
   var s = K.load();
-  $('sound').textContent = !s.sound ? 'Audio: Off' : s.voice ? 'Audio: All' : 'Audio: FX';
+  setText('sound', !s.sound ? 'Audio: Off' : s.voice ? 'Audio: All' : 'Audio: FX');
   $('deal').disabled = phase !== 'bet';
   $('rebet').disabled = phase !== 'bet' || !st.last;
+  $('rebet').textContent = st.last ? 'REPEAT' : 'REPEAT';
   $('clear').disabled = phase !== 'bet' || !atStake();
 }
 function liveStake() {
@@ -358,13 +361,17 @@ function mountDealer() {
   K.dealer.mount($('dealerStage'), K.load().dealerName || (K.load().dealerName = DEALER_NAMES[Math.floor(Math.random() * DEALER_NAMES.length)]));
 }
 function renderGear() {
-  $('shoeBox').innerHTML = K.shoeHTML(G.shoe, { label: '6 decks' });
-  $('discardBox').innerHTML = K.discardHTML(G.shoe);
+  K.setHTML($('shoeBox'), K.shoeHTML(G.shoe, { label: '6 decks' }));
+  K.setHTML($('discardBox'), K.discardHTML(G.shoe));
 }
 function render() {
   mountDealer(); renderDealer(); renderSpots(); renderActions(); renderStatus(); renderGear();
-  K.renderChips($('chips'), K.load().chip, function (c) { K.load().chip = c; K.save(); K.play('lay', 0, 0.4); render(); });
-  $('rules').innerHTML = rulesHTML();
+  var chipSel = K.load().chip;
+  if ($('chips').__chip !== chipSel) {
+    $('chips').__chip = chipSel;
+    K.renderChips($('chips'), chipSel, function (c) { K.load().chip = c; K.save(); K.play('lay', 0, 0.4); render(); });
+  }
+  K.setHTML($('rules'), rulesHTML());
 }
 function rulesHTML() {
   return '<summary>House rules and side bets</summary><ul>'
@@ -479,7 +486,7 @@ $('deal').addEventListener('click', deal);
 $('bookBtn').addEventListener('click', openBook);
 $('bookClose').addEventListener('click', function () { var d = $('bookDlg'); if (d.close) d.close(); else d.removeAttribute('open'); });
 $('bookDlg').addEventListener('click', function (e) { if (e.target === this) { var d = $('bookDlg'); if (d.close) d.close(); else d.removeAttribute('open'); } });
-$('rebet').addEventListener('click', rebet);
+$('rebet').addEventListener('click', function () { rebet(true); });
 $('clear').addEventListener('click', clearBets);
 $('sound').addEventListener('click', function () {
   var s = K.load();

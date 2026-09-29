@@ -140,6 +140,20 @@
   }
 
   /* ---------- small UI helpers ---------- */
+  /* Only touch the DOM when the markup actually changed. Keeps re-renders from
+     restarting animations and thrashing layout. */
+  function setHTML(el, html) {
+    if (!el || el.__h === html) return false;
+    el.__h = html; el.__t = null;
+    el.innerHTML = html;
+    return true;
+  }
+  function setText(el, txt) {
+    if (!el || el.__t === txt) return false;
+    el.__t = txt; el.__h = null;
+    el.textContent = txt;
+    return true;
+  }
   var toastTimer;
   function toast(msg) {
     var el = document.getElementById('toast');
@@ -295,7 +309,7 @@
   }
 
   var api = {
-    ac: ac, play: play, say: say, toast: toast, esc: esc, chipHTML: chipHTML, cardHTML: cardHTML, renderChips: renderChips, nav: nav,
+    ac: ac, play: play, say: say, toast: toast, esc: esc, setHTML: setHTML, setText: setText, chipHTML: chipHTML, cardHTML: cardHTML, renderChips: renderChips, nav: nav,
     shoeHTML: shoeHTML, discardHTML: discardHTML, chipStackHTML: chipStackHTML, dealerHTML: dealerHTML, dealer: dealer, winBanner: winBanner,
     KEY: KEY, START: START, CHIPS: CHIPS, RANKS: RANKS, SUITS: SUITS, SUIT_CH: SUIT_CH,
     money: money, chipText: chipText, chipColor: chipColor,

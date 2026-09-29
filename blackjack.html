@@ -14,6 +14,16 @@
 .dealrow{display:grid;grid-template-columns:90px minmax(0,300px) 92px;align-items:center;justify-content:center;gap:14px;width:100%}
 .table-top{display:flex;flex-direction:column;align-items:center;gap:8px;position:relative;z-index:1}
 .studio{width:100%;display:flex;justify-content:center;margin-bottom:2px}
+.paytable{position:absolute;top:26px;width:186px;z-index:1;border:1px solid rgba(242,199,92,.35);border-radius:12px;padding:9px 11px;background:linear-gradient(180deg,rgba(0,0,0,.22),rgba(0,0,0,.08));pointer-events:none}
+.pt-left{left:20px}
+.pt-right{right:20px}
+.paytable h5{margin:0 0 6px;font:600 11px Oswald,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:var(--gold);text-align:center}
+.paytable ul{list-style:none;margin:0;padding:0}
+.paytable li{display:flex;justify-content:space-between;gap:8px;font-size:11px;color:rgba(255,248,230,.75);padding:1.5px 0;border-bottom:1px dotted rgba(255,248,230,.12)}
+.paytable li:last-child{border-bottom:0}
+.paytable li b{color:#f7e3a8;font-weight:700;white-space:nowrap}
+.paytable p{margin:6px 0 0;font-size:9.5px;line-height:1.35;color:rgba(255,248,230,.45)}
+@media (max-width:1150px){.paytable{display:none}}
 .bookbtn{position:absolute;right:12px;bottom:10px;width:34px;height:34px;border-radius:50%;border:1px solid rgba(242,199,92,.7);background:rgba(0,0,0,.45);color:var(--gold);font:700 17px Inter;cursor:pointer;z-index:4}
 .bookbtn:hover{background:var(--gold);color:var(--gold-ink)}
 .actions{position:absolute;left:50%;bottom:calc(100% + 10px);transform:translateX(-50%);display:flex;gap:8px;flex-wrap:wrap;justify-content:center;background:rgba(6,18,12,.92);border:1px solid rgba(242,199,92,.45);border-radius:16px;padding:8px;box-shadow:0 12px 30px rgba(0,0,0,.6);z-index:25;max-width:calc(100vw - 20px)}
@@ -115,6 +125,25 @@
 
         <div class="spots" id="spots"></div>
       </div>
+      <div class="paytable pt-left">
+        <h5>Match the Dealer</h5>
+        <ul>
+          <li><span>Suited match</span><b>9 : 1</b></li>
+          <li><span>Any match</span><b>4 : 1</b></li>
+        </ul>
+        <p>Each of your first two cards that matches the dealer's up card pays. Both can pay.</p>
+      </div>
+      <div class="paytable pt-right">
+        <h5>Buster Blackjack</h5>
+        <ul>
+          <li><span>Dealer busts, 3-4 cards</span><b>2 : 1</b></li>
+          <li><span>5 cards</span><b>4 : 1</b></li>
+          <li><span>6 cards</span><b>18 : 1</b></li>
+          <li><span>7 cards</span><b>50 : 1</b></li>
+          <li><span>8 or more</span><b>250 : 1</b></li>
+        </ul>
+        <p>Pays even if your own hand busts.</p>
+      </div>
       <button class="bookbtn" id="bookBtn" type="button" title="Basic strategy chart" aria-label="Basic strategy chart">?</button>
       <div class="brand">CML</div>
     </div>
@@ -128,7 +157,6 @@
   <div class="wrap">
     <div class="chips" id="chips"></div>
     <div class="tools">
-      <button class="tool" id="rebet">Rebet</button>
       <button class="tool" id="clear">Clear</button>
       <button class="tool" id="sound">Audio: All</button>
     </div>
@@ -136,6 +164,7 @@
       <button class="stat bankbtn" id="bankBtn" type="button" title="Reset bankroll (B)"><small>Bankroll <i class="rs">&#8635;</i></small><b id="bank">$0</b></button>
       <div class="stat"><small>At stake</small><b id="atstake">$0</b></div>
     </div>
+    <button class="go-btn alt" id="rebet" title="Repeat your last bet and deal">REPEAT</button>
     <button class="go-btn" id="deal">DEAL</button>
   </div>
 </div>

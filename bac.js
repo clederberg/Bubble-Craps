@@ -12,7 +12,7 @@
     pPair: [11, 1], bPair: [11, 1], either: [5, 1], perfect: [25, 1], perfectBoth: [200, 1],
     dragon: [40, 1], panda: [25, 1]
   };
-  var LIMITS = { main: 1000000, side: 100000 };
+  var LIMITS = { main: 2500000, side: 100000 };
   var BETS = {
     player: 'Player', banker: 'Banker', tie: 'Tie', pPair: 'Player Pair', bPair: 'Banker Pair',
     either: 'Either Pair', perfect: 'Perfect Pair', dragon: 'Dragon 7', panda: 'Panda 8'

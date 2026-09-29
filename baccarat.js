@@ -2,7 +2,8 @@
 'use strict';
 var K = window.Casino, BAC = window.BAC;
 var BET_KEYS = ['player', 'banker', 'tie', 'pPair', 'bPair', 'either', 'perfect', 'dragon', 'panda'];
-var st = K.game('bac', { mode: 'commission', bets: {}, last: null, shoe: null, road: [] });
+var st = K.game('bac', { mode: 'commission', bets: {}, last: null, shoe: null, road: [], squeeze: true });
+if (st.squeeze === undefined) st.squeeze = true;
 if (!st.road) st.road = [];
 BET_KEYS.forEach(function (k) { if (typeof st.bets[k] !== 'number') st.bets[k] = 0; });
 
@@ -50,13 +51,14 @@ function clearAll() {
   BET_KEYS.forEach(function (k) { st.bets[k] = 0; });
   K.play('handle', 0, 0.7); K.save(); render();
 }
-function rebet() {
+function rebet(andDeal) {
   if (phase !== 'bet') return;
   if (!st.last) return K.toast('No previous bet to repeat');
   var total = BET_KEYS.reduce(function (a, k) { return a + (st.last[k] || 0); }, 0);
   if (total > bank()) return K.toast('Not enough in your bankroll to repeat that');
   BET_KEYS.forEach(function (k) { st.bets[k] = st.last[k] || 0; });
   K.play('stack', 0, 0.7); K.save(); render();
+  if (andDeal !== false) deal();
 }
 
 /* ---------- deal ---------- */
@@ -70,12 +72,14 @@ function deal() {
   K.addBank(-s);
   round = BAC.deal(G);
   if (round.shuffled) { K.play('shuffle', 0, 0.55); K.toast('New shoe: eight decks shuffled'); }
-  result = null; reveal = 0; seen = 0; phase = 'deal';
+  result = null; reveal = 0; seen = 0;
+  phase = st.squeeze ? 'squeeze' : 'deal';
   saveShoe(); render();
-  step();
+  if (st.squeeze) { K.play('deal', 0, 0.7); K.dealer.state('dealing'); K.dealer.speak('Cards out. Take your time.', true); }
+  else step();
 }
 function step() {
-  var cards = round.player.length + round.banker.length;
+  var cards = order().length;
   if (reveal < cards) {
     reveal++;
     K.play('deal', 0, 0.75);
@@ -108,7 +112,52 @@ function finish() {
   }, 2400);
 }
 
+/* ---------- squeeze: peel the card with the mouse ---------- */
+function revealNext() {
+  reveal++;
+  K.play('shove', 0, 0.6);
+  K.dealer.state('dealing');
+  render();
+  if (reveal >= order().length) { phase = 'deal'; finish(); }
+}
+(function squeezeHandlers() {
+  var drag = null;
+  document.addEventListener('pointerdown', function (e) {
+    var el = e.target.closest ? e.target.closest('.squeezer') : null;
+    if (!el || !squeezing()) return;
+    var r = el.getBoundingClientRect();
+    drag = { el: el, x: e.clientX, w: r.width, moved: 0, peel: 0 };
+    el.classList.add('dragging');
+    el.setPointerCapture && el.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  });
+  document.addEventListener('pointermove', function (e) {
+    if (!drag) return;
+    var dx = e.clientX - drag.x;
+    drag.moved = Math.max(drag.moved, Math.abs(dx));
+    drag.peel = Math.max(0, Math.min(1, dx / (drag.w * 1.15)));
+    drag.el.style.setProperty('--peel', drag.peel.toFixed(3));
+    if (drag.peel > 0.12 && !drag.ticked) { drag.ticked = true; K.play('shove', 0, 0.25); }
+  });
+  ['pointerup', 'pointercancel'].forEach(function (ev) {
+    document.addEventListener(ev, function () {
+      if (!drag) return;
+      var d = drag; drag = null;
+      d.el.classList.remove('dragging');
+      if (d.peel > 0.5 || d.moved < 6) revealNext();
+      else d.el.style.setProperty('--peel', '0');
+    });
+  });
+})();
+
 /* ---------- rendering ---------- */
+function order() {
+  var o = [['p', 0], ['b', 0], ['p', 1], ['b', 1]];
+  if (round.player[2]) o.push(['p', 2]);
+  if (round.banker[2]) o.push(['b', 2]);
+  return o;
+}
+function squeezing() { return st.squeeze && phase === 'squeeze'; }
 function shown(side) {
   // deal order: player, banker, player, banker, then player's third, then banker's third
   var order = [];
@@ -123,17 +172,30 @@ function shown(side) {
   return out;
 }
 function renderCards() {
-  if (!round) { $('pHand').innerHTML = $('bHand').innerHTML = ''; $('pTotal').innerHTML = $('bTotal').innerHTML = ''; return; }
-  var pIdx = shown('p'), bIdx = shown('b');
-  var shownTotal = pIdx.length + bIdx.length, cursor = 0;
-  function cls() { cursor++; return cursor > seen ? 'deal' : ''; }
-  $('pHand').innerHTML = pIdx.map(function (i) { return K.cardHTML(round.player[i], i < 2 ? (2 * i + 1 > seen ? 'deal' : '') : (shownTotal > seen ? 'deal' : '')); }).join('');
-  $('bHand').innerHTML = bIdx.map(function (i) { return K.cardHTML(round.banker[i], i < 2 ? (2 * i + 2 > seen ? 'deal' : '') : (shownTotal > seen ? 'deal' : '')); }).join('');
-  seen = shownTotal;
-  var pc = pIdx.map(function (i) { return round.player[i]; }), bc = bIdx.map(function (i) { return round.banker[i]; });
-  $('pTotal').innerHTML = pc.length ? '<span class="total">' + BAC.total(pc) + (round.pPair && pIdx.length >= 2 ? ' · pair' : '') + '</span>' : '';
-  $('bTotal').innerHTML = bc.length ? '<span class="total">' + BAC.total(bc) + (round.bPair && bIdx.length >= 2 ? ' · pair' : '') + '</span>' : '';
+  if (!round) { K.setHTML($('pHand'), ''); K.setHTML($('bHand'), ''); K.setHTML($('pTotal'), ''); K.setHTML($('bTotal'), ''); return; }
+  var ord = order(), html = { p: '', b: '' }, faceCount = { p: 0, b: 0 };
+  ord.forEach(function (o, pos) {
+    var side = o[0], idx = o[1], card = side === 'p' ? round.player[idx] : round.banker[idx];
+    if (pos < reveal) {
+      html[side] += K.cardHTML(card, pos >= seen ? 'deal' : '');
+      faceCount[side]++;
+    } else if (pos === reveal && (squeezing() || phase === 'deal')) {
+      if (squeezing()) {
+        html[side] += '<div class="squeezer" data-peel="' + pos + '" style="--peel:0">'
+          + '<div class="sq-face">' + K.cardHTML(card) + '</div>'
+          + '<div class="sq-back">' + K.cardHTML(null) + '</div>'
+          + '<span class="sq-hint">drag to peel</span></div>';
+      }
+    }
+  });
+  seen = reveal;
+  K.setHTML($('pHand'), html.p);
+  K.setHTML($('bHand'), html.b);
+  var pc = round.player.slice(0, faceCount.p), bc = round.banker.slice(0, faceCount.b);
+  K.setHTML($('pTotal'), pc.length ? '<span class="total">' + BAC.total(pc) + (round.pPair && faceCount.p >= 2 ? ' \u00b7 pair' : '') + '</span>' : '');
+  K.setHTML($('bTotal'), bc.length ? '<span class="total">' + BAC.total(bc) + (round.bPair && faceCount.b >= 2 ? ' \u00b7 pair' : '') + '</span>' : '');
 }
+
 var CN = {
   player: '\u9592', banker: '\u838a', tie: '\u548c',
   pPair: '\u9592\u5c0d', bPair: '\u838a\u5c0d', either: '\u4efb\u4e00\u5c0d', perfect: '\u5b8c\u7f8e\u5c0d',
@@ -154,16 +216,16 @@ function winners() {
 }
 function renderSpots() {
   var bankerPay = ez() ? '1 : 1 · Dragon 7 pushes' : '1 : 1 less 5%';
-  $('mainRow').innerHTML = spot('player', 'Player', '1 : 1', 'player')
+  K.setHTML($('mainRow'), spot('player', 'Player', '1 : 1', 'player')
     + spot('tie', 'Tie', '8 : 1', 'tie')
-    + spot('banker', 'Banker', bankerPay, 'banker');
-  $('sideRow').innerHTML = spot('pPair', 'P Pair', '11 : 1', 'small')
+    + spot('banker', 'Banker', bankerPay, 'banker'));
+  K.setHTML($('sideRow'), spot('pPair', 'P Pair', '11 : 1', 'small')
     + spot('either', 'Either Pair', '5 : 1', 'small')
     + spot('perfect', 'Perfect Pair', '25 : 1', 'small')
-    + spot('bPair', 'B Pair', '11 : 1', 'small');
-  $('ezRow').innerHTML = ez()
+    + spot('bPair', 'B Pair', '11 : 1', 'small'));
+  K.setHTML($('ezRow'), ez()
     ? spot('dragon', 'Dragon 7', '40 : 1', 'small dragon') + spot('panda', 'Panda 8', '25 : 1', 'small panda')
-    : '';
+    : '');
 }
 var CN_RES = { P: '\u9592', B: '\u838a', T: '\u548c' };
 /* Standard big road: a new column each time the winner changes, a dragon tail when a column is full. */
@@ -184,10 +246,10 @@ function bigRoad(list) {
 }
 function renderRoad() {
   var road = st.road, oldest = road.slice().reverse();
-  $('beads').innerHTML = oldest.slice(-42).map(function (x) {
+  K.setHTML($('beads'), oldest.slice(-42).map(function (x) {
     return '<span class="bead ' + x.r + '" title="' + x.r + '">' + CN_RES[x.r]
       + (x.p ? '<i class="p"></i>' : '') + (x.b ? '<i class="b"></i>' : '') + '</span>';
-  }).join('');
+  }).join(''));
   var br = bigRoad(oldest), from = Math.max(0, br.maxCol - 23), h = '';
   for (var c = from; c <= Math.max(br.maxCol, from + 5); c++) {
     for (var r = 0; r < 6; r++) {
@@ -195,12 +257,12 @@ function renderRoad() {
       h += '<span class="bcell' + (cell ? ' ' + cell.r : '') + '">' + (cell ? '<u></u>' + (cell.t ? '<s></s>' : '') : '') + '</span>';
     }
   }
-  $('bigRoad').innerHTML = h;
+  K.setHTML($('bigRoad'), h);
   var cnt = { P: 0, B: 0, T: 0 };
   road.forEach(function (x) { cnt[x.r]++; });
-  $('tally').innerHTML = '<span style="color:var(--blue)">\u9592 <b>' + cnt.P + '</b></span>'
+  K.setHTML($('tally'), '<span style="color:var(--blue)">\u9592 <b>' + cnt.P + '</b></span>'
     + '<span style="color:#ff9a90">\u838a <b>' + cnt.B + '</b></span>'
-    + '<span style="color:var(--win)">\u548c <b>' + cnt.T + '</b></span>';
+    + '<span style="color:var(--win)">\u548c <b>' + cnt.T + '</b></span>');
 }
 function renderStatus() {
   document.querySelectorAll('.mode').forEach(function (b) { b.setAttribute('aria-selected', b.dataset.mode === st.mode); });
@@ -211,31 +273,34 @@ function renderStatus() {
     bk.classList.remove('bump', 'dip'); void bk.offsetWidth; bk.classList.add(cls);
   }
   bk.dataset.v = bank();
-  $('atstake').textContent = money(stake());
-  $('shoeCount').textContent = K.remaining(G.shoe) + ' cards';
+  K.setText($('atstake'), money(stake()));
+  K.setText($('shoeCount'), K.remaining(G.shoe) + ' cards');
   $('shoeBar').style.width = Math.max(0, Math.min(100, (G.shoe.cut - G.shoe.pos) / G.shoe.cut * 100)) + '%';
-  $('subline').textContent = ez()
-    ? 'Eight decks · EZ: banker pays even money, a banker three-card 7 pushes'
-    : 'Eight decks · banker pays 19:20 (5% commission) · tie pays 8:1';
-  if (phase === 'bet') $('headline').textContent = 'Place your bets';
-  else if (phase === 'deal') $('headline').textContent = 'Dealing';
+  K.setText($('subline'), ez()
+    ? 'Eight decks \u00b7 EZ: banker pays even money, a banker three-card 7 pushes'
+    : 'Eight decks \u00b7 banker pays 19:20 (5% commission) \u00b7 tie pays 8:1');
+  if (phase === 'bet') K.setText($('headline'), 'Place your bets');
+  else if (phase === 'squeeze') K.setText($('headline'), 'Squeeze: drag the card to peel it');
+  else if (phase === 'deal') K.setText($('headline'), 'Dealing');
   else if (round) {
     var t = round.result === 'T' ? 'Tie on ' + round.pt : round.result === 'P' ? 'Player wins ' + round.pt + ' to ' + round.bt : 'Banker wins ' + round.bt + ' to ' + round.pt;
     if (round.dragon7 && ez()) t += ' · Dragon 7';
     if (round.panda8) t += ' · Panda 8';
-    $('headline').textContent = t;
+    K.setText($('headline'), t);
   }
   $('verdict').className = 'verdict ' + (round && phase === 'result' ? round.result : '');
-  $('verdict').innerHTML = round && phase === 'result'
+  K.setHTML($('verdict'), round && phase === 'result'
     ? '<b>' + CN_RES[round.result] + '</b>' + (round.result === 'T' ? 'TIE' : round.result === 'P' ? 'PLAYER WINS' : 'BANKER WINS') + (round.natural ? ' \u00b7 NATURAL' : '')
-    : '';
-  $('modeLabel').textContent = ez() ? 'EZ \u00b7 \u514d\u4f63' : 'Commission \u00b7 \u4f63\u91d1';
-  $('events').innerHTML = result ? result.rows.map(function (r) {
+    : '');
+  K.setText($('modeLabel'), ez() ? 'EZ \u00b7 \u514d\u4f63' : 'Commission \u00b7 \u4f63\u91d1');
+  K.setHTML($('events'), result ? result.rows.map(function (r) {
     return '<span class="ev ' + r.kind + '">' + K.esc(r.label) + ' ' + money(r.net, true) + '</span>';
-  }).join('') : '';
+  }).join('') : '');
   var s = K.load();
-  $('sound').textContent = !s.sound ? 'Audio: Off' : s.voice ? 'Audio: All' : 'Audio: FX';
+  K.setText($('sound'), !s.sound ? 'Audio: Off' : s.voice ? 'Audio: All' : 'Audio: FX');
+  K.setText($('squeeze'), st.squeeze ? 'Squeeze: On' : 'Squeeze: Off');
   $('deal').disabled = phase !== 'bet';
+  $('squeeze').disabled = phase !== 'bet';
   $('rebet').disabled = phase !== 'bet' || !st.last;
   $('clear').disabled = phase !== 'bet' || !stake();
 }
@@ -244,13 +309,17 @@ function mountDealer() {
   K.dealer.mount($('dealerStage'), K.load().dealerName || 'Dealer');
 }
 function renderGear() {
-  $('shoeBox').innerHTML = K.shoeHTML(G.shoe, { label: '8 decks' });
-  $('discardBox').innerHTML = K.discardHTML(G.shoe);
+  K.setHTML($('shoeBox'), K.shoeHTML(G.shoe, { label: '8 decks' }));
+  K.setHTML($('discardBox'), K.discardHTML(G.shoe));
 }
 function render() {
   mountDealer(); renderCards(); renderSpots(); renderRoad(); renderStatus(); renderGear();
-  K.renderChips($('chips'), K.load().chip, function (c) { K.load().chip = c; K.save(); K.play('lay', 0, 0.4); render(); });
-  $('rules').innerHTML = rulesHTML();
+  var chipSel = K.load().chip;
+  if ($('chips').__chip !== chipSel) {
+    $('chips').__chip = chipSel;
+    K.renderChips($('chips'), chipSel, function (c) { K.load().chip = c; K.save(); K.play('lay', 0, 0.4); render(); });
+  }
+  K.setHTML($('rules'), rulesHTML());
 }
 function rulesHTML() {
   return '<summary>How this table works</summary><ul>'
@@ -259,6 +328,7 @@ function rulesHTML() {
     + '<li><b>EZ game:</b> Banker pays even money with no commission, but when the banker wins with a three-card 7 the banker bet pushes. Player bets still lose that hand.</li>'
     + '<li><b>Dragon 7</b> (EZ only) pays 40 to 1 on that same banker three-card 7. <b>Panda 8</b> pays 25 to 1 when the player wins with a three-card 8.</li>'
     + '<li><b>Pairs:</b> Player Pair and Banker Pair pay 11 to 1, Either Pair pays 5 to 1, Perfect Pair (same rank and suit) pays 25 to 1, or 200 to 1 when both sides have one.</li>'
+    + '<li><b>Squeeze:</b> with squeeze on, cards come out face down. Drag across one with the mouse or your finger to peel it, or tap it to flip it over.</li>'
     + '<li>Table limits: ' + money(BAC.LIMITS.main) + ' on Player, Banker and Tie, ' + money(BAC.LIMITS.side) + ' on each side bet. Bankroll is shared with the Craps and Blackjack tables.</li></ul>';
 }
 
@@ -300,8 +370,13 @@ document.querySelector('.modes').addEventListener('click', function (e) {
   K.save(); render();
 });
 $('deal').addEventListener('click', deal);
-$('rebet').addEventListener('click', rebet);
+$('rebet').addEventListener('click', function () { rebet(true); });
 $('clear').addEventListener('click', clearAll);
+$('squeeze').addEventListener('click', function () {
+  st.squeeze = !st.squeeze;
+  K.save(); render();
+  K.toast(st.squeeze ? 'Squeeze on: drag each card to peel it' : 'Squeeze off: cards turn themselves over');
+});
 $('sound').addEventListener('click', function () {
   var s = K.load();
   if (s.sound && s.voice) s.voice = false;

@@ -14,7 +14,7 @@
   var MTD = { unsuited: 4, suited: 9 };
   // Buster Blackjack, 6 decks: pays on the number of cards in the dealer's busted hand.
   var BUSTER = { 3: 2, 4: 2, 5: 4, 6: 18, 7: 50, 8: 250 };
-  var LIMITS = { main: 500000, side: 100000, minBet: 100 };
+  var LIMITS = { main: 2500000, side: 100000, minBet: 100 };
 
   function value(cards) {
     var t = 0, aces = 0;

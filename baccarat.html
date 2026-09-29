@@ -31,6 +31,15 @@
 .side.banker .who{color:#ff9a90}
 .side .hand{justify-content:center}
 .side .hand .card+.card{margin-left:4px}
+.side .hand .squeezer+.card,.side .hand .card+.squeezer{margin-left:4px}
+.squeezer{position:relative;width:var(--cw);height:calc(var(--cw)*1.4);flex:none;perspective:800px;cursor:grab;touch-action:none}
+.squeezer.dragging{cursor:grabbing}
+.squeezer .sq-face,.squeezer .sq-back{position:absolute;inset:0}
+.squeezer .card{width:100%;height:100%}
+.squeezer .sq-back{transform-origin:left center;transform:rotateY(calc(var(--peel) * -168deg));transition:transform .22s ease-out;backface-visibility:hidden;filter:drop-shadow(-6px 0 10px rgba(0,0,0,.45))}
+.squeezer.dragging .sq-back{transition:none}
+.sq-hint{position:absolute;left:50%;bottom:-16px;transform:translateX(-50%);font:600 9px Oswald,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,248,230,.75);white-space:nowrap;animation:hintpulse 1.8s ease-in-out infinite}
+@keyframes hintpulse{50%{opacity:.4}}
 .verdict{position:relative;z-index:1;text-align:center;margin:8px 0 2px;font:600 18px Oswald,sans-serif;letter-spacing:.06em;min-height:24px}
 .verdict b{font-family:"Noto Serif SC",serif;font-size:22px;margin-right:6px}
 .verdict.P{color:var(--blue)}.verdict.B{color:#ff9a90}.verdict.T{color:var(--win)}
@@ -162,14 +171,15 @@
   <div class="wrap">
     <div class="chips" id="chips"></div>
     <div class="tools">
-      <button class="tool" id="rebet">Rebet</button>
       <button class="tool" id="clear">Clear</button>
+      <button class="tool" id="squeeze">Squeeze: On</button>
       <button class="tool" id="sound">Audio: All</button>
     </div>
     <div class="dockstats">
       <button class="stat bankbtn" id="bankBtn" type="button" title="Reset bankroll (B)"><small>Bankroll <i class="rs">&#8635;</i></small><b id="bank">$0</b></button>
       <div class="stat"><small>At stake</small><b id="atstake">$0</b></div>
     </div>
+    <button class="go-btn alt" id="rebet" title="Repeat your last bet and deal">REPEAT</button>
     <button class="go-btn" id="deal">DEAL</button>
   </div>
 </div>
