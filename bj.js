@@ -82,9 +82,25 @@
 
   function dealerBlackjack(G) { return G.dealer.length === 2 && total(G.dealer) === 21; }
 
+  /* A player holding a natural against an ace can take even money: a guaranteed 1:1
+     instead of the 3:2 that pushes when the dealer also has blackjack. */
+  function canTakeEvenMoney(G, spotIndex) {
+    var sp = G.spots[spotIndex];
+    return G.phase === 'insurance' && sp && !sp.even && !sp.ins && sp.hands.length === 1 && isBlackjack(sp.hands[0]);
+  }
+  function evenMoneySpots(G) {
+    return G.spots.map(function (sp, i) { return i; }).filter(function (i) { return canTakeEvenMoney(G, i); });
+  }
+  function takeEvenMoney(G, spotIndex) {
+    if (!canTakeEvenMoney(G, spotIndex)) return { ok: false, reason: 'Even money is only offered on a blackjack against an ace' };
+    G.spots[spotIndex].even = true;
+    return { ok: true };
+  }
+
   function insure(G, spotIndex, amount) {
     if (G.phase !== 'insurance') return { ok: false, reason: 'Insurance is closed' };
     var sp = G.spots[spotIndex];
+    if (sp.even) return { ok: false, reason: 'That hand already took even money' };
     var max = Math.floor(sp.bet / 2) - sp.ins;
     var a = Math.min(amount, max);
     if (a <= 0) return { ok: false, reason: 'Insurance is limited to half your bet' };
@@ -236,6 +252,7 @@
       sp.hands.forEach(function (h, hi) {
         var label = sp.hands.length > 1 ? 'Hand ' + (hi + 1) : 'Hand';
         var pv = value(h.cards), bj = isBlackjack(h);
+        if (sp.even && bj) { row(si, label + ' took even money', h.bet * 2, h.bet, 'win'); return; }
         if (h.surrendered) { row(si, label + ' surrendered', Math.floor(h.bet / 2), -Math.ceil(h.bet / 2), 'lose'); return; }
         if (pv.total > 21) { row(si, label + ' busts ' + pv.total, 0, -h.bet, 'lose'); return; }
         if (dealerBJ) {
@@ -258,6 +275,7 @@
     RULES: RULES, MTD: MTD, BUSTER: BUSTER, LIMITS: LIMITS,
     value: value, total: total, isBust: isBust, isBlackjack: isBlackjack, handLabel: handLabel,
     newGame: newGame, deal: deal, insure: insure, closeInsurance: closeInsurance,
+    canTakeEvenMoney: canTakeEvenMoney, evenMoneySpots: evenMoneySpots, takeEvenMoney: takeEvenMoney,
     options: options, act: act, current: current, settle: settle,
     dealerBlackjack: dealerBlackjack, dealerPlay: dealerPlay
   };

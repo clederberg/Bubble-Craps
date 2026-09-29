@@ -12,6 +12,7 @@ Free-play craps and crapless craps on a real table layout, with 3D dice. Play mo
 - **Six-deck shoe** with a cut card around three quarters in, not a continuous shuffler. The shoe carries over between hands and page reloads.
 - **Blackjack pays 3 to 2.** Dealer stands on all 17s, including soft 17 (the player-friendly version).
 - Double on any two cards, double after split, split to four hands, split aces get one card, late surrender, insurance 2:1, dealer peeks.
+- **Even money:** a blackjack against a dealer ace is offered 1:1 on the spot instead of insurance.
 - **Play up to three hands at once**, each with its own bets.
 - **Side bets:** Match the Dealer (each of your first two cards matching the dealer's up card pays 4:1, or 9:1 suited) and Buster Blackjack (dealer busts: 3-4 cards 2:1, 5 cards 4:1, 6 cards 18:1, 7 cards 50:1, 8+ cards 250:1, paid even if you busted).
 - Cards are dealt one at a time in table order, the hole card flips after you act, and the dealer draws with a pause between cards.

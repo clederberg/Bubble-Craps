@@ -73,6 +73,7 @@
 .insrow{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
 .insrow button{border:1px solid #3d6a54;background:rgba(0,0,0,.35);border-radius:10px;height:38px;padding:0 12px;cursor:pointer;font-weight:600}
 .insrow button:hover{border-color:var(--gold)}
+.insrow button.even{background:var(--gold);color:var(--gold-ink);border-color:var(--gold)}
 </style>
 </head>
 <body>
@@ -185,7 +186,7 @@
 </dialog>
 
 <dialog id="insDlg" class="dlg">
-  <h2>Insurance?</h2>
+  <h2 id="insTitle">Insurance?</h2>
   <p class="note" id="insNote">The dealer shows an ace. Insurance pays 2 to 1 and costs up to half your bet.</p>
   <div class="insrow" id="insRow"></div>
   <div class="dlg-actions">

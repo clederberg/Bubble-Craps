@@ -191,15 +191,35 @@ function finish() {
 
 /* ---------- insurance ---------- */
 function openInsurance() {
+  var evens = BJ.evenMoneySpots(G);
   var spots = G.spots.filter(function (sp) { return sp.bet > 0; });
-  var max = spots.reduce(function (a, sp) { return a + Math.floor(sp.bet / 2); }, 0);
-  $('insNote').textContent = 'The dealer shows an ace. Insurance pays 2 to 1 and costs up to half your bet ('
-    + money(max) + ' for your ' + (spots.length > 1 ? spots.length + ' hands' : 'hand') + ').';
-  $('insRow').innerHTML = '<button type="button" data-ins="half">Insure for ' + money(max) + '</button>'
-    + '<button type="button" data-ins="halfhalf">Insure for ' + money(Math.floor(max / 2)) + '</button>';
+  var plain = spots.filter(function (sp, i) { return evens.indexOf(i) < 0; });
+  var max = plain.reduce(function (a, sp) { return a + Math.floor(sp.bet / 2); }, 0);
+  var h = '';
+  if (evens.length) {
+    var evenPay = evens.reduce(function (t, i) { return t + G.spots[i].bet; }, 0);
+    h += '<button type="button" data-even="all" class="even">Take even money on ' + (evens.length > 1 ? evens.length + ' hands' : 'seat ' + (G.spots[evens[0]].seat + 1))
+      + ' &middot; ' + money(evenPay) + '</button>';
+  }
+  if (max > 0) {
+    h += '<button type="button" data-ins="half">Insure for ' + money(max) + '</button>'
+      + '<button type="button" data-ins="halfhalf">Insure for ' + money(Math.floor(max / 2)) + '</button>';
+  }
+  $('insRow').innerHTML = h;
+  $('insTitle').textContent = evens.length ? 'Even money?' : 'Insurance?';
+  $('insNote').textContent = evens.length
+    ? 'The dealer shows an ace and you have a blackjack. Even money pays 1 to 1 right now. Turn it down and you get 3 to 2, unless the dealer also has blackjack, which pushes.'
+    : 'The dealer shows an ace. Insurance pays 2 to 1 and costs up to half your bet (' + money(max) + ' for your ' + (spots.length > 1 ? spots.length + ' hands' : 'hand') + ').';
+  $('insNo').textContent = evens.length && max <= 0 ? 'No, take the 3 to 2' : 'No thanks';
+  $('insDone').style.display = (evens.length && max <= 0) ? 'none' : '';
   var d = $('insDlg');
   if (d.showModal) d.showModal(); else d.setAttribute('open', '');
-  K.say('Insurance?');
+  K.dealer.speak(evens.length ? 'Even money?' : 'Insurance?');
+}
+function takeEvenMoney() {
+  BJ.evenMoneySpots(G).forEach(function (i) { BJ.takeEvenMoney(G, i); });
+  K.play('stack', 0, 0.8);
+  closeInsurance();
 }
 function takeInsurance(fraction) {
   var spent = 0;
@@ -277,6 +297,7 @@ function renderSpots() {
       if (sp.mtd) extra.push('MTD ' + money(sp.mtd));
       if (sp.buster) extra.push('Buster ' + money(sp.buster));
       if (sp.ins) extra.push('Insurance ' + money(sp.ins));
+      if (sp.even) extra.push('Even money');
       if (extra.length) h += '<span class="seat">' + extra.join(' · ') + '</span>';
       var rows = lastResult ? lastResult.rows.filter(function (r) { return G.spots[r.spot] && G.spots[r.spot].seat === i; }) : [];
       if (rows.length) {
@@ -379,6 +400,7 @@ function rulesHTML() {
     + '<li><b>Blackjack pays 3 to 2.</b> Dealer stands on all 17s, including soft 17, which is the version that favors you.</li>'
     + '<li>Double on any two cards, double after splitting, split up to four hands. Split aces get one card each.</li>'
     + '<li>Late surrender on your first two cards. Insurance pays 2 to 1. The dealer peeks for blackjack.</li>'
+    + '<li><b>Even money:</b> hold a blackjack against an ace and you are offered 1 to 1 on the spot instead of the 3 to 2 that pushes when the dealer has blackjack too.</li>'
     + '<li><b>Match the Dealer:</b> each of your first two cards that matches the dealer’s up card pays 4 to 1, or 9 to 1 if the suit matches too. Both cards can pay.</li>'
     + '<li><b>Buster Blackjack:</b> pays when the dealer busts, by how many cards it took. 3 or 4 cards 2 to 1, 5 cards 4 to 1, 6 cards 18 to 1, 7 cards 50 to 1, 8 or more 250 to 1. It pays even if your own hand busted.</li>'
     + '<li>Table limits: ' + money(BJ.LIMITS.main) + ' on the main bet, ' + money(BJ.LIMITS.side) + ' on each side bet. Bankroll is shared with the Craps and Baccarat tables.</li></ul>';
@@ -497,7 +519,8 @@ $('sound').addEventListener('click', function () {
   if (s.sound) K.play('lay', 0, 0.6);
 });
 $('insRow').addEventListener('click', function (e) {
-  var b = e.target.closest('[data-ins]'); if (!b) return;
+  var b = e.target.closest('[data-ins],[data-even]'); if (!b) return;
+  if (b.dataset.even) return takeEvenMoney();
   takeInsurance(b.dataset.ins === 'half' ? 1 : 0.5);
 });
 $('insNo').addEventListener('click', closeInsurance);

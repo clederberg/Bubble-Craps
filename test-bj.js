@@ -79,6 +79,33 @@ BJ.closeInsurance(G);
 eq(G.phase, 'payout');
 eq(money(BJ.settle(G)), [['Insurance', 1500, 1000], ['Hand loses to blackjack', 0, -1000]]);
 
+// even money: blackjack against an ace pays 1:1 up front
+G = stacked(['AS', 'AH', 'KD', 'KC']);
+BJ.deal(G, [{ bet: 1000 }]);
+eq(G.phase, 'insurance');
+eq(BJ.evenMoneySpots(G), [0]);
+eq(BJ.takeEvenMoney(G, 0).ok, true);
+eq(BJ.insure(G, 0, 500).ok, false, 'no insurance after even money');
+BJ.closeInsurance(G);
+eq(BJ.dealerBlackjack(G), true);
+eq(money(BJ.settle(G)), [['Hand took even money', 2000, 1000]], 'even money pays 1:1 even when the dealer has blackjack');
+// even money when the dealer does not have blackjack: still 1:1, not 3:2
+G = stacked(['AS', 'AH', 'KD', '5C']);
+BJ.deal(G, [{ bet: 1000 }]);
+BJ.takeEvenMoney(G, 0);
+BJ.closeInsurance(G);
+eq(money(BJ.settle(G)), [['Hand took even money', 2000, 1000]]);
+// declining even money keeps the 3:2 when the dealer misses
+G = stacked(['AS', 'AH', 'KD', '5C']);
+BJ.deal(G, [{ bet: 1000 }]);
+BJ.closeInsurance(G);
+eq(money(BJ.settle(G)), [['Hand blackjack', 2500, 1500]]);
+// even money is not offered without a blackjack
+G = stacked(['9S', 'AH', 'KD', '5C']);
+BJ.deal(G, [{ bet: 1000 }]);
+eq(BJ.evenMoneySpots(G), []);
+eq(BJ.takeEvenMoney(G, 0).ok, false);
+
 // player blackjack pushes dealer blackjack
 G = stacked(['AS', 'AH', 'KD', 'KC']);
 BJ.deal(G, [{ bet: 1000 }]); BJ.closeInsurance(G);
