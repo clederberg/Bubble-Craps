@@ -24,6 +24,10 @@ button{font:inherit;color:inherit}
 header{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:12px 0 10px}
 h1{font:600 24px/1 Oswald,sans-serif;letter-spacing:.05em;margin:0;text-transform:uppercase}
 h1 span{color:var(--gold)}
+.games{display:flex;background:rgba(0,0,0,.35);border:1px solid var(--line);border-radius:999px;padding:3px}
+.games a{padding:7px 14px;border-radius:999px;text-decoration:none;color:var(--ink-2);font-weight:600;font-size:14px}
+.games a.on{background:#fff;color:#0b2318}
+.games a:hover{color:var(--ink)}
 .tabs{display:flex;background:rgba(0,0,0,.35);border:1px solid var(--line);border-radius:999px;padding:3px}
 .tab{border:0;background:none;padding:7px 16px;border-radius:999px;cursor:pointer;font-weight:600;color:var(--ink-2)}
 .tab[aria-selected=true]{background:var(--gold);color:var(--gold-ink)}
@@ -203,6 +207,7 @@ details.fair p{margin:10px 0}
   .toast{bottom:150px}
 }
 @media (max-width:760px){
+  .games a{padding:6px 10px;font-size:13px}
   body{padding-bottom:170px}
   header{gap:10px}
   .bank{margin-left:auto}
@@ -229,8 +234,13 @@ details.fair p{margin:10px 0}
 <div class="wrap">
   <header>
     <h1>Bubble <span>Craps</span></h1>
+    <nav class="games">
+      <a href="index.html" class="on" aria-current="page">Craps</a>
+      <a href="blackjack.html">Blackjack</a>
+      <a href="baccarat.html">Baccarat</a>
+    </nav>
     <div class="tabs" role="tablist">
-      <button class="tab" role="tab" data-mode="craps">Craps</button>
+      <button class="tab" role="tab" data-mode="craps">Regular</button>
       <button class="tab" role="tab" data-mode="crapless">Crapless</button>
     </div>
     <div class="bank">

@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bubble Craps · Blackjack</title>
+<meta name="description" content="Free-play six-deck blackjack: 3:2, dealer stands on all 17s, up to three hands, Match the Dealer and Buster side bets.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect x='8' y='8' width='84' height='84' rx='18' fill='%23f4efe3'/><text x='50' y='70' font-size='58' font-family='Georgia' text-anchor='middle' fill='%23111'>A</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Inter:wght@400;500;600;700&family=Oswald:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="casino.css">
+<style>
+.table-top{display:flex;flex-direction:column;align-items:center;gap:10px;position:relative;z-index:1}
+.dealer{display:flex;flex-direction:column;align-items:center;gap:4px;min-height:calc(var(--cw)*1.6)}
+.dealer .who{font:600 12px Oswald,sans-serif;letter-spacing:.22em;color:rgba(255,248,230,.65);text-transform:uppercase}
+.rulesline{font:600 11px Oswald,sans-serif;letter-spacing:.18em;color:rgba(255,248,230,.5);text-transform:uppercase;text-align:center}
+.spots{display:flex;gap:10px;justify-content:center;align-items:flex-start;width:100%;margin-top:6px}
+.spot{flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 6px 10px;border-radius:16px;border:1px dashed rgba(255,248,230,.25)}
+.spot.active{border-color:var(--gold);border-style:solid;background:rgba(242,199,92,.08)}
+.spot.empty{opacity:.75}
+.spot .seat{font:600 11px Oswald,sans-serif;letter-spacing:.16em;color:rgba(255,248,230,.55);text-transform:uppercase}
+.hands{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;min-height:calc(var(--cw)*1.45)}
+.hbox{display:flex;flex-direction:column;align-items:center;gap:3px;padding:4px;border-radius:12px}
+.hbox.on{background:rgba(242,199,92,.16);box-shadow:0 0 0 2px var(--gold)}
+.hbox .bet{font:600 12px Inter;color:var(--gold)}
+.circles{display:flex;gap:6px;align-items:center;justify-content:center;flex-wrap:wrap}
+.circle{position:relative;border-radius:50%;border:2px dashed rgba(255,248,230,.6);background:rgba(0,0,0,.25);cursor:pointer;display:grid;place-items:center;text-align:center;padding:0;line-height:1.05}
+.circle.main{width:72px;height:72px;font:600 11px Oswald,sans-serif;letter-spacing:.1em;text-transform:uppercase}
+.circle.side{width:50px;height:50px;font:600 9px Oswald,sans-serif;letter-spacing:.06em;text-transform:uppercase}
+.circle:hover{border-color:var(--gold)}
+.circle.has{border-style:solid;border-color:var(--gold)}
+.circle .amt{display:block;font:700 13px Inter;color:#fff;margin-top:2px}
+.circle.side .amt{font-size:11px}
+.res{font-size:12px;text-align:center;min-height:16px;font-weight:600}
+.res.win{color:var(--win)}.res.lose{color:var(--lose)}.res.push{color:var(--ink-2)}
+.felt{--cw:76px}
+@media (max-width:900px){.felt{--cw:62px}.circle.main{width:62px;height:62px}.circle.side{width:44px;height:44px}}
+@media (max-width:640px){.felt{--cw:46px;min-height:0;padding:10px 6px 8px}.dealer{min-height:calc(var(--cw)*1.5)}.rulesline{font-size:9px;letter-spacing:.1em}.spots{gap:4px}.spot{padding:6px 2px 8px}.circle.main{width:52px;height:52px;font-size:9px}.circle.side{width:38px;height:38px;font-size:8px}.circle .amt{font-size:11px}}
+.insrow{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+.insrow button{border:1px solid #3d6a54;background:rgba(0,0,0,.35);border-radius:10px;height:38px;padding:0 12px;cursor:pointer;font-weight:600}
+.insrow button:hover{border-color:var(--gold)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Bubble <span>Blackjack</span></h1>
+    <div id="nav"></div>
+    <button class="ghost" id="reset">Reset bankroll</button>
+  </header>
+
+  <div class="statusbar">
+    <div class="status">
+      <div class="big" id="headline">Place your bets</div>
+      <div class="sub" id="subline">Six decks · 3:2 · dealer stands on all 17s</div>
+      <div class="events" id="events"></div>
+    </div>
+    <div class="shoe">
+      <small>Shoe</small>
+      <b id="shoeCount">312 cards</b>
+      <div class="shoebar"><i id="shoeBar" style="width:100%"></i></div>
+    </div>
+  </div>
+
+  <div class="rail">
+    <div class="felt" id="felt">
+      <div class="arc"></div>
+      <div class="table-top">
+        <div class="dealer">
+          <span class="who">Dealer</span>
+          <div class="hand" id="dealerHand"></div>
+          <div id="dealerTotal"></div>
+        </div>
+        <div class="rulesline">Blackjack pays 3 to 2 &nbsp;·&nbsp; Dealer stands on all 17s</div>
+        <div class="spots" id="spots"></div>
+      </div>
+      <div class="actions" id="actions" hidden></div>
+      <div class="brand">CML</div>
+    </div>
+  </div>
+  <p class="hint">Tap a circle to bet, then Deal. Keys: space deals, H hit, S stand, D double, P split, U surrender. B resets your bankroll.</p>
+  <details class="rules" id="rules"></details>
+</div>
+
+<div class="dock">
+  <div class="wrap">
+    <div class="chips" id="chips"></div>
+    <div class="tools">
+      <button class="tool" id="rebet">Rebet</button>
+      <button class="tool" id="clear">Clear</button>
+      <button class="tool" id="sound">Audio: All</button>
+    </div>
+    <div class="dockstats">
+      <button class="stat bankbtn" id="bankBtn" type="button" title="Reset bankroll (B)"><small>Bankroll <i class="rs">&#8635;</i></small><b id="bank">$0</b></button>
+      <div class="stat"><small>At stake</small><b id="atstake">$0</b></div>
+    </div>
+    <button class="go-btn" id="deal">DEAL</button>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<dialog id="insDlg" class="dlg">
+  <h2>Insurance?</h2>
+  <p class="note" id="insNote">The dealer shows an ace. Insurance pays 2 to 1 and costs up to half your bet.</p>
+  <div class="insrow" id="insRow"></div>
+  <div class="dlg-actions">
+    <button type="button" class="tool" id="insNo">No thanks</button>
+    <button type="button" class="go" id="insDone">Deal on</button>
+  </div>
+</dialog>
+
+<dialog id="resetDlg" class="dlg">
+  <form id="resetForm" method="dialog">
+    <h2>Reset bankroll</h2>
+    <label for="resetAmt">Starting amount</label>
+    <div class="amt"><span>$</span><input id="resetAmt" inputmode="decimal" autocomplete="off" value="1,000"></div>
+    <div class="presets" id="resetPresets">
+      <button type="button" data-amt="100">$100</button>
+      <button type="button" data-amt="500">$500</button>
+      <button type="button" data-amt="1000">$1,000</button>
+      <button type="button" data-amt="5000">$5,000</button>
+      <button type="button" data-amt="10000">$10,000</button>
+      <button type="button" data-amt="100000">$100,000</button>
+    </div>
+    <p class="err" id="resetErr"></p>
+    <p class="note">Shared with the Craps and Baccarat tables.</p>
+    <div class="dlg-actions">
+      <button type="button" class="tool" id="resetCancel">Cancel</button>
+      <button type="submit" class="go">Reset</button>
+    </div>
+  </form>
+</dialog>
+
+<script src="sounds.js"></script>
+<script src="common.js"></script>
+<script src="bj.js"></script>
+<script src="blackjack.js"></script>
+</body>
+</html>

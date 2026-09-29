@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bubble Craps · Baccarat</title>
+<meta name="description" content="Free-play baccarat: commission and EZ (Dragon 7 pushes), with pair and EZ side bets.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect x='8' y='8' width='84' height='84' rx='18' fill='%23f4efe3'/><text x='50' y='72' font-size='62' font-family='Georgia' text-anchor='middle' fill='%23c0261f'>9</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Inter:wght@400;500;600;700&family=Oswald:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="casino.css">
+<style>
+.felt{--cw:72px;min-height:0;padding:16px 14px 14px}
+.sides{display:flex;gap:16px;justify-content:center;align-items:flex-start;position:relative;z-index:1;min-height:calc(var(--cw)*1.7)}
+.side{flex:1 1 0;display:flex;flex-direction:column;align-items:center;gap:6px;max-width:340px}
+.side .who{font:600 13px Oswald,sans-serif;letter-spacing:.24em;text-transform:uppercase}
+.side.player .who{color:var(--blue)}
+.side.banker .who{color:#ff9a90}
+.side .hand{justify-content:center}
+.side .hand .card+.card{margin-left:4px}
+.pip{width:10px;height:10px;border-radius:50%;background:var(--gold);display:inline-block;margin-left:6px}
+.verdict{position:relative;z-index:1;text-align:center;margin:10px 0 4px;font:600 18px Oswald,sans-serif;letter-spacing:.06em;min-height:24px}
+.verdict.P{color:var(--blue)}.verdict.B{color:#ff9a90}.verdict.T{color:var(--win)}
+.layout{position:relative;z-index:1;display:grid;gap:8px;margin-top:8px}
+.mainrow{display:grid;grid-template-columns:1fr .7fr 1fr;gap:8px}
+.siderow{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.ezrow{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.spot{position:relative;border:2px solid rgba(255,248,230,.55);border-radius:14px;background:rgba(0,0,0,.18);cursor:pointer;padding:10px 8px;text-align:center;color:var(--ink);min-height:62px}
+.spot:hover{background:rgba(255,255,255,.08);border-color:var(--gold)}
+.spot.has{border-color:var(--gold);background:rgba(242,199,92,.12)}
+.spot .nm{display:block;font:600 14px Oswald,sans-serif;letter-spacing:.12em;text-transform:uppercase}
+.spot .pay{display:block;font-size:11px;color:var(--ink-3);margin-top:2px}
+.spot .amt{display:inline-block;margin-top:4px;font:700 13px Inter;color:var(--gold)}
+.spot.player{border-color:rgba(90,162,224,.85)}
+.spot.banker{border-color:rgba(255,154,144,.85)}
+.spot.tie{border-color:rgba(107,227,148,.8)}
+.spot.small .nm{font-size:12px;letter-spacing:.06em}
+.spot.small{min-height:54px;padding:8px 4px}
+.spot.win{animation:winflash 1.2s ease-out 2}
+@keyframes winflash{0%{background:rgba(242,199,92,.5)}100%{background:rgba(242,199,92,.12)}}
+.road{display:flex;gap:10px;align-items:flex-start;margin-top:12px;position:relative;z-index:1}
+.beads{display:grid;grid-auto-flow:column;grid-template-rows:repeat(6,16px);gap:3px;overflow-x:auto;padding-bottom:4px;flex:1}
+.bead{width:16px;height:16px;border-radius:50%;display:grid;place-items:center;font:700 9px Inter;color:#fff;position:relative}
+.bead.P{background:#2f6fb0}.bead.B{background:#b3322a}.bead.T{background:#2f8a4f}
+.bead i{position:absolute;width:5px;height:5px;border-radius:50%;background:#fff}
+.bead i.p{left:-1px;top:-1px}.bead i.b{right:-1px;bottom:-1px}
+.tally{display:flex;gap:8px;font-size:12px;color:var(--ink-2);flex:none;flex-direction:column}
+.tally b{font:600 14px Oswald,sans-serif}
+@media (max-width:760px){
+  .felt{--cw:54px;padding:10px 8px}
+  .sides{gap:8px}
+  .mainrow{grid-template-columns:1fr .8fr 1fr;gap:6px}
+  .siderow{grid-template-columns:repeat(2,1fr);gap:6px}
+  .spot{min-height:54px;padding:8px 4px}
+  .spot .nm{font-size:12px;letter-spacing:.06em}
+  .spot .pay{font-size:10px}
+  .beads{grid-template-rows:repeat(4,14px)}
+  .bead{width:14px;height:14px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Bubble <span>Baccarat</span></h1>
+    <div id="nav"></div>
+    <div class="modes" role="tablist">
+      <button class="mode" role="tab" data-mode="commission">Commission</button>
+      <button class="mode" role="tab" data-mode="ez">EZ</button>
+    </div>
+    <button class="ghost" id="reset">Reset bankroll</button>
+  </header>
+
+  <div class="statusbar">
+    <div class="status">
+      <div class="big" id="headline">Place your bets</div>
+      <div class="sub" id="subline">Eight decks · banker pays 19:20 · tie pays 8:1</div>
+      <div class="events" id="events"></div>
+    </div>
+    <div class="shoe">
+      <small>Shoe</small>
+      <b id="shoeCount">416 cards</b>
+      <div class="shoebar"><i id="shoeBar" style="width:100%"></i></div>
+    </div>
+  </div>
+
+  <div class="rail">
+    <div class="felt">
+      <div class="sides">
+        <div class="side player">
+          <span class="who">Player</span>
+          <div class="hand" id="pHand"></div>
+          <div id="pTotal"></div>
+        </div>
+        <div class="side banker">
+          <span class="who">Banker</span>
+          <div class="hand" id="bHand"></div>
+          <div id="bTotal"></div>
+        </div>
+      </div>
+      <div class="verdict" id="verdict"></div>
+      <div class="layout">
+        <div class="mainrow" id="mainRow"></div>
+        <div class="siderow" id="sideRow"></div>
+        <div class="ezrow" id="ezRow"></div>
+      </div>
+      <div class="road">
+        <div class="tally" id="tally"></div>
+        <div class="beads" id="beads"></div>
+      </div>
+    </div>
+  </div>
+  <p class="hint">Tap a spot to bet, then Deal. Space deals, B resets your bankroll. Right-click a spot to clear it.</p>
+  <details class="rules" id="rules"></details>
+</div>
+
+<div class="dock">
+  <div class="wrap">
+    <div class="chips" id="chips"></div>
+    <div class="tools">
+      <button class="tool" id="rebet">Rebet</button>
+      <button class="tool" id="clear">Clear</button>
+      <button class="tool" id="sound">Audio: All</button>
+    </div>
+    <div class="dockstats">
+      <button class="stat bankbtn" id="bankBtn" type="button" title="Reset bankroll (B)"><small>Bankroll <i class="rs">&#8635;</i></small><b id="bank">$0</b></button>
+      <div class="stat"><small>At stake</small><b id="atstake">$0</b></div>
+    </div>
+    <button class="go-btn" id="deal">DEAL</button>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<dialog id="resetDlg" class="dlg">
+  <form id="resetForm" method="dialog">
+    <h2>Reset bankroll</h2>
+    <label for="resetAmt">Starting amount</label>
+    <div class="amt"><span>$</span><input id="resetAmt" inputmode="decimal" autocomplete="off" value="1,000"></div>
+    <div class="presets" id="resetPresets">
+      <button type="button" data-amt="100">$100</button>
+      <button type="button" data-amt="500">$500</button>
+      <button type="button" data-amt="1000">$1,000</button>
+      <button type="button" data-amt="5000">$5,000</button>
+      <button type="button" data-amt="10000">$10,000</button>
+      <button type="button" data-amt="100000">$100,000</button>
+    </div>
+    <p class="err" id="resetErr"></p>
+    <p class="note">Shared with the Craps and Blackjack tables.</p>
+    <div class="dlg-actions">
+      <button type="button" class="tool" id="resetCancel">Cancel</button>
+      <button type="submit" class="go">Reset</button>
+    </div>
+  </form>
+</dialog>
+
+<script src="sounds.js"></script>
+<script src="common.js"></script>
+<script src="bac.js"></script>
+<script src="baccarat.js"></script>
+</body>
+</html>

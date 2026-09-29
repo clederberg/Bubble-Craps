@@ -1,10 +1,30 @@
 # Bubble Craps
 
+Three free-play tables that share one bankroll: **Craps**, **Blackjack** and **Baccarat**. Use the links at the top of any page to switch games.
+
+
 Free-play craps and crapless craps on a real table layout, with 3D dice. Play money only, no accounts, no purchases. Your bankroll is saved in your browser, and **Reset bankroll** starts you over with any amount up to $100,000.
 
 **Play:** open `index.html`, or turn on GitHub Pages (below).
 
-## Tables
+## Blackjack (`blackjack.html`)
+
+- **Six-deck shoe** with a cut card around three quarters in, not a continuous shuffler. The shoe carries over between hands and page reloads.
+- **Blackjack pays 3 to 2.** Dealer stands on all 17s, including soft 17 (the player-friendly version).
+- Double on any two cards, double after split, split to four hands, split aces get one card, late surrender, insurance 2:1, dealer peeks.
+- **Play up to three hands at once**, each with its own bets.
+- **Side bets:** Match the Dealer (each of your first two cards matching the dealer's up card pays 4:1, or 9:1 suited) and Buster Blackjack (dealer busts: 3-4 cards 2:1, 5 cards 4:1, 6 cards 18:1, 7 cards 50:1, 8+ cards 250:1, paid even if you busted).
+- Limits: $5,000 main bet, $1,000 each side bet. Keys: space deals, H hit, S stand, D double, P split, U surrender.
+
+## Baccarat (`baccarat.html`)
+
+- **Eight-deck shoe**, standard drawing tableau, with a bead road and running tally.
+- **Commission game:** Banker pays 1:1 less 5%, Player 1:1, Tie 8:1.
+- **EZ game:** Banker pays even money with no commission, but a banker three-card 7 pushes the banker bet.
+- **Side bets:** Player Pair and Banker Pair 11:1, Either Pair 5:1, Perfect Pair 25:1 (200:1 if both sides), and in EZ, Dragon 7 40:1 and Panda 8 25:1.
+- Limits: $10,000 on Player, Banker and Tie, $1,000 each side bet.
+
+## Craps tables
 
 - **Craps:** Pass / Don't Pass, Come / Don't Come, 3-4-5x odds, Place, Buy, Lay, Field, Hardways, one-roll props, Horn, C & E, All Small / All Tall / Make 'Em All.
 - **Crapless:** every number except 7 is a point (2, 3, 11 and 12 included). No Don't bets.
@@ -64,7 +84,13 @@ Dice and chip sounds are real recordings from Kenney's [Casino Audio](https://ke
 
 ## Files
 
-- `index.html` page and styles
+- `index.html` craps page and styles
+- `blackjack.html` / `blackjack.js` blackjack table
+- `baccarat.html` / `baccarat.js` baccarat table
+- `casino.css` shared styling for the card games
+- `common.js` shared bankroll, chips, sounds, cards and shoes
+- `bj.js` / `bac.js` blackjack and baccarat rules
+- `test-bj.js` / `test-bac.js` their tests (`node test-bj.js`)
 - `app.js` table drawing, dice, animations, sound
 - `layout.js` table layouts (desktop and phone)
 - `sounds.js` recorded dice and chip sounds
