@@ -8,7 +8,7 @@ BET_KEYS.forEach(function (k) { if (typeof st.bets[k] !== 'number') st.bets[k] =
 
 var G = BAC.newGame();
 restoreShoe();
-var phase = 'bet', round = null, result = null, reveal = 0, timer = null;
+var phase = 'bet', round = null, result = null, reveal = 0, timer = null, seen = 0;
 
 function $(id) { return document.getElementById(id); }
 function money(c, s) { return K.money(c, s); }
@@ -70,7 +70,7 @@ function deal() {
   K.addBank(-s);
   round = BAC.deal(G);
   if (round.shuffled) { K.play('shuffle', 0, 0.55); K.toast('New shoe: eight decks shuffled'); }
-  result = null; reveal = 0; phase = 'deal';
+  result = null; reveal = 0; seen = 0; phase = 'deal';
   saveShoe(); render();
   step();
 }
@@ -123,15 +123,24 @@ function shown(side) {
 function renderCards() {
   if (!round) { $('pHand').innerHTML = $('bHand').innerHTML = ''; $('pTotal').innerHTML = $('bTotal').innerHTML = ''; return; }
   var pIdx = shown('p'), bIdx = shown('b');
-  $('pHand').innerHTML = pIdx.map(function (i) { return K.cardHTML(round.player[i]); }).join('');
-  $('bHand').innerHTML = bIdx.map(function (i) { return K.cardHTML(round.banker[i]); }).join('');
+  var shownTotal = pIdx.length + bIdx.length, cursor = 0;
+  function cls() { cursor++; return cursor > seen ? 'deal' : ''; }
+  $('pHand').innerHTML = pIdx.map(function (i) { return K.cardHTML(round.player[i], i < 2 ? (2 * i + 1 > seen ? 'deal' : '') : (shownTotal > seen ? 'deal' : '')); }).join('');
+  $('bHand').innerHTML = bIdx.map(function (i) { return K.cardHTML(round.banker[i], i < 2 ? (2 * i + 2 > seen ? 'deal' : '') : (shownTotal > seen ? 'deal' : '')); }).join('');
+  seen = shownTotal;
   var pc = pIdx.map(function (i) { return round.player[i]; }), bc = bIdx.map(function (i) { return round.banker[i]; });
   $('pTotal').innerHTML = pc.length ? '<span class="total">' + BAC.total(pc) + (round.pPair && pIdx.length >= 2 ? ' · pair' : '') + '</span>' : '';
   $('bTotal').innerHTML = bc.length ? '<span class="total">' + BAC.total(bc) + (round.bPair && bIdx.length >= 2 ? ' · pair' : '') + '</span>' : '';
 }
+var CN = {
+  player: '\u9592', banker: '\u838a', tie: '\u548c',
+  pPair: '\u9592\u5c0d', bPair: '\u838a\u5c0d', either: '\u4efb\u4e00\u5c0d', perfect: '\u5b8c\u7f8e\u5c0d',
+  dragon: '\u9f8d\u4e03', panda: '\u718a\u8c93\u516b'
+};
 function spot(k, name, pay, cls) {
   var amt = st.bets[k];
   return '<button class="spot ' + (cls || '') + (amt ? ' has' : '') + (result && winners()[k] ? ' win' : '') + '" data-bet="' + k + '">'
+    + '<span class="cn">' + CN[k] + '</span>'
     + '<span class="nm">' + name + '</span><span class="pay">' + pay + '</span>'
     + (amt ? '<span class="amt">' + money(amt) + '</span>' : '') + '</button>';
 }
@@ -151,20 +160,45 @@ function renderSpots() {
     + spot('perfect', 'Perfect Pair', '25 : 1', 'small')
     + spot('bPair', 'B Pair', '11 : 1', 'small');
   $('ezRow').innerHTML = ez()
-    ? spot('dragon', 'Dragon 7', '40 : 1', 'small') + spot('panda', 'Panda 8', '25 : 1', 'small')
+    ? spot('dragon', 'Dragon 7', '40 : 1', 'small dragon') + spot('panda', 'Panda 8', '25 : 1', 'small panda')
     : '';
 }
+var CN_RES = { P: '\u9592', B: '\u838a', T: '\u548c' };
+/* Standard big road: a new column each time the winner changes, a dragon tail when a column is full. */
+function bigRoad(list) {
+  var cells = {}, col = 0, row = 0, last = null, maxCol = 0;
+  function taken(c, r) { return !!cells[c + ',' + r]; }
+  list.forEach(function (x) {
+    if (x.r === 'T') { if (last !== null && cells[col + ',' + row]) cells[col + ',' + row].t++; return; }
+    if (last === null) { col = 0; row = 0; }
+    else if (x.r !== last) { col = maxCol + 1; row = 0; }
+    else if (row < 5 && !taken(col, row + 1)) { row = row + 1; }
+    else { var c = col + 1; while (taken(c, row)) c++; col = c; }
+    cells[col + ',' + row] = { r: x.r, t: 0, p: x.p, b: x.b };
+    if (col > maxCol) maxCol = col;
+    last = x.r;
+  });
+  return { cells: cells, maxCol: maxCol };
+}
 function renderRoad() {
-  var road = st.road;
-  $('beads').innerHTML = road.slice(0, 42).reverse().map(function (x) {
-    return '<span class="bead ' + x.r + '" title="' + x.r + '">' + x.r
+  var road = st.road, oldest = road.slice().reverse();
+  $('beads').innerHTML = oldest.slice(-42).map(function (x) {
+    return '<span class="bead ' + x.r + '" title="' + x.r + '">' + CN_RES[x.r]
       + (x.p ? '<i class="p"></i>' : '') + (x.b ? '<i class="b"></i>' : '') + '</span>';
   }).join('');
-  var c = { P: 0, B: 0, T: 0 };
-  road.forEach(function (x) { c[x.r]++; });
-  $('tally').innerHTML = '<span style="color:var(--blue)">P <b>' + c.P + '</b></span>'
-    + '<span style="color:#ff9a90">B <b>' + c.B + '</b></span>'
-    + '<span style="color:var(--win)">T <b>' + c.T + '</b></span>';
+  var br = bigRoad(oldest), from = Math.max(0, br.maxCol - 23), h = '';
+  for (var c = from; c <= Math.max(br.maxCol, from + 5); c++) {
+    for (var r = 0; r < 6; r++) {
+      var cell = br.cells[c + ',' + r];
+      h += '<span class="bcell' + (cell ? ' ' + cell.r : '') + '">' + (cell ? '<u></u>' + (cell.t ? '<s></s>' : '') : '') + '</span>';
+    }
+  }
+  $('bigRoad').innerHTML = h;
+  var cnt = { P: 0, B: 0, T: 0 };
+  road.forEach(function (x) { cnt[x.r]++; });
+  $('tally').innerHTML = '<span style="color:var(--blue)">\u9592 <b>' + cnt.P + '</b></span>'
+    + '<span style="color:#ff9a90">\u838a <b>' + cnt.B + '</b></span>'
+    + '<span style="color:var(--win)">\u548c <b>' + cnt.T + '</b></span>';
 }
 function renderStatus() {
   document.querySelectorAll('.mode').forEach(function (b) { b.setAttribute('aria-selected', b.dataset.mode === st.mode); });
@@ -190,9 +224,10 @@ function renderStatus() {
     $('headline').textContent = t;
   }
   $('verdict').className = 'verdict ' + (round && phase === 'result' ? round.result : '');
-  $('verdict').textContent = round && phase === 'result'
-    ? (round.result === 'T' ? 'TIE' : round.result === 'P' ? 'PLAYER WINS' : 'BANKER WINS') + (round.natural ? ' · NATURAL' : '')
+  $('verdict').innerHTML = round && phase === 'result'
+    ? '<b>' + CN_RES[round.result] + '</b>' + (round.result === 'T' ? 'TIE' : round.result === 'P' ? 'PLAYER WINS' : 'BANKER WINS') + (round.natural ? ' \u00b7 NATURAL' : '')
     : '';
+  $('modeLabel').textContent = ez() ? 'EZ \u00b7 \u514d\u4f63' : 'Commission \u00b7 \u4f63\u91d1';
   $('events').innerHTML = result ? result.rows.map(function (r) {
     return '<span class="ev ' + r.kind + '">' + K.esc(r.label) + ' ' + money(r.net, true) + '</span>';
   }).join('') : '';
@@ -202,8 +237,12 @@ function renderStatus() {
   $('rebet').disabled = phase !== 'bet' || !st.last;
   $('clear').disabled = phase !== 'bet' || !stake();
 }
+function renderGear() {
+  $('shoeBox').innerHTML = K.shoeHTML(G.shoe, { label: '8 decks' });
+  $('discardBox').innerHTML = K.discardHTML(G.shoe);
+}
 function render() {
-  renderCards(); renderSpots(); renderRoad(); renderStatus();
+  renderCards(); renderSpots(); renderRoad(); renderStatus(); renderGear();
   K.renderChips($('chips'), K.load().chip, function (c) { K.load().chip = c; K.save(); K.play('lay', 0, 0.4); render(); });
   $('rules').innerHTML = rulesHTML();
 }

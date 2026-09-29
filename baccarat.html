@@ -11,52 +11,87 @@
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Inter:wght@400;500;600;700&family=Oswald:wght@500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="casino.css">
 <style>
-.felt{--cw:72px;min-height:0;padding:16px 14px 14px}
-.sides{display:flex;gap:16px;justify-content:center;align-items:flex-start;position:relative;z-index:1;min-height:calc(var(--cw)*1.7)}
+.felt{--cw:72px;min-height:0;padding:14px 14px 12px;background:radial-gradient(120% 90% at 50% 15%, #16583c 0%, #0f4a30 45%, #0a3a25 100%)}
+.felt::after{content:"";position:absolute;inset:0;pointer-events:none;
+  background:
+    radial-gradient(circle at 12% 88%, rgba(242,199,92,.10) 0 22px, transparent 23px),
+    radial-gradient(circle at 88% 88%, rgba(242,199,92,.10) 0 22px, transparent 23px);}
+.hanzi-bg{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);font:700 clamp(150px,34vw,360px)/1 "Noto Serif SC", Cinzel, serif;color:rgba(242,199,92,.07);pointer-events:none;user-select:none;z-index:0;letter-spacing:.1em}
+.topband{display:grid;grid-template-columns:92px 1fr 92px;align-items:center;gap:10px;position:relative;z-index:2}
+.title-cn{text-align:center}
+.title-cn .cn{font:700 26px/1 "Noto Serif SC", serif;color:#f2c75c;letter-spacing:.35em;text-shadow:0 2px 0 rgba(0,0,0,.5)}
+.title-cn .en{display:block;font:600 10px Oswald,sans-serif;letter-spacing:.4em;color:rgba(255,248,230,.5);margin-top:4px;text-transform:uppercase}
+.gear-slot{display:flex;justify-content:center}
+.sides{display:flex;gap:16px;justify-content:center;align-items:flex-start;position:relative;z-index:1;min-height:calc(var(--cw)*1.6);margin-top:6px}
 .side{flex:1 1 0;display:flex;flex-direction:column;align-items:center;gap:6px;max-width:340px}
-.side .who{font:600 13px Oswald,sans-serif;letter-spacing:.24em;text-transform:uppercase}
+.side .who{font:600 13px Oswald,sans-serif;letter-spacing:.24em;text-transform:uppercase;display:flex;align-items:center;gap:8px}
+.side .who b{font:700 20px/1 "Noto Serif SC", serif;letter-spacing:0}
 .side.player .who{color:var(--blue)}
 .side.banker .who{color:#ff9a90}
 .side .hand{justify-content:center}
 .side .hand .card+.card{margin-left:4px}
-.pip{width:10px;height:10px;border-radius:50%;background:var(--gold);display:inline-block;margin-left:6px}
-.verdict{position:relative;z-index:1;text-align:center;margin:10px 0 4px;font:600 18px Oswald,sans-serif;letter-spacing:.06em;min-height:24px}
+.verdict{position:relative;z-index:1;text-align:center;margin:8px 0 2px;font:600 18px Oswald,sans-serif;letter-spacing:.06em;min-height:24px}
+.verdict b{font-family:"Noto Serif SC",serif;font-size:22px;margin-right:6px}
 .verdict.P{color:var(--blue)}.verdict.B{color:#ff9a90}.verdict.T{color:var(--win)}
-.layout{position:relative;z-index:1;display:grid;gap:8px;margin-top:8px}
-.mainrow{display:grid;grid-template-columns:1fr .7fr 1fr;gap:8px}
+.layout{position:relative;z-index:1;display:grid;gap:8px;margin-top:6px}
+.mainrow{display:grid;grid-template-columns:1fr .68fr 1fr;gap:8px}
 .siderow{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
 .ezrow{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
-.spot{position:relative;border:2px solid rgba(255,248,230,.55);border-radius:14px;background:rgba(0,0,0,.18);cursor:pointer;padding:10px 8px;text-align:center;color:var(--ink);min-height:62px}
-.spot:hover{background:rgba(255,255,255,.08);border-color:var(--gold)}
-.spot.has{border-color:var(--gold);background:rgba(242,199,92,.12)}
-.spot .nm{display:block;font:600 14px Oswald,sans-serif;letter-spacing:.12em;text-transform:uppercase}
-.spot .pay{display:block;font-size:11px;color:var(--ink-3);margin-top:2px}
-.spot .amt{display:inline-block;margin-top:4px;font:700 13px Inter;color:var(--gold)}
-.spot.player{border-color:rgba(90,162,224,.85)}
-.spot.banker{border-color:rgba(255,154,144,.85)}
-.spot.tie{border-color:rgba(107,227,148,.8)}
-.spot.small .nm{font-size:12px;letter-spacing:.06em}
-.spot.small{min-height:54px;padding:8px 4px}
-.spot.win{animation:winflash 1.2s ease-out 2}
-@keyframes winflash{0%{background:rgba(242,199,92,.5)}100%{background:rgba(242,199,92,.12)}}
-.road{display:flex;gap:10px;align-items:flex-start;margin-top:12px;position:relative;z-index:1}
-.beads{display:grid;grid-auto-flow:column;grid-template-rows:repeat(6,16px);gap:3px;overflow-x:auto;padding-bottom:4px;flex:1}
-.bead{width:16px;height:16px;border-radius:50%;display:grid;place-items:center;font:700 9px Inter;color:#fff;position:relative}
+.spot{position:relative;border:2px solid rgba(255,248,230,.5);border-radius:14px;background:linear-gradient(180deg,rgba(0,0,0,.28),rgba(0,0,0,.12));cursor:pointer;padding:9px 8px;text-align:center;color:var(--ink);min-height:70px;overflow:hidden}
+.spot::before{content:"";position:absolute;inset:3px;border-radius:10px;border:1px solid rgba(242,199,92,.28);pointer-events:none}
+.spot:hover{border-color:var(--gold);background:linear-gradient(180deg,rgba(242,199,92,.16),rgba(0,0,0,.15))}
+.spot.has{border-color:var(--gold);box-shadow:0 0 16px rgba(242,199,92,.25) inset}
+.spot .cn{display:block;font:700 22px/1 "Noto Serif SC", serif;color:#f7e3a8;text-shadow:0 2px 0 rgba(0,0,0,.45)}
+.spot .nm{display:block;font:600 12px Oswald,sans-serif;letter-spacing:.14em;text-transform:uppercase;margin-top:2px}
+.spot .pay{display:block;font-size:11px;color:rgba(255,248,230,.55);margin-top:1px}
+.spot .amt{display:inline-block;margin-top:3px;font:700 13px Inter;color:var(--gold)}
+.spot.player{border-color:rgba(90,162,224,.8);background:linear-gradient(180deg,rgba(28,74,122,.5),rgba(0,0,0,.15))}
+.spot.player .cn{color:#bfe0ff}
+.spot.banker{border-color:rgba(214,63,50,.85);background:linear-gradient(180deg,rgba(140,28,22,.55),rgba(0,0,0,.15))}
+.spot.banker .cn{color:#ffd9ae}
+.spot.tie{border-color:rgba(107,227,148,.7);background:linear-gradient(180deg,rgba(20,90,55,.5),rgba(0,0,0,.15))}
+.spot.small{min-height:58px;padding:7px 4px}
+.spot.small .cn{font-size:16px}
+.spot.small .nm{font-size:10px;letter-spacing:.06em}
+.spot.dragon{border-color:rgba(242,199,92,.85);background:linear-gradient(180deg,rgba(120,30,24,.5),rgba(0,0,0,.15))}
+.spot.panda{border-color:rgba(255,255,255,.7);background:linear-gradient(180deg,rgba(40,40,40,.5),rgba(0,0,0,.15))}
+.spot.win{animation:winflash 1.1s ease-out 2}
+@keyframes winflash{0%{background:rgba(242,199,92,.55)}100%{background:rgba(0,0,0,.18)}}
+/* roads */
+.roads{display:grid;grid-template-columns:auto 1fr;gap:10px;margin-top:10px;position:relative;z-index:1;align-items:start}
+.roadbox{background:rgba(0,0,0,.28);border:1px solid rgba(255,248,230,.22);border-radius:10px;padding:6px}
+.roadbox h4{margin:0 0 4px;font:600 9px Oswald,sans-serif;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,248,230,.5)}
+.roadbox h4 b{font-family:"Noto Serif SC",serif;letter-spacing:0;color:var(--gold);margin-right:5px}
+.beads{display:grid;grid-auto-flow:column;grid-template-rows:repeat(6,17px);gap:2px;overflow-x:auto;padding-bottom:2px}
+.bead{width:17px;height:17px;border-radius:50%;display:grid;place-items:center;font:700 9px "Noto Serif SC",serif;color:#fff;position:relative}
 .bead.P{background:#2f6fb0}.bead.B{background:#b3322a}.bead.T{background:#2f8a4f}
 .bead i{position:absolute;width:5px;height:5px;border-radius:50%;background:#fff}
 .bead i.p{left:-1px;top:-1px}.bead i.b{right:-1px;bottom:-1px}
-.tally{display:flex;gap:8px;font-size:12px;color:var(--ink-2);flex:none;flex-direction:column}
+.big{display:grid;grid-auto-flow:column;grid-template-rows:repeat(6,17px);gap:2px;overflow-x:auto;padding-bottom:2px}
+.bcell{width:17px;height:17px;position:relative}
+.bcell u{position:absolute;inset:1px;border-radius:50%;border:2px solid transparent;display:block}
+.bcell.P u{border-color:#4f96e0}
+.bcell.B u{border-color:#e05b4f}
+.bcell s{position:absolute;left:1px;top:50%;width:15px;height:2px;background:#6be394;transform:rotate(-45deg);transform-origin:center}
+.tally{display:flex;gap:10px;font-size:12px;color:var(--ink-2);justify-content:center;margin-top:6px}
 .tally b{font:600 14px Oswald,sans-serif}
 @media (max-width:760px){
   .felt{--cw:54px;padding:10px 8px}
+  .topband{grid-template-columns:56px 1fr 56px;gap:6px}
+  .title-cn .cn{font-size:19px;letter-spacing:.25em}
+  .title-cn .en{font-size:8px;letter-spacing:.24em}
   .sides{gap:8px}
   .mainrow{grid-template-columns:1fr .8fr 1fr;gap:6px}
   .siderow{grid-template-columns:repeat(2,1fr);gap:6px}
-  .spot{min-height:54px;padding:8px 4px}
-  .spot .nm{font-size:12px;letter-spacing:.06em}
+  .ezrow{gap:6px}
+  .spot{min-height:60px;padding:7px 4px}
+  .spot .cn{font-size:18px}
+  .spot .nm{font-size:10px;letter-spacing:.06em}
   .spot .pay{font-size:10px}
-  .beads{grid-template-rows:repeat(4,14px)}
-  .bead{width:14px;height:14px}
+  .roads{grid-template-columns:1fr;gap:6px}
+  .beads,.big{grid-template-rows:repeat(4,15px)}
+  .bead,.bcell{width:15px;height:15px}
+  .bcell s{width:13px}
 }
 </style>
 </head>
@@ -87,14 +122,20 @@
 
   <div class="rail">
     <div class="felt">
+      <div class="hanzi-bg">龍</div>
+      <div class="topband">
+        <div class="gear-slot" id="discardBox"></div>
+        <div class="title-cn"><span class="cn">百家樂</span><span class="en" id="modeLabel">Commission</span></div>
+        <div class="gear-slot" id="shoeBox"></div>
+      </div>
       <div class="sides">
         <div class="side player">
-          <span class="who">Player</span>
+          <span class="who"><b>閒</b> Player</span>
           <div class="hand" id="pHand"></div>
           <div id="pTotal"></div>
         </div>
         <div class="side banker">
-          <span class="who">Banker</span>
+          <span class="who"><b>莊</b> Banker</span>
           <div class="hand" id="bHand"></div>
           <div id="bTotal"></div>
         </div>
@@ -105,9 +146,9 @@
         <div class="siderow" id="sideRow"></div>
         <div class="ezrow" id="ezRow"></div>
       </div>
-      <div class="road">
-        <div class="tally" id="tally"></div>
-        <div class="beads" id="beads"></div>
+      <div class="roads">
+        <div class="roadbox"><h4><b>珠盤</b> Bead plate</h4><div class="beads" id="beads"></div></div>
+        <div class="roadbox"><h4><b>大路</b> Big road</h4><div class="big" id="bigRoad"></div><div class="tally" id="tally"></div></div>
       </div>
     </div>
   </div>

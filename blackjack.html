@@ -11,8 +11,9 @@
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Inter:wght@400;500;600;700&family=Oswald:wght@500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="casino.css">
 <style>
+.dealrow{display:grid;grid-template-columns:90px 1fr 92px;align-items:start;gap:10px;width:100%}
 .table-top{display:flex;flex-direction:column;align-items:center;gap:10px;position:relative;z-index:1}
-.dealer{display:flex;flex-direction:column;align-items:center;gap:4px;min-height:calc(var(--cw)*1.6)}
+.dealer{display:flex;flex-direction:column;align-items:center;gap:4px;min-height:calc(var(--cw)*1.5)}
 .dealer .who{font:600 12px Oswald,sans-serif;letter-spacing:.22em;color:rgba(255,248,230,.65);text-transform:uppercase}
 .rulesline{font:600 11px Oswald,sans-serif;letter-spacing:.18em;color:rgba(255,248,230,.5);text-transform:uppercase;text-align:center}
 .spots{display:flex;gap:10px;justify-content:center;align-items:flex-start;width:100%;margin-top:6px}
@@ -23,20 +24,24 @@
 .hands{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;min-height:calc(var(--cw)*1.45)}
 .hbox{display:flex;flex-direction:column;align-items:center;gap:3px;padding:4px;border-radius:12px}
 .hbox.on{background:rgba(242,199,92,.16);box-shadow:0 0 0 2px var(--gold)}
-.hbox .bet{font:600 12px Inter;color:var(--gold)}
+.hbox .bet{display:flex;align-items:center;gap:5px;font:600 12px Inter;color:var(--gold)}
+.hbox .bet .disc{width:20px;height:20px;border-radius:50%;border:2px dashed rgba(255,255,255,.85);display:inline-block;box-shadow:0 2px 4px rgba(0,0,0,.5)}
 .circles{display:flex;gap:6px;align-items:center;justify-content:center;flex-wrap:wrap}
-.circle{position:relative;border-radius:50%;border:2px dashed rgba(255,248,230,.6);background:rgba(0,0,0,.25);cursor:pointer;display:grid;place-items:center;text-align:center;padding:0;line-height:1.05}
-.circle.main{width:72px;height:72px;font:600 11px Oswald,sans-serif;letter-spacing:.1em;text-transform:uppercase}
-.circle.side{width:50px;height:50px;font:600 9px Oswald,sans-serif;letter-spacing:.06em;text-transform:uppercase}
+.circle{position:relative;border-radius:50%;border:2px solid rgba(255,248,230,.55);background:radial-gradient(circle at 50% 35%, rgba(255,255,255,.1), rgba(0,0,0,.3));cursor:pointer;display:grid;place-items:center;text-align:center;padding:0;line-height:1.05;box-shadow:inset 0 0 0 4px rgba(0,0,0,.18), inset 0 0 0 5px rgba(255,248,230,.25)}
+.circle.main{width:86px;height:86px;font:600 11px Oswald,sans-serif;letter-spacing:.1em;text-transform:uppercase}
+.circle.side{width:54px;height:54px;font:600 9px Oswald,sans-serif;letter-spacing:.06em;text-transform:uppercase}
 .circle:hover{border-color:var(--gold)}
-.circle.has{border-style:solid;border-color:var(--gold)}
-.circle .amt{display:block;font:700 13px Inter;color:#fff;margin-top:2px}
-.circle.side .amt{font-size:11px}
+.circle.has{border-color:var(--gold);box-shadow:inset 0 0 0 4px rgba(0,0,0,.2), inset 0 0 0 5px rgba(242,199,92,.5), 0 0 18px rgba(242,199,92,.25)}
+.circle .lbl{display:block;opacity:.85}
+.circle.has .lbl{opacity:.35}
+.chipdisc{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:64%;aspect-ratio:1;border-radius:50%;border:3px dashed rgba(255,255,255,.85);display:grid;place-items:center;font:700 13px Inter;box-shadow:0 3px 8px rgba(0,0,0,.5)}
+.circle.side .chipdisc{font-size:11px;border-width:2.5px}
+
 .res{font-size:12px;text-align:center;min-height:16px;font-weight:600}
 .res.win{color:var(--win)}.res.lose{color:var(--lose)}.res.push{color:var(--ink-2)}
 .felt{--cw:76px}
-@media (max-width:900px){.felt{--cw:62px}.circle.main{width:62px;height:62px}.circle.side{width:44px;height:44px}}
-@media (max-width:640px){.felt{--cw:46px;min-height:0;padding:10px 6px 8px}.dealer{min-height:calc(var(--cw)*1.5)}.rulesline{font-size:9px;letter-spacing:.1em}.spots{gap:4px}.spot{padding:6px 2px 8px}.circle.main{width:52px;height:52px;font-size:9px}.circle.side{width:38px;height:38px;font-size:8px}.circle .amt{font-size:11px}}
+@media (max-width:900px){.felt{--cw:62px}.circle.main{width:72px;height:72px}.circle.side{width:48px;height:48px}}
+@media (max-width:640px){.felt{--cw:46px;min-height:0;padding:10px 6px 8px}.dealrow{grid-template-columns:50px 1fr 62px;gap:4px}.dealer{min-height:calc(var(--cw)*1.5)}.rulesline{font-size:9px;letter-spacing:.1em}.spots{gap:4px}.spot{padding:6px 2px 8px}.circle.main{width:52px;height:52px;font-size:9px}.circle.side{width:38px;height:38px;font-size:8px}.circle .amt{font-size:11px}}
 .insrow{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
 .insrow button{border:1px solid #3d6a54;background:rgba(0,0,0,.35);border-radius:10px;height:38px;padding:0 12px;cursor:pointer;font-weight:600}
 .insrow button:hover{border-color:var(--gold)}
@@ -65,14 +70,31 @@
 
   <div class="rail">
     <div class="felt" id="felt">
-      <div class="arc"></div>
       <div class="table-top">
-        <div class="dealer">
-          <span class="who">Dealer</span>
-          <div class="hand" id="dealerHand"></div>
-          <div id="dealerTotal"></div>
+        <div class="dealrow">
+          <div class="gear-slot" id="discardBox"></div>
+          <div class="dealer">
+            <span class="who">Dealer</span>
+            <div class="hand" id="dealerHand"></div>
+            <div id="dealerTotal"></div>
+          </div>
+          <div class="gear-slot" id="shoeBox"></div>
         </div>
-        <div class="rulesline">Blackjack pays 3 to 2 &nbsp;·&nbsp; Dealer stands on all 17s</div>
+        <svg class="felt-print" viewBox="0 0 1000 120" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+          <defs>
+            <path id="arcTop" d="M70,108 Q500,-8 930,108"/>
+            <linearGradient id="goldText" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#fbe9a6"/><stop offset="1" stop-color="#c99a2c"/>
+            </linearGradient>
+          </defs>
+          <path d="M70,108 Q500,-8 930,108" fill="none" stroke="rgba(255,248,230,.3)" stroke-width="2"/>
+          <text font-family="Oswald, sans-serif" font-size="26" letter-spacing="4" fill="url(#goldText)">
+            <textPath href="#arcTop" startOffset="50%" text-anchor="middle">BLACKJACK PAYS 3 TO 2</textPath>
+          </text>
+          <text x="500" y="70" text-anchor="middle" font-family="Oswald, sans-serif" font-size="13" letter-spacing="3" fill="rgba(255,248,230,.5)">DEALER MUST DRAW TO 16 AND STAND ON ALL 17'S</text>
+          <text x="500" y="92" text-anchor="middle" font-family="Oswald, sans-serif" font-size="12" letter-spacing="4" fill="rgba(255,248,230,.38)">INSURANCE PAYS 2 TO 1</text>
+        </svg>
+
         <div class="spots" id="spots"></div>
       </div>
       <div class="actions" id="actions" hidden></div>

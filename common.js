@@ -152,6 +152,23 @@
     var col = chipColor(amount);
     return '<span class="chipmark ' + (cls || '') + '" style="background:' + col[0] + ';color:' + col[1] + '">' + chipText(amount) + '</span>';
   }
+  /* A stack of casino chips for an amount, largest denomination first. */
+  function chipStackHTML(amount, cls) {
+    if (!amount) return '';
+    var left = amount, picks = [], i;
+    for (i = CHIPS.length - 1; i >= 0 && picks.length < 5; i--) {
+      var v = CHIPS[i] * 100;
+      while (left >= v && picks.length < 5) { picks.push(v); left -= v; }
+    }
+    if (!picks.length) picks.push(100);
+    var h = '<span class="chipstack ' + (cls || '') + '">';
+    picks.forEach(function (v, n) {
+      var col = chipColor(v);
+      h += '<i style="--n:' + n + ';background:' + col[0] + ';color:' + col[1] + '"></i>';
+    });
+    h += '<b>' + money(amount) + '</b></span>';
+    return h;
+  }
   function cardHTML(c, cls) {
     if (!c) return '<div class="card back ' + (cls || '') + '"></div>';
     var red = isRed(c), ch = SUIT_CH[c.s];
@@ -165,6 +182,24 @@
     }).join('');
     el.onclick = function (e) { var b = e.target.closest('[data-chip]'); if (b) onPick(+b.dataset.chip); };
   }
+  /* A dealing shoe and discard tray drawn in CSS. `used` is 0..1 */
+  function shoeHTML(shoe, opts) {
+    opts = opts || {};
+    var left = Math.max(0, 1 - shoe.pos / shoe.cards.length);
+    var stack = Math.max(1, Math.round(left * 20));
+    var h = '<div class="shoebox" title="' + remaining(shoe) + ' cards left"><div class="body"></div><div class="well"><div class="shoe-stack">';
+    for (var i = 0; i < stack; i++) h += '<i style="--i:' + i + '"></i>';
+    h += '</div></div><div class="mouth"></div><span class="shoe-label">' + (opts.label || (shoe.decks + ' decks')) + '</span></div>';
+    return h;
+  }
+  function discardHTML(shoe) {
+    var stack = Math.max(0, Math.round(shoe.pos / shoe.cards.length * 20));
+    var h = '<div class="discard" title="' + shoe.pos + ' cards used"><div class="tray"><div class="disc-stack">';
+    for (var i = 0; i < stack; i++) h += '<i style="--i:' + i + '"></i>';
+    h += '</div></div><span class="shoe-label">Discards</span></div>';
+    return h;
+  }
+
   function nav(active) {
     var pages = [['index.html', 'Craps'], ['blackjack.html', 'Blackjack'], ['baccarat.html', 'Baccarat']];
     return '<nav class="games">' + pages.map(function (p) {
@@ -174,6 +209,7 @@
 
   var api = {
     ac: ac, play: play, say: say, toast: toast, esc: esc, chipHTML: chipHTML, cardHTML: cardHTML, renderChips: renderChips, nav: nav,
+    shoeHTML: shoeHTML, discardHTML: discardHTML, chipStackHTML: chipStackHTML,
     KEY: KEY, START: START, CHIPS: CHIPS, RANKS: RANKS, SUITS: SUITS, SUIT_CH: SUIT_CH,
     money: money, chipText: chipText, chipColor: chipColor,
     load: load, save: save, bank: bank, addBank: addBank, setBank: setBank, game: game,

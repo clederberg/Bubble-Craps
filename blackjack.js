@@ -8,7 +8,7 @@ while (st.bets.length < SPOTS) st.bets.push({ bet: 0, mtd: 0, buster: 0 });
 
 var G = BJ.newGame();
 restoreShoe();
-var phase = 'bet', lastResult = null, pending = false;
+var phase = 'bet', lastResult = null, pending = false, seen = {};
 
 function $(id) { return document.getElementById(id); }
 function money(c, s) { return K.money(c, s); }
@@ -79,6 +79,7 @@ function deal() {
   if (G.events.some(function (e) { return e.t === 'shuffle'; })) { K.play('shuffle', 0, 0.55); K.toast('New shoe: six decks shuffled'); }
   K.play('deal', 0.05, 0.8); K.play('deal', 0.22, 0.7); K.play('deal', 0.4, 0.7);
   lastResult = null;
+  seen = {};
   phase = 'play';
   saveShoe(); render();
   if (G.phase === 'insurance') return openInsurance();
@@ -167,12 +168,19 @@ function totalPill(cards, hand) {
   else txt = (v.soft && v.total !== 21 ? v.total - 10 + '/' : '') + v.total;
   return '<span class="total ' + cls + '">' + txt + '</span>';
 }
+function fresh(key, i) {
+  var n = seen[key] || 0;
+  return i >= n ? 'deal' : '';
+}
+function markSeen(key, n) { seen[key] = n; }
 function renderDealer() {
   var cards = G.dealer, h = '';
   if (!cards.length) { $('dealerHand').innerHTML = ''; $('dealerTotal').innerHTML = ''; return; }
-  h += K.cardHTML(cards[0]);
-  if (G.dealerHole && cards.length > 1) h += K.cardHTML(null);
-  else for (var i = 1; i < cards.length; i++) h += K.cardHTML(cards[i], i === 1 ? 'flip' : '');
+  var shownCount = G.dealerHole ? 2 : cards.length;
+  h += K.cardHTML(cards[0], fresh('d', 0));
+  if (G.dealerHole && cards.length > 1) h += K.cardHTML(null, fresh('d', 1));
+  else for (var i = 1; i < cards.length; i++) h += K.cardHTML(cards[i], i === 1 ? 'flip' : fresh('d', i));
+  markSeen('d', shownCount);
   $('dealerHand').innerHTML = h;
   $('dealerTotal').innerHTML = G.dealerHole
     ? '<span class="total">' + BJ.value([cards[0]]).total + ' showing</span>'
@@ -189,10 +197,14 @@ function renderSpots() {
       h += '<div class="hands">';
       sp.hands.forEach(function (hand, hi) {
         var on = activeSpot && G.active.hand === hi;
+        var key = 's' + i + 'h' + hi;
         h += '<div class="hbox' + (on ? ' on' : '') + '"><div class="hand">'
-          + hand.cards.map(function (c) { return K.cardHTML(c); }).join('') + '</div>'
+          + hand.cards.map(function (c, ci) { return K.cardHTML(c, fresh(key, ci)); }).join('') + '</div>';
+        markSeen(key, hand.cards.length);
+        h += ''
           + totalPill(hand.cards, hand)
-          + '<span class="bet">' + money(hand.bet) + (hand.doubled ? ' (doubled)' : '') + (hand.surrendered ? ' (surrendered)' : '') + '</span></div>';
+          + '<span class="bet"><i class="disc" style="background:' + K.chipColor(hand.bet)[0] + '"></i>' + money(hand.bet)
+          + (hand.doubled ? ' dbl' : '') + (hand.surrendered ? ' surr' : '') + '</span></div>';
       });
       h += '</div>';
       var extra = [];
@@ -217,8 +229,13 @@ function renderSpots() {
   $('spots').innerHTML = h;
 }
 function circle(i, kind, label, amount, cls) {
+  var chip = '';
+  if (amount) {
+    var col = K.chipColor(amount);
+    chip = '<span class="chipdisc" style="background:' + col[0] + ';color:' + col[1] + '">' + K.chipText(amount) + '</span>';
+  }
   return '<button class="circle ' + cls + (amount ? ' has' : '') + '" data-bet="' + i + '|' + kind + '">'
-    + '<span>' + label + (amount ? '<span class="amt">' + K.chipText(amount) + '</span>' : '') + '</span></button>';
+    + '<span class="lbl">' + label + '</span>' + chip + '</button>';
 }
 function renderActions() {
   var el = $('actions');
@@ -270,8 +287,12 @@ function liveStake() {
     return a + sp.mtd + sp.buster + sp.ins + sp.hands.reduce(function (x, h) { return x + h.bet; }, 0);
   }, 0);
 }
+function renderGear() {
+  $('shoeBox').innerHTML = K.shoeHTML(G.shoe, { label: '6 decks' });
+  $('discardBox').innerHTML = K.discardHTML(G.shoe);
+}
 function render() {
-  renderDealer(); renderSpots(); renderActions(); renderStatus();
+  renderDealer(); renderSpots(); renderActions(); renderStatus(); renderGear();
   K.renderChips($('chips'), K.load().chip, function (c) { K.load().chip = c; K.save(); K.play('lay', 0, 0.4); render(); });
   $('rules').innerHTML = rulesHTML();
 }
