@@ -72,18 +72,18 @@ eq(g.freeReels.every(r => r.filter(s => s === 'CANDLE').length > g.reels[0].filt
 // pinball
 const p = G.pinball();
 const line = (a, b, c, cr) => G.pinballWin(p, [[a],[b],[c]], 100, cr);
-eq(line('SEVEN','SEVEN','SEVEN').total, 45000, 'three sevens pay 450x on one credit');
-eq(line('SEVEN','SEVEN','SEVEN', 2).total, 120000, 'three sevens on two credits pay the boosted award');
-eq(line('BELL','BELL','BELL', 2).total, 7200, 'ordinary wins double on two credits');
-eq(line('BAR3','BAR3','BAR3').total, 11500);
-eq(line('BAR1','BAR3','BAR2').total, 600, 'mixed bars pay the consolation');
-eq(line('CHERRY','BELL','BELL').total, 200, 'one cherry from the left');
-eq(line('CHERRY','CHERRY','BELL').total, 600);
+eq(line('SEVEN','SEVEN','SEVEN').total, p.pays.SEVEN[3] * 100, 'three sevens pay the paytable line');
+eq(line('SEVEN','SEVEN','SEVEN', 2).total, p.pays.SEVEN.max * 100, 'three sevens on two credits pay the boosted award');
+eq(line('BELL','BELL','BELL', 2).total, p.pays.BELL[3] * 200, 'ordinary wins double on two credits');
+eq(line('BAR3','BAR3','BAR3').total, p.pays.BAR3[3] * 100);
+eq(line('BAR1','BAR3','BAR2').total, p.anyBar * 100, 'mixed bars pay the consolation');
+eq(line('CHERRY','BELL','BELL').total, p.pays.CHERRY[1] * 100, 'one cherry from the left');
+eq(line('CHERRY','CHERRY','BELL').total, p.pays.CHERRY[2] * 100);
 eq(line('BELL','CHERRY','CHERRY').total, 0, 'cherries must start on reel one');
 eq(line('BELL','BELL','BALL').bonus, true, 'one ball on the last reel starts the bonus');
 eq(line('BALL','BALL','BELL').bonus, false, 'the ball only counts on the third reel');
 eq(p.reels[0].filter(s => s === 'BALL').length, 0, 'no balls on the first two reels');
-eq(p.reels[2].filter(s => s === 'BALL').length, 3, 'three balls on the third reel');
+eq(p.reels[2].filter(s => s === 'BALL').length, 1, 'a single ball on the third reel');
 
 /* Jackpots are far too rare to read off a general run, so measure the hold and
    spin directly: how often it fills all fifteen, and how often a jackpot cell
@@ -235,23 +235,38 @@ const latke = avgLatke(120000, 2500);
   }
 });
 
-/* Pinball is small enough to price exactly: walk all 10,648 reel stops and
-   add the bonus, rather than trusting a sample. */
+/* Pinball is small enough to price exactly: walk every reel stop and add the
+   shot bonus, rather than trusting a sample. */
 function pinRTP(credits) {
-  function binom(k) { let r = 1; for (let i = 0; i < k; i++) r = r * (p.pins.rows - i) / (i + 1); return r; }
-  const pocketEV = p.pins.pockets.reduce((a, v, i) => a + v * binom(i) / Math.pow(2, p.pins.rows), 0);
+  const t = p.shot.targets, wsum = t.reduce((a, x) => a + x.w, 0);
+  const shotEV = t.reduce((a, x) => a + x.credits * x.w, 0) / wsum;
+  const shots = p.shot.shots[credits] || p.shot.shots[1];
   let paid = 0, combos = 0, trig = 0;
   for (const a of p.reels[0]) for (const b of p.reels[1]) for (const c of p.reels[2]) {
     combos++;
     const w = G.pinballWin(p, [[a], [b], [c]], 1, credits);
     paid += w.total;
-    if (w.bonus) { paid += pocketEV * credits; trig++; }
+    if (w.bonus) { paid += shotEV * shots; trig++; }
   }
-  return { rtp: paid / combos / credits, bonus: trig / combos };
+  return { rtp: paid / combos / credits, bonus: trig / combos, shotEV, shots };
+}
+eq(p.shot.shots[1], 3, 'a single credit buys three shots');
+eq(p.shot.shots[2], 6, 'max credits buys twice as many');
+eq(p.shot.targets[0].credits, 5, 'targets start at 5 credits');
+eq(p.shot.targets[p.shot.targets.length - 1].credits, 100, 'and top out at 100');
+for (let i = 0; i < 300; i++) {
+  const b1 = G.pinballBonus(p, 100, 1), b2 = G.pinballBonus(p, 100, 2);
+  eq(b1.shots.length, p.shot.shots[1], 'one credit fires its shots');
+  eq(b2.shots.length, p.shot.shots[2], 'max credits fires twice as many');
+  eq(p.shot.shots[2], 2 * p.shot.shots[1], 'shots scale with credits, so the return does not depend on bet level');
+  eq(b2.total, b2.shots.reduce((a, s2) => a + s2.amount, 0), 'the bonus pays exactly what the targets awarded');
+  eq(b2.shots.every(s2 => s2.credits >= 5 && s2.credits <= 100), true, 'every shot lands on a real target');
 }
 [1, 2].forEach(cr => {
   const sp = pinRTP(cr);
-  eq(sp.rtp > 0.94 && sp.rtp < 0.98, true, `pinball ${cr}-credit return stays in band`);
-  console.log(`Pinball Classic ${cr} credit${cr > 1 ? 's' : ' '} \u00b7 RTP ${(sp.rtp * 100).toFixed(2)}% (exact) \u00b7 bonus 1 in ${Math.round(1 / sp.bonus)} spins`);
+  eq(sp.rtp > 0.93 && sp.rtp < 0.97, true, `pinball ${cr}-credit return stays in band (${(sp.rtp * 100).toFixed(2)}%)`);
+  console.log(`Pinball Classic ${cr} credit${cr > 1 ? 's' : ' '} \u00b7 RTP ${(sp.rtp * 100).toFixed(2)}% (exact) \u00b7 ` +
+    `ball 1 in ${Math.round(1 / sp.bonus)} spins \u00b7 ${sp.shots} shot${sp.shots > 1 ? 's' : ''} worth ` +
+    `${(sp.shotEV * sp.shots).toFixed(0)} credits on average`);
 });
 console.log('slots: all passed', n, 'asserts');

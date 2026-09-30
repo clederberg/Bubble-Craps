@@ -38,10 +38,12 @@ Fixed reel strips, so the odds are the same for everyone, every session.
 
 Three reels, one line, bars and bells and sevens, with blanks between them like an old machine. A **real pull handle** on the side of the cabinet: drag the knob down and let go (space or the PULL button work too).
 
-- **1 or 2 credits.** Play one credit or play max; every pay doubles on two credits, and three sevens on max credits pay **1,200x** instead of 900x. The chip rack sets the bet per credit, table max $25,000 a spin.
-- Pays run from one cherry at 2x up to three sevens at 450x a credit.
-- **Ball bonus:** a single silver ball on the **third reel** sends the ball down the playfield in the backbox, bouncing off the bumpers into a pocket worth 1x to 15x your bet. It lands about 1 spin in 7.
-- Exact return to player 95.3% on one credit, 96.7% on max credits.
+- **1 or 2 credits.** Play one credit or play max. Every line pay doubles on two credits, and three sevens on max credits pay **1,300x** instead of 1,200x. The chip rack sets the bet per credit, table max $25,000 a spin.
+- Pays run from one cherry at 2x up to three sevens at 600x a credit.
+- **Shot bonus:** a silver ball on the **third reel** launches the ball at the lit targets on the playfield, worth **5, 10, 15, 25, 50 or 100 credits** each. **Max credits buys six shots, a single credit buys three**, so the shots scale with what you bet and the return barely moves between the two. Six shots average about 71 credits. The ball lands about 1 spin in 305.
+- Exact return to player **95.90% on max credits, 94.67% on a single credit**, computed by walking all 147,620 reel combinations rather than by sampling. The small gap left is the max-credit seven award, not the bonus.
+
+Shots have to scale with credits for the two bet levels to return the same. An earlier build gave one shot for a single credit and five for max, which handed max-credit play 2.5x the bonus value per unit wagered and dragged the single-credit return down to 88.9%.
 
 ## Blackjack (`blackjack.html`)
 

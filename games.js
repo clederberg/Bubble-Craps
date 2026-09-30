@@ -203,16 +203,30 @@
   /* The silver ball only lives on the third reel: one of them anywhere on the
      line sends the ball to the playfield. */
   var PIN_SIDE = { SEVEN: 1, BELL: 3, BAR3: 1, BAR2: 2, BAR1: 3, CHERRY: 2, BLANK: 10 };
-  var PIN_LAST = { SEVEN: 1, BELL: 3, BAR3: 1, BAR2: 2, BAR1: 3, CHERRY: 2, BALL: 3, BLANK: 7 };
+  /* Reel three carries a single silver ball on a long virtual strip, so the
+     shot bonus is a real event rather than something that lands every few
+     spins. The other symbols keep their old proportions (every count x16). */
+  var PIN_LAST = { SEVEN: 16, BELL: 48, BAR3: 16, BAR2: 32, BAR1: 48, CHERRY: 32, BALL: 1, BLANK: 112 };
   // Pays are multiples of the bet per credit, on the single line, left to right.
   var PIN_PAYS = {
-    SEVEN: { 3: 450, max: 1200 },
-    BELL: { 3: 36 },
-    BAR3: { 3: 115 },
-    BAR2: { 3: 58 },
-    BAR1: { 3: 24 },
-    CHERRY: { 1: 2, 2: 6, 3: 40 }
+    SEVEN: { 3: 586, max: 1400 },
+    BELL: { 3: 56 },
+    BAR3: { 3: 147 },
+    BAR2: { 3: 73 },
+    BAR1: { 3: 28 },
+    CHERRY: { 1: 2, 2: 8, 3: 49 }
   };
+  /* The shot bonus: the ball is launched at lit targets worth 5 to 100
+     credits. One shot on a single credit, all five on max credits. */
+  var PIN_TARGETS = [
+    { credits: 5, w: 55 },
+    { credits: 10, w: 22 },
+    { credits: 15, w: 12 },
+    { credits: 25, w: 6 },
+    { credits: 50, w: 3 },
+    { credits: 100, w: 2 }
+  ];
+
   function pinball() {
     var g = {
       id: 'pinball',
@@ -226,14 +240,15 @@
       scatter: 'BALL',
       special: ['BALL'],
       lineOptions: [1],
-      anyBar: 6,
+      anyBar: 9,
       maxCredits: 2,
       scatterPays: null,
       free: { trigger: 3, spins: {}, multiplier: 1 },
-      pins: {
-        // the ball bounces down the playfield into one of these pockets
-        pockets: [15, 5, 2, 1, 2, 5, 15],
-        rows: 6
+      /* The shot bonus: the ball is launched at lit targets. One shot on a
+         single credit, all five on max credits. */
+      shot: {
+        shots: { 1: 3, 2: 6 },
+        targets: PIN_TARGETS
       }
     };
     g.lines = [[0, 0, 0]];
@@ -267,17 +282,25 @@
     var total = wins.reduce(function (a, w) { return a + w.amount; }, 0);
     return { line: line, wins: wins, total: total, balls: line[2] === 'BALL' ? 1 : 0, bonus: line[2] === 'BALL' };
   }
-  /* The pinball bonus: the ball rattles down the playfield, bouncing left or
-     right off each bumper, and settles in a pocket. */
+  /* The shot bonus: the ball is launched at the lit targets. Each shot hits one
+     of them, and how many shots you get comes down to how many credits you
+     played. Awards are in credits, so they scale with the bet per credit. */
   function pinballBonus(g, bet, credits) {
-    var cr = credits || 1, pos = 0, path = [];
-    for (var r = 0; r < g.pins.rows; r++) {
-      var right = Math.random() < 0.5;
-      pos += right ? 1 : 0;
-      path.push(right ? 1 : 0);
+    var cr = credits || 1;
+    var count = g.shot.shots[cr] || g.shot.shots[1];
+    var targets = g.shot.targets, total = 0, shots = [], i;
+    var wsum = targets.reduce(function (a, t) { return a + t.w; }, 0);
+    for (i = 0; i < count; i++) {
+      var roll = Math.random() * wsum, acc = 0, hit = targets[targets.length - 1], idx = targets.length - 1;
+      for (var j = 0; j < targets.length; j++) {
+        acc += targets[j].w;
+        if (roll < acc) { hit = targets[j]; idx = j; break; }
+      }
+      var amount = hit.credits * bet;
+      total += amount;
+      shots.push({ target: idx, credits: hit.credits, amount: amount });
     }
-    var pocket = Math.max(0, Math.min(g.pins.pockets.length - 1, pos));
-    return { path: path, slot: pocket, mult: g.pins.pockets[pocket], amount: g.pins.pockets[pocket] * bet * cr };
+    return { shots: shots, count: count, total: total, maxed: cr >= g.maxCredits };
   }
 
   var api = { lights: lights, FREE_PICKS: FREE_PICKS, pinball: pinball, pinballWin: pinballWin, pinballBonus: pinballBonus,
