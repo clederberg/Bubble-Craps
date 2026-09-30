@@ -337,9 +337,26 @@ function runLatke(res, done) {
   K.setHTML(ov, '<h3>Latke Bonus</h3><p>Pick a pan. Every latke pays, an empty pan ends it.</p>'
     + '<div class="latke-meter"><div class="meter" id="lkmeter">' + money(0) + '</div></div>'
     + '<div class="latke-stage" id="lkstage"></div>');
-  var stage = $('lkstage'), meter = $('lkmeter');
+  var stage = $('lkstage'), meter = $('lkmeter'), idleTimer = null;
 
-  var idleTimer = null;
+  /* Five pans stay on the table and fill up as you pick. A fresh batch only
+     flies in once they have all been used, so the stage is never empty. */
+  var SPOTS = [[6, 8], [40, 4], [72, 12], [20, 50], [56, 52]];
+  function deal(first) {
+    var h = '';
+    SPOTS.forEach(function (sp, i) {
+      h += '<div class="panwrap" data-pan="' + i + '" style="left:' + sp[0] + '%;top:' + sp[1] + '%;width:23%;height:38%;'
+        + 'animation:panin .45s ease-out ' + (i * 0.06).toFixed(2) + 's both">'
+        + '<svg viewBox="0 0 48 48">' + G.ART.pan + '</svg>'
+        + '<div class="latke">' + LATKE_ART + '</div><div class="tag"></div></div>';
+    });
+    K.setHTML(stage, h);
+    later(function () {
+      stage.querySelectorAll('.panwrap').forEach(function (el) { el.classList.add('float'); });
+    }, 560);
+    if (!first) fx('whoosh');
+    armIdle();
+  }
   function armIdle() {
     if (idleTimer) clearTimeout(idleTimer);
     idleTimer = setTimeout(function () {
@@ -348,63 +365,50 @@ function runLatke(res, done) {
     }, 20000);
     timers.push(idleTimer);
   }
-  function deal() {
-    if (idx >= lr.picks.length) return endLatke();
-    busy = false;
-    var n = 4, h = '';
-    for (var i = 0; i < n; i++) {
-      var top = 10 + (i % 2) * 38 + Math.random() * 8;
-      var left = 3 + i * 24 + Math.random() * 3;
-      h += '<div class="panwrap" data-pan="' + i + '" style="left:' + left + '%;top:' + top + '%;width:26%;height:40%;'
-        + 'animation:panin .5s ease-out ' + (i * 0.07).toFixed(2) + 's both">'
-        + '<svg viewBox="0 0 48 48">' + G.ART.pan + '</svg>'
-        + '<div class="latke">' + LATKE_ART + '</div><div class="tag"></div></div>';
-    }
-    K.setHTML(stage, h);
-    later(function () {
-      stage.querySelectorAll('.panwrap').forEach(function (el) { el.classList.add('float'); });
-    }, 620);
-    fx('whoosh');
-    armIdle();
+  function bump() {
+    meter.textContent = money(running);
+    meter.classList.remove('pop'); void meter.offsetWidth; meter.classList.add('pop');
   }
   stage.addEventListener('click', function (e) {
     var pan = e.target.closest('[data-pan]');
-    if (!pan || busy || idx >= lr.picks.length) return;
+    if (!pan || busy || pan.classList.contains('picked') || idx >= lr.picks.length) return;
     busy = true;
+    if (idleTimer) clearTimeout(idleTimer);
     var pick = lr.picks[idx++];
+    pan.classList.remove('float');
     pan.classList.add('picked', 'done');
     var tag = pan.querySelector('.tag');
     if (pick.empty) {
       pan.classList.add('empty');
       tag.textContent = 'EMPTY';
       fx('thud');
-      later(endLatke, 1200);
-      return;
+      return later(endLatke, 1400);
     }
     fx('sizzle');
+    running += pick.amount;
+    bump();
     if (pick.jackpot) {
       tag.textContent = pick.label;
-      running += pick.amount;
-      meter.textContent = money(running);
-      meter.classList.remove('pop'); void meter.offsetWidth; meter.classList.add('pop');
       fx('jackpot', pick.jackpot);
       flash(); shake();
-      later(endLatke, 2200);
-      return;
+      return later(endLatke, 2200);
     }
     tag.textContent = money(pick.amount);
-    running += pick.amount;
-    meter.textContent = money(running);
-    meter.classList.remove('pop'); void meter.offsetWidth; meter.classList.add('pop');
-    later(deal, 1000);
+    later(function () {
+      busy = false;
+      if (idx >= lr.picks.length) return endLatke();
+      /* only bring in a new batch once every pan has been used */
+      if (!stage.querySelector('.panwrap:not(.picked)')) deal(false);
+      else armIdle();
+    }, 850);
   });
   function endLatke() {
     if (idleTimer) clearTimeout(idleTimer);
     K.setHTML(ov, '<h3>Latke bonus pays ' + money(lr.total) + '</h3><div class="meter">' + money(lr.total) + '</div>');
     fx('coinRun', lr.total / totalBet());
-    later(function () { ov.hidden = true; done(); }, 1600);
+    later(function () { ov.hidden = true; done(); }, 1700);
   }
-  later(deal, 700);
+  later(function () { deal(true); }, 600);
 }
 
 /* ---------- free games ---------- */
