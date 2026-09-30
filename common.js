@@ -183,10 +183,11 @@
     h += '<b>' + money(amount) + '</b></span>';
     return h;
   }
-  function cardHTML(c, cls) {
-    if (!c) return '<div class="card back ' + (cls || '') + '"></div>';
+  function cardHTML(c, cls, slot) {
+    var pos = ' style="--i:' + (slot || 0) + '"';
+    if (!c) return '<div class="card back ' + (cls || '') + '"' + pos + '></div>';
     var red = isRed(c), ch = SUIT_CH[c.s];
-    return '<div class="card ' + (red ? 'red ' : '') + (cls || '') + '"><span class="r">' + c.r + '<i>' + ch + '</i></span>'
+    return '<div class="card ' + (red ? 'red ' : '') + (cls || '') + '"' + pos + '><span class="r">' + c.r + '<i>' + ch + '</i></span>'
       + '<span class="big">' + ch + '</span><span class="r rb">' + c.r + '<i>' + ch + '</i></span></div>';
   }
   function renderChips(el, selected, onPick) {
@@ -302,7 +303,7 @@
   }
 
   function nav(active) {
-    var pages = [['index.html', 'Craps'], ['blackjack.html', 'Blackjack'], ['baccarat.html', 'Baccarat']];
+    var pages = [['index.html', 'Craps'], ['blackjack.html', 'Blackjack'], ['baccarat.html', 'Baccarat'], ['lanterns.html', 'Lanterns'], ['pinball.html', 'Pinball']];
     return '<nav class="games">' + pages.map(function (p) {
       return '<a href="' + p[0] + '"' + (p[1].toLowerCase() === active ? ' class="on" aria-current="page"' : '') + '>' + p[1] + '</a>';
     }).join('') + '</nav>';

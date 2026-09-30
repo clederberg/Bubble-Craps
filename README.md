@@ -1,11 +1,28 @@
 # Bubble Craps
 
-Three free-play tables that share one bankroll: **Craps**, **Blackjack** and **Baccarat**. Use the links at the top of any page to switch games.
+Five free-play games that share one bankroll: **Craps**, **Blackjack**, **Baccarat**, and two slots, **Golden Lanterns** and **Pinball Classic**. Use the links at the top of any page to switch games.
 
 
 Free-play craps and crapless craps on a real table layout, with 3D dice. Play money only, no accounts, no purchases. Your bankroll is saved in your browser, and **Reset bankroll** starts you over with any amount up to $100,000.
 
 **Play:** open `index.html`, or turn on GitHub Pages (below).
+
+## Golden Lanterns (`lanterns.html`)
+
+Five reels, three rows, with **5, 25 or 50 lines** selectable and the chip rack setting the bet per line.
+
+- **Hold & Spin:** six or more gold coins lock in place and start three respins that reset every time another coin lands. Fill all fifteen positions for the **Grand**. Coins also carry Mini, Minor and Major jackpots, all scaled to your total bet.
+- **Free games:** three, four or five temples pay 2x, 10x or 50x the bet and start 8, 12 or 20 free games with every win doubled.
+- Pearl is wild. Fixed reel strips, so the odds are the same for everyone, every session.
+- Measured return to player about 94%: roughly 59% from the lines, 23% from Hold & Spin, 9% from free games and 2% from temple pays. Hold & Spin hits about 1 spin in 280.
+
+## Pinball Classic (`pinball.html`)
+
+Three reels, one line, bars and bells and sevens, with blanks between them like an old machine.
+
+- Pays run from one cherry at 3x up to three sevens at 600x.
+- **Pinball bonus:** three silver balls drop a ball through a peg board into a prize slot worth 10x to 250x your bet. It lands about 1 spin in 400.
+- Measured return to player about 95%.
 
 ## Blackjack (`blackjack.html`)
 
@@ -96,7 +113,9 @@ Dice and chip sounds are real recordings from Kenney's [Casino Audio](https://ke
 - `casino.css` shared styling for the card games
 - `common.js` shared bankroll, chips, sounds, cards and shoes
 - `bj.js` / `bac.js` blackjack and baccarat rules
-- `test-bj.js` / `test-bac.js` their tests (`node test-bj.js`)
+- `slots.js` / `games.js` the slot engine and both machines
+- `lanterns.html` / `lanterns.js` and `pinball.html` / `pinball.js` the two slots
+- `test-bj.js` / `test-bac.js` / `test-slots.js` their tests (`node test-bj.js`)
 - `app.js` table drawing, dice, animations, sound
 - `layout.js` table layouts (desktop and phone)
 - `sounds.js` recorded dice and chip sounds

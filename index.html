@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Bubble Craps</title>
 <meta name="description" content="Free-play craps and crapless craps on a real table layout. Play money, no purchases.">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect x='8' y='8' width='84' height='84' rx='18' fill='%23c0261f'/><circle cx='30' cy='30' r='9' fill='white'/><circle cx='50' cy='50' r='9' fill='white'/><circle cx='70' cy='70' r='9' fill='white'/></svg>">
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2064%2064%27%3E%3Cdefs%3E%3ClinearGradient%20id%3D%27g%27%20x1%3D%270%27%20y1%3D%270%27%20x2%3D%270%27%20y2%3D%271%27%3E%3Cstop%20offset%3D%270%27%20stop-color%3D%27%23fbe9a6%27%2F%3E%3Cstop%20offset%3D%271%27%20stop-color%3D%27%23c9962b%27%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Ccircle%20cx%3D%2732%27%20cy%3D%2732%27%20r%3D%2730%27%20fill%3D%27%230b1f17%27%20stroke%3D%27url%28%23g%29%27%20stroke-width%3D%274%27%2F%3E%3Ccircle%20cx%3D%2732%27%20cy%3D%2732%27%20r%3D%2723%27%20fill%3D%27none%27%20stroke%3D%27url%28%23g%29%27%20stroke-width%3D%275%27%20stroke-dasharray%3D%277%207%27%2F%3E%3Ccircle%20cx%3D%2732%27%20cy%3D%2732%27%20r%3D%2718%27%20fill%3D%27%2308140e%27%2F%3E%3Ctext%20x%3D%2732%27%20y%3D%2743%27%20text-anchor%3D%27middle%27%20font-family%3D%22Georgia%2C%27Times%20New%20Roman%27%2Cserif%22%20font-weight%3D%27700%27%20font-size%3D%2734%27%20fill%3D%27%23f7e3a8%27%3E%26%239856%3B%3C%2Ftext%3E%3C%2Fsvg%3E"><rect x='8' y='8' width='84' height='84' rx='18' fill='%23c0261f'/><circle cx='30' cy='30' r='9' fill='white'/><circle cx='50' cy='50' r='9' fill='white'/><circle cx='70' cy='70' r='9' fill='white'/></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Inter:wght@400;500;600;700&family=Oswald:wght@500;600&display=swap" rel="stylesheet">
@@ -24,7 +24,7 @@ button{font:inherit;color:inherit}
 header{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:12px 0 10px}
 h1{font:600 24px/1 Oswald,sans-serif;letter-spacing:.05em;margin:0;text-transform:uppercase}
 h1 span{color:var(--gold)}
-.games{display:flex;background:rgba(0,0,0,.35);border:1px solid var(--line);border-radius:999px;padding:3px}
+.games{display:flex;flex-wrap:wrap;background:rgba(0,0,0,.35);border:1px solid var(--line);border-radius:999px;padding:3px}
 .games a{padding:7px 14px;border-radius:999px;text-decoration:none;color:var(--ink-2);font-weight:600;font-size:14px}
 .games a.on{background:#fff;color:#0b2318}
 .games a:hover{color:var(--ink)}
@@ -238,6 +238,8 @@ details.fair p{margin:10px 0}
       <a href="index.html" class="on" aria-current="page">Craps</a>
       <a href="blackjack.html">Blackjack</a>
       <a href="baccarat.html">Baccarat</a>
+      <a href="lanterns.html">Lanterns</a>
+      <a href="pinball.html">Pinball</a>
     </nav>
     <div class="tabs" role="tablist">
       <button class="tab" role="tab" data-mode="craps">Regular</button>
