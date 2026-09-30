@@ -2,25 +2,29 @@
 'use strict';
 var K = window.Casino, S = window.Slots, G = window.Games;
 var g = G.pinball();
-var st = K.game('slots-pinball', { bet: 100, auto: false });
+var st = K.game('slots-pinball', { bet: 100, credits: 1, auto: false });
+if (!st.credits) st.credits = 1;
 var spinning = false, timers = [];
+var MAX_TOTAL = 2500000;
 
 function $(id) { return document.getElementById(id); }
 function money(c, s) { return K.money(c, s); }
 function bank() { return K.bank(); }
+function totalBet() { return st.bet * st.credits; }
 function later(fn, ms) { timers.push(setTimeout(fn, ms)); }
 function clearTimers() { timers.forEach(clearTimeout); timers = []; }
 
+/* ---------- reel symbols ---------- */
 var BARS = { BAR1: 1, BAR2: 2, BAR3: 3 };
 function symHTML(sym) {
   var def = g.symbols[sym];
   var inner;
   if (BARS[sym]) { inner = ''; for (var i = 0; i < BARS[sym]; i++) inner += '<i class="bar"></i>'; }
   else if (sym === 'SEVEN') inner = '7';
-  else if (sym === 'BELL') inner = 'BELL';
-  else if (sym === 'CHERRY') inner = 'CHERRY';
-  else if (sym === 'BALL') inner = 'BALL';
-  else inner = '◆';
+  else if (sym === 'BELL') inner = '<svg viewBox="0 0 48 48" fill="currentColor"><path d="M24 5a3 3 0 0 1 3 3v1.6c6.3 1.4 10 6.4 10 13.4 0 7 1 10 3.4 12.6.9 1 .2 2.4-1.1 2.4H8.7c-1.3 0-2-1.4-1.1-2.4C10 33 11 30 11 23c0-7 3.7-12 10-13.4V8a3 3 0 0 1 3-3z"/><path d="M19 40h10a5 5 0 0 1-10 0z"/></svg>';
+  else if (sym === 'CHERRY') inner = '<svg viewBox="0 0 48 48" fill="currentColor"><path d="M25 8c6 0 11 4 14 10-4-3-8-3-11 0-2 2-3 5-3 8h-2c0-4-1-8-3-11-3-4-8-5-12-3 4-3 9-4 17-4z" opacity=".75"/><circle cx="15" cy="34" r="8"/><circle cx="33" cy="36" r="7"/></svg>';
+  else if (sym === 'BALL') inner = '<svg viewBox="0 0 48 48"><circle cx="24" cy="24" r="14" fill="currentColor"/><circle cx="19" cy="19" r="4.5" fill="#fff" opacity=".85"/></svg>';
+  else inner = '&#9670;';
   return '<div class="psym ' + def.cls + '">' + inner + '</div>';
 }
 function column(reel, stop, rows) {
@@ -34,7 +38,7 @@ function drawBoard(stops) {
   }).join(''));
 }
 function spinReels(stops, done) {
-  var cell = parseFloat(getComputedStyle($('window')).getPropertyValue('--cell')) || 118;
+  var cell = parseFloat(getComputedStyle($('window')).getPropertyValue('--cell')) || 112;
   var lead = 16;
   g.reels.forEach(function (reel, i) {
     var col = $('reels').querySelector('[data-reel="' + i + '"]');
@@ -54,19 +58,88 @@ function spinReels(stops, done) {
   });
 }
 
+/* ---------- the playfield up top ---------- */
+var ROWS = g.pins.rows, STEP_X = 13.71, TOP_Y = 14, ROW_Y = 10;
+function pocketHTML() {
+  return g.pins.pockets.map(function (v, i) {
+    return '<div data-slot="' + i + '" class="' + (v >= 10 ? 'big' : '') + '">' + v + 'x</div>';
+  }).join('');
+}
+function drawPlayfield() {
+  var h = '<div class="bonuslamp">Ball bonus</div>';
+  h += '<i class="bumper" style="left:15%;top:10%"></i><i class="bumper" style="left:85%;top:10%"></i>';
+  for (var r = 0; r < ROWS; r++) {
+    for (var c = 0; c <= r; c++) {
+      var x = 50 + (c - r / 2) * STEP_X, y = TOP_Y + (r + 0.5) * ROW_Y;
+      h += '<i class="peg" data-peg="' + r + '-' + c + '" style="left:' + x.toFixed(2) + '%;top:' + y.toFixed(2) + '%"></i>';
+    }
+  }
+  h += '<div class="pockets">' + pocketHTML() + '</div>';
+  h += '<i class="ball" id="ball" style="left:50%;top:' + (TOP_Y - 6) + '%;opacity:.45"></i>';
+  K.setHTML($('playfield'), h);
+}
+function refreshPockets() {
+  var cells = $('playfield').querySelectorAll('.pockets div');
+  cells.forEach(function (el, i) {
+    el.classList.remove('hit');
+    el.textContent = g.pins.pockets[i] + 'x';
+  });
+}
+function runBonus(res) {
+  var pf = $('playfield'), drop = G.pinballBonus(g, st.bet, st.credits);
+  refreshPockets();
+  pf.classList.remove('idle'); pf.classList.add('live');
+  var ball = $('ball'), pos = 0, step = 0;
+  ball.style.opacity = '1';
+  ball.style.left = '50%';
+  ball.style.top = (TOP_Y - 6) + '%';
+  K.play('shuffle', 0, 0.45);
+  K.setText($('headline'), 'Ball bonus');
+  (function fall() {
+    if (step >= ROWS) {
+      var cell = pf.querySelector('[data-slot="' + drop.slot + '"]');
+      ball.style.top = '84%';
+      if (cell) cell.classList.add('hit');
+      K.play('stack', 0, 0.95);
+      var tag = document.createElement('div');
+      tag.className = 'pfwin';
+      tag.textContent = drop.mult + 'x · ' + money(drop.amount);
+      pf.appendChild(tag);
+      later(function () {
+        tag.remove();
+        pf.classList.remove('live'); pf.classList.add('idle');
+        ball.style.opacity = '.45';
+        ball.style.left = '50%'; ball.style.top = (TOP_Y - 6) + '%';
+        payOut(res, drop.amount);
+      }, 1800);
+      return;
+    }
+    var peg = pf.querySelector('[data-peg="' + step + '-' + Math.min(step, pos) + '"]');
+    if (peg) { peg.classList.add('hit'); later(function () { peg.classList.remove('hit'); }, 320); }
+    pos += drop.path[step];
+    ball.style.left = (50 + (pos - (step + 1) / 2) * STEP_X).toFixed(2) + '%';
+    ball.style.top = (TOP_Y + (step + 1) * ROW_Y).toFixed(2) + '%';
+    K.play('shove', 0, 0.3);
+    step++;
+    later(fall, 280);
+  })();
+}
+
+/* ---------- a spin ---------- */
 function spin() {
   if (spinning) return;
-  if (st.bet > bank()) return K.toast('Not enough in your bankroll for that bet');
+  if (totalBet() > bank()) return K.toast('Not enough in your bankroll for that bet');
   K.ac(); clearTimers();
   spinning = true;
-  K.addBank(-st.bet);
+  K.addBank(-totalBet());
   K.setText($('lastwin'), 'WIN $0');
   K.setHTML($('events'), '');
   $('spin').disabled = true;
+  pullLever();
   K.play('lay', 0, 0.5);
   render();
   var stops = S.spinStops(g), grid = S.gridAt(g, stops);
-  var res = G.pinballWin(g, grid, st.bet);
+  var res = G.pinballWin(g, grid, st.bet, st.credits);
   spinReels(stops, function () {
     if (res.bonus) return runBonus(res);
     payOut(res, 0);
@@ -77,58 +150,68 @@ function payOut(res, bonusAmount) {
   K.addBank(total);
   spinning = false;
   $('spin').disabled = false;
-  K.setText($('lastwin'), 'WIN ' + money(total).replace('$', '$'));
+  K.setText($('lastwin'), 'WIN ' + money(total));
   K.setHTML($('events'), res.wins.map(function (w) {
     return '<span class="ev win">' + K.esc(w.note) + ' ' + money(w.amount) + '</span>';
-  }).join('') + (bonusAmount ? '<span class="ev win">Pinball bonus ' + money(bonusAmount) + '</span>' : ''));
-  if (total) { K.play('stack', 0, 0.8); if (total >= st.bet * 40) K.winBanner($('window'), total); }
+  }).join('') + (bonusAmount ? '<span class="ev win">Ball bonus ' + money(bonusAmount) + '</span>' : ''));
+  if (total) { K.play('stack', 0, 0.8); if (total >= totalBet() * 40) K.winBanner($('window'), total); }
   K.save(); render();
-  if (st.auto && bank() >= st.bet) later(spin, 900);
+  if (st.auto && bank() >= totalBet()) later(spin, 900);
 }
 
-/* ---------- the pinball drop ---------- */
-function runBonus(res) {
-  var ov = $('overlay'), drop = G.pinballBonus(g, st.bet);
-  ov.hidden = false;
-  var rows = g.pins.rows, pegs = '';
-  for (var r = 0; r < rows; r++) {
-    for (var c = 0; c <= r; c++) {
-      var x = 50 + (c - r / 2) * (86 / rows), y = 8 + (r + 1) * (74 / (rows + 1));
-      pegs += '<i class="peg" style="left:' + x + '%;top:' + y + '%"></i>';
-    }
+/* ---------- the handle ---------- */
+var arm = null, dragging = false, startY = 0, PULL = 78;
+function setArm(px) { arm.style.transform = 'translateY(' + px + 'px)'; }
+function pullLever() {
+  if (!arm) return;
+  arm.classList.remove('snap'); setArm(PULL);
+  void arm.offsetWidth;
+  arm.classList.add('snap'); setArm(0);
+}
+function wireLever() {
+  arm = $('arm');
+  var knob = $('knob'), lever = $('lever');
+  knob.addEventListener('pointerdown', function (e) {
+    if (spinning) return;
+    dragging = true; startY = e.clientY;
+    knob.setPointerCapture(e.pointerId);
+    lever.classList.add('pulling');
+    arm.classList.remove('snap');
+    e.preventDefault();
+  });
+  knob.addEventListener('pointermove', function (e) {
+    if (!dragging) return;
+    var dy = Math.max(0, Math.min(PULL, e.clientY - startY));
+    setArm(dy);
+    e.preventDefault();
+  });
+  function release(e) {
+    if (!dragging) return;
+    dragging = false;
+    lever.classList.remove('pulling');
+    var dy = Math.max(0, Math.min(PULL, (e.clientY || 0) - startY));
+    arm.classList.add('snap');
+    setArm(0);
+    if (dy >= PULL * 0.5) { K.play('handle', 0, 0.6); spin(); }
   }
-  var slots = g.pins.slots.map(function (v, i) { return '<div data-slot="' + i + '">' + v + 'x</div>'; }).join('');
-  K.setHTML(ov, '<h3 style="margin:0;font:600 20px Oswald,sans-serif;letter-spacing:.12em;color:#ffd970">PINBALL BONUS</h3>'
-    + '<div class="pegboard" id="pegboard">' + pegs + '<div class="ball" id="ball" style="left:calc(50% - 8px);top:2%"></div>'
-    + '<div class="slots">' + slots + '</div></div>');
-  K.play('shuffle', 0, 0.4);
-  var ball = $('ball'), pos = 0;
-  var step = 0;
-  (function fall() {
-    if (step >= rows) {
-      var idx = drop.slot;
-      var cell = ov.querySelector('[data-slot="' + idx + '"]');
-      if (cell) cell.classList.add('hit');
-      K.play('stack', 0, 0.9);
-      later(function () { ov.hidden = true; payOut(res, drop.amount); }, 1500);
-      return;
-    }
-    pos += drop.path[step];
-    var spread = (pos - (step + 1) / 2) * (86 / rows);
-    ball.style.left = 'calc(' + (50 + spread) + '% - 8px)';
-    ball.style.top = (8 + (step + 1) * (74 / (rows + 1))) + '%';
-    K.play('shove', 0, 0.3);
-    step++;
-    later(fall, 260);
-  })();
+  knob.addEventListener('pointerup', release);
+  knob.addEventListener('pointercancel', release);
+  knob.addEventListener('click', function () { if (!spinning && !dragging) spin(); });
 }
 
 /* ---------- chrome ---------- */
 function payTableHTML() {
-  var b = st.bet;
-  function row(label, mult) { return '<tr><td>' + label + '</td><td class="num">' + mult + 'x</td><td class="num">' + money(mult * b) + '</td></tr>'; }
+  var b = st.bet, cr = st.credits;
+  function row(label, mult, cls) {
+    return '<tr' + (cls ? ' class="' + cls + '"' : '') + '><td>' + label + '</td><td class="num">' + mult + 'x</td>'
+      + '<td class="num">' + money(mult * b * (cls === 'maxrow' ? 1 : cr)) + '</td></tr>';
+  }
+  var sevens = cr >= g.maxCredits
+    ? row('Three sevens &middot; max credits', g.pays.SEVEN.max, 'maxrow')
+    : row('Three sevens', g.pays.SEVEN[3]) + '<tr class="maxrow"><td>Three sevens on 2 credits</td><td class="num">'
+      + g.pays.SEVEN.max + 'x</td><td class="num">' + money(g.pays.SEVEN.max * b) + '</td></tr>';
   return '<table>'
-    + row('Three sevens', g.pays.SEVEN[3])
+    + sevens
     + row('Three triple bars', g.pays.BAR3[3])
     + row('Three double bars', g.pays.BAR2[3])
     + row('Three bars', g.pays.BAR1[3])
@@ -137,7 +220,9 @@ function payTableHTML() {
     + row('Three cherries', g.pays.CHERRY[3])
     + row('Two cherries from the left', g.pays.CHERRY[2])
     + row('One cherry from the left', g.pays.CHERRY[1])
-    + '<tr><td>Three silver balls</td><td class="num">bonus</td><td class="num">' + money(10 * b) + ' to ' + money(250 * b) + '</td></tr>'
+    + '<tr><td>Silver ball on the third reel</td><td class="num">bonus</td><td class="num">'
+      + money(g.pins.pockets.reduce(function (a, v) { return Math.min(a, v); }, 999) * b * cr) + ' to '
+      + money(g.pins.pockets.reduce(function (a, v) { return Math.max(a, v); }, 0) * b * cr) + '</td></tr>'
     + '</table>';
 }
 function render() {
@@ -148,24 +233,39 @@ function render() {
     bk.classList.remove('bump', 'dip'); void bk.offsetWidth; bk.classList.add(cls);
   }
   bk.dataset.v = bank();
-  K.setText($('totalbet'), money(st.bet));
-  K.setText($('credit'), 'BET ' + money(st.bet));
+  K.setText($('totalbet'), money(totalBet()));
+  K.setText($('credit'), st.credits + (st.credits > 1 ? ' CREDITS ' : ' CREDIT ') + money(totalBet()));
+  $('c1').className = st.credits >= 1 ? 'on' : '';
+  $('c2').className = st.credits >= 2 ? 'on' : '';
+  $('bet1').setAttribute('aria-pressed', String(st.credits === 1));
+  $('betmax').setAttribute('aria-pressed', String(st.credits >= 2));
   K.setHTML($('ptable'), payTableHTML());
+  K.setText($('subline'), 'Three reels · ' + st.credits + (st.credits > 1 ? ' credits at ' : ' credit at ')
+    + money(st.bet) + ' · a silver ball on the third reel drops the ball');
   var s = K.load();
   K.setText($('sound'), !s.sound ? 'Audio: Off' : s.voice ? 'Audio: All' : 'Audio: FX');
   K.setText($('auto'), st.auto ? 'Auto: On' : 'Auto: Off');
-  K.setText($('headline'), spinning ? 'Spinning' : 'Drop a coin and pull');
+  K.setText($('headline'), spinning ? 'Spinning' : 'Pull the handle');
   $('spin').disabled = spinning;
   var chipSel = K.load().chip;
   if ($('chips').__chip !== chipSel) {
     $('chips').__chip = chipSel;
     K.renderChips($('chips'), chipSel, function (c) {
       K.load().chip = c;
-      st.bet = Math.min(c, 2500000);
+      st.bet = Math.min(c, Math.floor(MAX_TOTAL / st.credits));
+      if (st.bet < c) K.toast('Table max is ' + money(MAX_TOTAL) + ' a spin');
       K.save(); K.play('lay', 0, 0.4); render();
     });
   }
   if (!$('reels').children.length) drawBoard(S.spinStops(g));
+  if (!$('playfield').children.length) drawPlayfield();
+}
+function setCredits(n, andSpin) {
+  if (spinning) return;
+  st.credits = n;
+  if (totalBet() > MAX_TOTAL) { st.bet = Math.floor(MAX_TOTAL / st.credits); K.toast('Table max is ' + money(MAX_TOTAL) + ' a spin'); }
+  K.save(); K.play('place', 0, 0.55); render();
+  if (andSpin) spin();
 }
 
 /* ---------- reset ---------- */
@@ -189,10 +289,13 @@ function doReset() {
 
 $('nav').innerHTML = K.nav('pinball');
 $('spin').addEventListener('click', spin);
+$('bet1').addEventListener('click', function () { setCredits(1, false); });
+$('betmax').addEventListener('click', function () { setCredits(g.maxCredits, true); });
 $('maxbet').addEventListener('click', function () {
   if (spinning) return;
-  var want = Math.min(2500000, bank());
-  var chips = K.CHIPS.map(function (d) { return d * 100; }).filter(function (c) { return c <= want; });
+  st.credits = g.maxCredits;
+  var want = Math.min(MAX_TOTAL, bank());
+  var chips = K.CHIPS.map(function (d) { return d * 100; }).filter(function (c) { return c * st.credits <= want; });
   st.bet = chips.length ? chips[chips.length - 1] : 100;
   K.load().chip = st.bet;
   K.save(); K.play('stack', 0, 0.7); render();
@@ -218,9 +321,13 @@ document.addEventListener('keydown', function (e) {
   if ($('resetDlg').open || /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
   var k = e.key.toLowerCase();
   if (k === 'b') { e.preventDefault(); return openReset(); }
+  if (k === '1') { e.preventDefault(); return setCredits(1, false); }
+  if (k === '2' || k === 'm') { e.preventDefault(); return setCredits(g.maxCredits, false); }
   if (e.code === 'Space' || k === 'enter') { e.preventDefault(); spin(); }
 });
 document.addEventListener('pointerdown', function () { K.ac(); }, { once: true });
 st.bet = K.load().chip || st.bet;
+if (totalBet() > MAX_TOTAL) st.bet = Math.floor(MAX_TOTAL / st.credits);
+wireLever();
 render();
 })();

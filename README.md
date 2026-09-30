@@ -1,28 +1,29 @@
 # Bubble Craps
 
-Five free-play games that share one bankroll: **Craps**, **Blackjack**, **Baccarat**, and two slots, **Golden Lanterns** and **Pinball Classic**. Use the links at the top of any page to switch games.
+Five free-play games that share one bankroll: **Craps**, **Blackjack**, **Baccarat**, and two slots, **Festival of Lights** and **Pinball Classic**. Use the links at the top of any page to switch games.
 
 
 Free-play craps and crapless craps on a real table layout, with 3D dice. Play money only, no accounts, no purchases. Your bankroll is saved in your browser, and **Reset bankroll** starts you over with any amount up to $100,000.
 
 **Play:** open `index.html`, or turn on GitHub Pages (below).
 
-## Golden Lanterns (`lanterns.html`)
+## Festival of Lights (`lights.html`)
 
-Five reels, three rows, with **5, 25 or 50 lines** selectable and the chip rack setting the bet per line.
+Five reels, three rows, with **5, 25 or 50 lines** selectable and the chip rack setting the bet per line. A Hanukkah-themed machine: menorahs, dreidels, pomegranates and challah, with Hebrew letters on the low pays and a Star of David wild.
 
-- **Hold & Spin:** six or more gold coins lock in place and start three respins that reset every time another coin lands. Fill all fifteen positions for the **Grand**. Coins also carry Mini, Minor and Major jackpots, all scaled to your total bet.
-- **Free games:** three, four or five temples pay 2x, 10x or 50x the bet and start 8, 12 or 20 free games with every win doubled.
-- Pearl is wild. Fixed reel strips, so the odds are the same for everyone, every session.
-- Measured return to player about 94%: roughly 59% from the lines, 23% from Hold & Spin, 9% from free games and 2% from temple pays. Hold & Spin hits about 1 spin in 280.
+- **Light the Menorah (hold & spin):** six or more candles lock in place and start three respins that reset every time another candle lands. **You press spin yourself for each respin** and the new candles land one at a time. Light all fifteen positions for the **Grand**. Candles also carry Mini, Minor and Major jackpots, all scaled to your total bet.
+- **Free games:** three, four or five shofars pay 2x, 10x or 50x the bet and start 8, 12 or 20 free games with every win doubled.
+- The star is wild. Fixed reel strips, so the odds are the same for everyone, every session.
+- Measured return to player about 94%: roughly 59% from the lines, 23% from the hold & spin, 9% from free games and 2% from shofar pays. The feature hits about 1 spin in 290.
 
 ## Pinball Classic (`pinball.html`)
 
-Three reels, one line, bars and bells and sevens, with blanks between them like an old machine.
+Three reels, one line, bars and bells and sevens, with blanks between them like an old machine. A **real pull handle** on the side of the cabinet: drag the knob down and let go (space or the PULL button work too).
 
-- Pays run from one cherry at 3x up to three sevens at 600x.
-- **Pinball bonus:** three silver balls drop a ball through a peg board into a prize slot worth 10x to 250x your bet. It lands about 1 spin in 400.
-- Measured return to player about 95%.
+- **1 or 2 credits.** Play one credit or play max; every pay doubles on two credits, and three sevens on max credits pay **1,200x** instead of 900x. The chip rack sets the bet per credit, table max $25,000 a spin.
+- Pays run from one cherry at 2x up to three sevens at 450x a credit.
+- **Ball bonus:** a single silver ball on the **third reel** sends the ball down the playfield in the backbox, bouncing off the bumpers into a pocket worth 1x to 15x your bet. It lands about 1 spin in 7.
+- Exact return to player 95.3% on one credit, 96.7% on max credits.
 
 ## Blackjack (`blackjack.html`)
 
@@ -114,7 +115,7 @@ Dice and chip sounds are real recordings from Kenney's [Casino Audio](https://ke
 - `common.js` shared bankroll, chips, sounds, cards and shoes
 - `bj.js` / `bac.js` blackjack and baccarat rules
 - `slots.js` / `games.js` the slot engine and both machines
-- `lanterns.html` / `lanterns.js` and `pinball.html` / `pinball.js` the two slots
+- `lights.html` / `lights.js` and `pinball.html` / `pinball.js` the two slots
 - `test-bj.js` / `test-bac.js` / `test-slots.js` their tests (`node test-bj.js`)
 - `app.js` table drawing, dice, animations, sound
 - `layout.js` table layouts (desktop and phone)

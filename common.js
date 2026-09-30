@@ -290,20 +290,24 @@
     }
   };
 
-  /* Big gold win banner, like the ones on live tables. */
-  function winBanner(host, amount) {
+  /* Result banner: gold for a win, red for a loss, silver for a push. */
+  function resultBanner(host, kind, amount, title) {
     if (!host) return;
     var el = document.createElement('div');
-    el.className = 'winbanner';
-    el.innerHTML = '<span class="wb-lbl">YOU WIN</span><span class="wb-amt">' + money(amount) + '</span>'
-      + '<i class="spark s1"></i><i class="spark s2"></i><i class="spark s3"></i><i class="spark s4"></i>';
+    el.className = 'winbanner ' + (kind || 'win');
+    var label = title || (kind === 'lose' ? 'YOU LOSE' : kind === 'push' ? 'PUSH' : 'YOU WIN');
+    var value = kind === 'push' ? (amount ? money(amount) + ' returned' : 'Bets returned')
+      : money(Math.abs(amount || 0));
+    el.innerHTML = '<span class="wb-lbl">' + esc(label) + '</span><span class="wb-amt">' + esc(value) + '</span>'
+      + (kind === 'win' ? '<i class="spark s1"></i><i class="spark s2"></i><i class="spark s3"></i><i class="spark s4"></i>' : '');
     host.appendChild(el);
-    setTimeout(function () { el.classList.add('out'); }, 1700);
-    setTimeout(function () { el.remove(); }, 2300);
+    setTimeout(function () { el.classList.add('out'); }, kind === 'win' ? 1700 : 1300);
+    setTimeout(function () { el.remove(); }, kind === 'win' ? 2300 : 1900);
   }
+  function winBanner(host, amount) { resultBanner(host, 'win', amount); }
 
   function nav(active) {
-    var pages = [['index.html', 'Craps'], ['blackjack.html', 'Blackjack'], ['baccarat.html', 'Baccarat'], ['lanterns.html', 'Lanterns'], ['pinball.html', 'Pinball']];
+    var pages = [['index.html', 'Craps'], ['blackjack.html', 'Blackjack'], ['baccarat.html', 'Baccarat'], ['lights.html', 'Lights'], ['pinball.html', 'Pinball']];
     return '<nav class="games">' + pages.map(function (p) {
       return '<a href="' + p[0] + '"' + (p[1].toLowerCase() === active ? ' class="on" aria-current="page"' : '') + '>' + p[1] + '</a>';
     }).join('') + '</nav>';
@@ -311,7 +315,7 @@
 
   var api = {
     ac: ac, play: play, say: say, toast: toast, esc: esc, setHTML: setHTML, setText: setText, chipHTML: chipHTML, cardHTML: cardHTML, renderChips: renderChips, nav: nav,
-    shoeHTML: shoeHTML, discardHTML: discardHTML, chipStackHTML: chipStackHTML, dealerHTML: dealerHTML, dealer: dealer, winBanner: winBanner,
+    shoeHTML: shoeHTML, discardHTML: discardHTML, chipStackHTML: chipStackHTML, dealerHTML: dealerHTML, dealer: dealer, winBanner: winBanner, resultBanner: resultBanner,
     KEY: KEY, START: START, CHIPS: CHIPS, RANKS: RANKS, SUITS: SUITS, SUIT_CH: SUIT_CH,
     money: money, chipText: chipText, chipColor: chipColor,
     load: load, save: save, bank: bank, addBank: addBank, setBank: setBank, game: game,

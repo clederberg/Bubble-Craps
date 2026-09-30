@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bubble Craps &middot; Festival of Lights</title>
+<meta name="description" content="Free-play five-reel slot with a light-the-menorah hold and spin, jackpots and free games.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2064%2064%27%3E%3Crect%20width%3D%2764%27%20height%3D%2764%27%20rx%3D%2714%27%20fill%3D%27%230a1b3d%27%2F%3E%3Cg%20fill%3D%27none%27%20stroke%3D%27%23ffd970%27%20stroke-width%3D%274%27%20stroke-linejoin%3D%27round%27%3E%3Cpath%20d%3D%27M32%208%2052%2042H12Z%27%2F%3E%3Cpath%20d%3D%27M32%2056%2012%2022h40Z%27%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Inter:wght@400;500;600;700&family=Oswald:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="casino.css">
+<style>
+.cabinet{position:relative;background:linear-gradient(180deg,#123166,#0a1b3d 45%,#050d1e);border:1px solid rgba(219,230,245,.35);border-radius:24px;padding:14px;box-shadow:0 22px 46px rgba(0,0,0,.65), inset 0 1px 0 rgba(255,255,255,.18)}
+.cabinet:before{content:'';position:absolute;inset:0;border-radius:24px;pointer-events:none;opacity:.16;
+  background-image:radial-gradient(circle at 12px 12px, rgba(255,217,112,.9) 1.4px, transparent 1.6px);background-size:34px 34px}
+.topglass{position:relative;text-align:center;margin:0 0 12px;padding:10px 12px;border-radius:16px;
+  background:linear-gradient(180deg,rgba(28,72,145,.95),rgba(8,22,50,.95));border:1px solid rgba(255,217,112,.5);
+  box-shadow:0 8px 22px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.2)}
+.topglass h2{margin:0;font:700 clamp(19px,3.4vw,32px)/1 Cinzel,serif;letter-spacing:.14em;text-transform:uppercase;
+  background:linear-gradient(180deg,#fff6d8,#ffd970 45%,#c9962b);-webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:drop-shadow(0 2px 6px rgba(0,0,0,.5))}
+.topglass small{display:block;margin-top:3px;font:600 10px Oswald,sans-serif;letter-spacing:.32em;text-transform:uppercase;color:#a9c6f0}
+.bulbs{position:absolute;left:10px;right:10px;top:-4px;display:flex;justify-content:space-between;pointer-events:none}
+.bulbs i{width:7px;height:7px;border-radius:50%;background:#ffd970;box-shadow:0 0 8px rgba(255,217,112,.9);opacity:.35;animation:bulb 1.6s infinite}
+@keyframes bulb{0%,100%{opacity:.25}50%{opacity:1}}
+.jackpots{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}
+.jp{position:relative;border-radius:12px;padding:8px 6px;text-align:center;border:1px solid rgba(219,230,245,.35);
+  background:linear-gradient(180deg,rgba(12,32,70,.95),rgba(4,10,24,.9));overflow:hidden}
+.jp b{display:block;font:600 11px Oswald,sans-serif;letter-spacing:.22em;text-transform:uppercase;color:#a9c6f0}
+.jp span{display:block;font:600 clamp(14px,2.2vw,22px)/1.2 Oswald,sans-serif;color:#fff;text-shadow:0 0 12px rgba(160,200,255,.6)}
+.jp.mini{border-color:rgba(122,214,255,.6)}.jp.minor{border-color:rgba(147,197,253,.6)}
+.jp.major{border-color:rgba(219,230,245,.8)}
+.jp.grand{border-color:#ffd970;background:linear-gradient(180deg,rgba(78,48,8,.9),rgba(24,14,2,.95))}
+.jp.grand b{color:#ffe7a6}.jp.grand span{color:#ffe7a6;text-shadow:0 0 14px rgba(255,217,112,.8)}
+.jp.lit{animation:jplit .5s ease-in-out 6}
+@keyframes jplit{50%{filter:brightness(1.9);transform:scale(1.04)}}
+.machine{position:relative;background:linear-gradient(180deg,#0c2350,#050f26);border-radius:16px;padding:10px;border:1px solid rgba(255,217,112,.3);
+  box-shadow:inset 0 0 44px rgba(0,0,0,.6)}
+.reels{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;position:relative}
+.reel{position:relative;overflow:hidden;height:calc(var(--cell) * 3);border-radius:10px;
+  background:linear-gradient(180deg,#0a1c3e,#071630 50%,#0a1c3e);box-shadow:inset 0 0 0 1px rgba(219,230,245,.14), inset 0 14px 18px rgba(0,0,0,.55), inset 0 -14px 18px rgba(0,0,0,.55)}
+.reel .col{position:absolute;left:0;right:0;top:0;will-change:transform}
+.sym{height:var(--cell);display:grid;place-items:center;position:relative;border-bottom:1px solid rgba(0,0,0,.35)}
+.sym i{position:absolute;inset:5%;border-radius:12px;opacity:.95;box-shadow:inset 0 1px 0 rgba(255,255,255,.18)}
+.sym svg{position:relative;z-index:1;width:68%;height:68%;filter:drop-shadow(0 2px 3px rgba(0,0,0,.55))}
+.sym span{position:relative;z-index:1;font:700 calc(var(--cell)*.5)/1 "Frank Ruhl Libre",Cinzel,serif;text-shadow:0 2px 3px rgba(0,0,0,.55)}
+.sym .fill{fill:currentColor}
+.sym .stroke{fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+.sym .stroke.thin{stroke-width:1.5;opacity:.5}
+.sym .hole{fill:rgba(0,0,0,.34)}
+.sym .seed{fill:rgba(0,0,0,.45)}
+.sym .flame{fill:#ffcf5c}
+.sym .mark{fill:rgba(9,20,44,.8)}
+.sym .braid{fill:none;stroke:rgba(60,32,6,.75);stroke-width:2;stroke-linecap:round}
+.sym .seedtop{fill:rgba(60,32,6,.5)}
+.w-menorah{color:#ffd970}.w-menorah .flame{fill:#ffb03a}.w-menorah i{background:linear-gradient(180deg,#2a3f7a,#101c3e)}
+.w-dreidel{color:#eaf2ff}.w-dreidel .mark{fill:#0d2d52}.w-dreidel i{background:linear-gradient(180deg,#1d5f9e,#08304f)}
+.w-pom{color:#ff8a8a}.w-pom i{background:linear-gradient(180deg,#6d1830,#2c0812)}
+.w-challah{color:#f0c07a}.w-challah i{background:linear-gradient(180deg,#5a3a13,#241505)}
+.l-a,.l-k,.l-q,.l-j,.l-t{}
+.l-a i,.l-k i,.l-q i,.l-j i,.l-t i{background:linear-gradient(180deg,rgba(18,40,80,.95),rgba(6,16,36,.95))}
+.l-a span{color:#ffd970}.l-k span{color:#dbe6f5}.l-q span{color:#a9c6f0}.l-j span{color:#8fd8c4}.l-t span{color:#c3b4ff}
+.w-star{color:#0a1b3d}.w-star i{background:linear-gradient(180deg,#ffffff,#8fc4ff 45%,#2f7fd6)}
+.w-candle i{background:linear-gradient(180deg,#123a6d,#06162f);box-shadow:inset 0 0 18px rgba(255,185,60,.55), inset 0 1px 0 rgba(255,255,255,.2)}
+.w-shofar{color:#f1e6d2}.w-shofar i{background:linear-gradient(180deg,#155f52,#062a24)}
+.sym.win{animation:symwin .7s ease-in-out 3}
+@keyframes symwin{50%{transform:scale(1.09);filter:brightness(1.55)}}
+.sym.dim{opacity:.4}
+.frame-lit{animation:framelit .45s ease-in-out 4}
+@keyframes framelit{50%{box-shadow:inset 0 0 60px rgba(255,217,112,.55), 0 0 0 2px rgba(255,217,112,.8)}}
+/* ---- feature overlay ---- */
+.overlay{position:fixed;inset:0;z-index:60;background:radial-gradient(120% 80% at 50% 14%,rgba(14,38,84,.96),rgba(2,6,16,.985));
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center;padding:18px;
+  box-shadow:inset 0 0 160px rgba(255,217,112,.14);animation:ovin .28s ease-out}
+@keyframes ovin{from{opacity:0}}
+.overlay[hidden]{display:none}
+.overlay h3{margin:0;font:600 clamp(20px,3.6vw,38px) Oswald,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);
+  text-shadow:0 0 18px rgba(255,217,112,.55)}
+.overlay p{margin:0;color:var(--ink-2);font-size:13px}
+.hold-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;
+  width:min(660px, 94vw, calc((100vh - 300px) * 5 / 3))}
+.hold-cell{aspect-ratio:1;border-radius:12px;border:1px dashed rgba(219,230,245,.25);display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:2px;color:#3a2506;background:rgba(3,10,24,.55);position:relative;overflow:hidden}
+.hold-cell svg{width:42%;height:42%;filter:drop-shadow(0 0 8px rgba(255,180,60,.75))}
+.hold-cell b{font:700 clamp(11px,1.7vw,17px) Oswald,sans-serif;letter-spacing:.03em}
+.hold-cell.on{border-style:solid;border-color:#ffd970;color:#3a2506;
+  background:radial-gradient(circle at 42% 28%,#fff4cd,#ffcf5c 55%,#c9962b)}
+.hold-cell.on:after{content:'';position:absolute;inset:-40% 30% 60%;background:radial-gradient(circle,rgba(255,200,90,.55),transparent 70%);pointer-events:none}
+.hold-cell.jp{background:radial-gradient(circle at 42% 28%,#fff,#ff7a3d 60%,#c92f1f);color:#fff;
+  border-color:#ffb08a;animation:jpcell .45s ease-in-out 5}
+.hold-cell.jp b{font-size:clamp(10px,1.5vw,15px);letter-spacing:.1em}
+@keyframes jpcell{50%{filter:brightness(1.7)}}
+.hold-cell.fresh{animation:lockin .42s cubic-bezier(.2,1.5,.4,1)}
+@keyframes lockin{from{transform:scale(1.7) rotate(-8deg);opacity:0}}
+.hold-head{display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap}
+.pips{display:flex;gap:6px}
+.pips i{width:12px;height:12px;border-radius:50%;background:rgba(219,230,245,.2);box-shadow:inset 0 0 0 1px rgba(219,230,245,.4)}
+.pips i.on{background:#ffd970;box-shadow:0 0 10px rgba(255,217,112,.9)}
+.meter{font:600 clamp(22px,4vw,40px) Oswald,sans-serif;color:#fff;text-shadow:0 0 18px rgba(255,217,112,.7)}
+.meter.pop{animation:meterpop .35s ease-out}
+@keyframes meterpop{from{transform:scale(1.18);color:#ffd970}}
+.holdspin{border:0;cursor:pointer;border-radius:999px;padding:12px 30px;font:600 15px Oswald,sans-serif;letter-spacing:.16em;text-transform:uppercase;
+  background:linear-gradient(180deg,#ffe9a8,#e0a32b);color:#2a1a05;box-shadow:0 8px 18px rgba(0,0,0,.45);animation:pulse 1.4s ease-in-out infinite}
+.holdspin:disabled{animation:none;opacity:.5;cursor:default}
+@keyframes pulse{50%{transform:scale(1.045);box-shadow:0 10px 26px rgba(255,217,112,.4)}}
+.respins{font:600 13px Oswald,sans-serif;letter-spacing:.2em;color:#a9c6f0;text-transform:uppercase}
+.flash{position:absolute;inset:0;background:rgba(255,238,190,.55);border-radius:16px;pointer-events:none;animation:fl .3s ease-out forwards;z-index:9}
+@keyframes fl{to{opacity:0}}
+.shake{animation:shk .5s}
+@keyframes shk{10%,90%{transform:translateX(-2px)}30%,70%{transform:translateX(4px)}50%{transform:translateX(-4px)}}
+/* ---- bet bar ---- */
+.betbar{display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap;margin-top:10px}
+.lines{display:flex;gap:4px;background:rgba(3,10,24,.6);border:1px solid rgba(219,230,245,.28);border-radius:999px;padding:3px}
+.lines button{border:0;background:none;color:var(--ink-2);font-weight:600;font-size:13px;padding:6px 12px;border-radius:999px;cursor:pointer}
+.lines button[aria-selected=true]{background:var(--gold);color:var(--gold-ink)}
+.winline{font:600 15px Oswald,sans-serif;letter-spacing:.06em;color:var(--gold);min-height:20px;text-align:center;margin-top:8px}
+.paytable-dlg table{width:100%;border-collapse:collapse;font-size:13px}
+.paytable-dlg td{padding:4px;border-bottom:1px solid rgba(255,255,255,.08);vertical-align:middle}
+.paytable-dlg td.ic{width:34px}
+.paytable-dlg svg{width:26px;height:26px}
+.paytable-dlg .fill{fill:currentColor}
+.paytable-dlg .stroke{fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+.paytable-dlg .stroke.thin{stroke-width:1.5;opacity:.5}
+.paytable-dlg .hole{fill:#101820}.paytable-dlg .seed{fill:rgba(0,0,0,.45)}.paytable-dlg .core{fill:#fff6d0}
+.paytable-dlg td.glyph{font:700 20px Cinzel,serif;text-align:center}
+.paytable-dlg td.num{text-align:right;color:var(--gold);font-weight:600}
+.machine{--cell:76px}
+@media (max-width:900px){.machine{--cell:58px}}
+@media (max-width:640px){
+  .machine{--cell:42px;padding:6px}
+  .cabinet{padding:8px;border-radius:16px}
+  .reels{gap:3px}
+  .jackpots{gap:4px}
+  .jp b{font-size:8px;letter-spacing:.12em}
+  .jp span{font-size:13px}
+  .hold-cell{font-size:10px}
+  .holdspin{padding:10px 22px;font-size:13px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Festival of <span>Lights</span></h1>
+    <div id="nav"></div>
+    <button class="ghost" id="reset">Reset bankroll</button>
+  </header>
+
+  <div class="statusbar">
+    <div class="status">
+      <div class="big" id="headline">Pick your lines and spin</div>
+      <div class="sub" id="subline">Five reels &middot; six candles start the hold &amp; spin &middot; three shofars pay free games</div>
+      <div class="events" id="events"></div>
+    </div>
+  </div>
+
+  <div class="cabinet">
+    <div class="topglass">
+      <div class="bulbs" id="bulbs"></div>
+      <h2>Festival of Lights</h2>
+      <small>Light the menorah &middot; hold &amp; spin</small>
+    </div>
+    <div class="jackpots" id="jackpots"></div>
+    <div class="machine" id="machine">
+      <div class="reels" id="reels"></div>
+      <div class="overlay" id="overlay" hidden></div>
+    </div>
+    <div class="winline" id="winline"></div>
+    <div class="betbar">
+      <div class="lines" id="lines"></div>
+      <button class="tool" id="paytableBtn">Paytable</button>
+    </div>
+  </div>
+  <p class="hint">Chips set the bet per line. Space or Enter spins. B resets your bankroll.</p>
+</div>
+
+<div class="dock">
+  <div class="wrap">
+    <div class="chips" id="chips"></div>
+    <div class="tools">
+      <button class="tool" id="maxbet">Max bet</button>
+      <button class="tool" id="auto">Auto: Off</button>
+      <button class="tool" id="sound">Audio: All</button>
+    </div>
+    <div class="dockstats">
+      <button class="stat bankbtn" id="bankBtn" type="button" title="Reset bankroll (B)"><small>Bankroll <i class="rs">&#8635;</i></small><b id="bank">$0</b></button>
+      <div class="stat"><small>Total bet</small><b id="totalbet">$0</b></div>
+    </div>
+    <button class="go-btn" id="spin">SPIN</button>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<dialog id="payDlg" class="dlg paytable-dlg" style="width:min(560px,calc(100% - 24px))">
+  <h2>Festival of Lights paytable</h2>
+  <p class="note" id="payNote"></p>
+  <div id="payBody" style="max-height:min(56vh,420px);overflow:auto"></div>
+  <div class="dlg-actions"><button type="button" class="go" id="payClose">Close</button></div>
+</dialog>
+
+<dialog id="resetDlg" class="dlg">
+  <form id="resetForm" method="dialog">
+    <h2>Reset bankroll</h2>
+    <label for="resetAmt">Starting amount</label>
+    <div class="amt"><span>$</span><input id="resetAmt" inputmode="decimal" autocomplete="off" value="1,000"></div>
+    <div class="presets" id="resetPresets">
+      <button type="button" data-amt="100">$100</button>
+      <button type="button" data-amt="500">$500</button>
+      <button type="button" data-amt="1000">$1,000</button>
+      <button type="button" data-amt="5000">$5,000</button>
+      <button type="button" data-amt="10000">$10,000</button>
+      <button type="button" data-amt="100000">$100,000</button>
+    </div>
+    <p class="err" id="resetErr"></p>
+    <p class="note">Shared with every table.</p>
+    <div class="dlg-actions">
+      <button type="button" class="tool" id="resetCancel">Cancel</button>
+      <button type="submit" class="go">Reset</button>
+    </div>
+  </form>
+</dialog>
+
+<script src="sounds.js"></script>
+<script src="common.js"></script>
+<script src="slots.js"></script>
+<script src="games.js"></script>
+<script src="lights.js"></script>
+</body>
+</html>

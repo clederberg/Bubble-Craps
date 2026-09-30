@@ -242,8 +242,10 @@ function finish() {
   var line = dt > 21 ? 'Dealer busts with ' + dt : BJ.dealerBlackjack(G) ? 'Dealer blackjack' : 'Dealer has ' + dt;
   K.dealer.speak(line + (out.net > 0 ? '. You win ' + money(out.net) : out.net < 0 ? '' : '. Push'));
   K.dealer.state(out.net > 0 ? 'win' : out.net < 0 ? 'lose' : 'idle');
-  if (out.net > 0) { K.play('stack', 0.15, 0.85); K.winBanner(document.querySelector('.felt'), out.net); }
-  else if (out.net < 0) K.play('collide', 0.15, 0.6);
+  var felt = document.querySelector('.felt');
+  if (out.net > 0) { K.play('stack', 0.15, 0.85); K.resultBanner(felt, 'win', out.net); }
+  else if (out.net < 0) { K.play('collide', 0.15, 0.6); K.resultBanner(felt, 'lose', out.net); }
+  else { K.play('handle', 0.15, 0.5); K.resultBanner(felt, 'push', out.back); }
   saveShoe(); render();
   setTimeout(function () {
     if (phase !== 'result') return;
@@ -341,7 +343,13 @@ function renderSpots() {
   for (var i = 0; i < SPOTS; i++) {
     var b = st.bets[i], sp = phase !== 'bet' ? G.spots.filter(function (x) { return x.seat === i; })[0] : null;
     var activeSpot = G.active && G.spots[G.active.spot] && G.spots[G.active.spot].seat === i;
-    h += '<div class="spot' + (activeSpot ? ' active' : '') + (!b.bet && !sp ? ' empty' : '') + '" data-spot="' + i + '">';
+    var seatClass = '';
+    var seatRows = lastResult ? lastResult.rows.filter(function (r) { return G.spots[r.spot] && G.spots[r.spot].seat === i; }) : [];
+    if (seatRows.length) {
+      var seatNet = seatRows.reduce(function (t, r) { return t + r.net; }, 0);
+      seatClass = ' out-' + (seatNet > 0 ? 'win' : seatNet < 0 ? 'lose' : 'push');
+    }
+    h += '<div class="spot' + (activeSpot ? ' active' : '') + seatClass + (!b.bet && !sp ? ' empty' : '') + '" data-spot="' + i + '">';
     h += '<span class="seat">Seat ' + (i + 1) + '</span>';
     h += '<div class="hands">';
     if (sp) {
@@ -370,7 +378,9 @@ function renderSpots() {
     var rows = lastResult ? lastResult.rows.filter(function (r) { return G.spots[r.spot] && G.spots[r.spot].seat === i; }) : [];
     if (rows.length) {
       var net = rows.reduce(function (a, r) { return a + r.net; }, 0);
-      h += '<div class="res ' + (net > 0 ? 'win' : net < 0 ? 'lose' : 'push') + '">' + money(net, true) + '</div>';
+      var kind = net > 0 ? 'win' : net < 0 ? 'lose' : 'push';
+      var word = net > 0 ? 'WIN ' + money(net) : net < 0 ? 'LOSE ' + money(-net) : 'PUSH';
+      h += '<div class="res ' + kind + '">' + word + '</div>';
     } else h += '<div class="res">&nbsp;</div>';
     h += '</div>';
   }

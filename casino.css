@@ -43,10 +43,10 @@ h1 span{color:var(--gold)}
 .brand{position:absolute;left:50%;bottom:8px;transform:translateX(-50%);font:600 13px Oswald,sans-serif;letter-spacing:.35em;color:rgba(255,248,230,.25);pointer-events:none;text-transform:uppercase}
 
 /* cards */
-.hand{display:flex;align-items:flex-end;min-height:calc(var(--cw)*1.4)}
-.hand .card+.card{margin-left:calc(var(--cw)*-0.55)}
+.hand{position:relative;width:calc(var(--cw) * 2.5);height:calc(var(--cw)*1.4);flex:none;margin:0 auto}
+.hand .card{position:absolute;top:0;left:calc(var(--i, 0) * var(--cw) * 0.42)}
 .card{position:relative;width:var(--cw);height:calc(var(--cw)*1.4);border-radius:9%;background:linear-gradient(160deg,#fffdf7,#ece6d6);color:#15130f;box-shadow:0 4px 10px rgba(0,0,0,.45), inset 0 0 0 1px rgba(0,0,0,.15);padding:5% 6%;flex:none}
-.card.deal{animation:dealin .3s ease-out}
+.card.deal{animation:dealin .3s cubic-bezier(.2,.75,.3,1);will-change:transform,opacity}
 .card.red{color:#c0261f}
 .card .r{position:absolute;top:5%;left:7%;font:700 calc(var(--cw)*0.30)/1 Inter,sans-serif;display:flex;flex-direction:column;align-items:center}
 .card .r i{font-style:normal;font-size:calc(var(--cw)*0.24);line-height:.9}
@@ -54,7 +54,7 @@ h1 span{color:var(--gold)}
 .card .big{position:absolute;inset:0;display:grid;place-items:center;font-size:calc(var(--cw)*0.52);opacity:.92}
 .card.back{background:repeating-linear-gradient(45deg,#8d241d,#8d241d 5px,#6d1a15 5px,#6d1a15 10px);box-shadow:0 4px 10px rgba(0,0,0,.45), inset 0 0 0 2px #f0e2c0}
 .card.flip{animation:flipin .4s ease-out}
-@keyframes dealin{from{transform:translate(190px,-70px) rotate(13deg) scale(.92);opacity:0}}
+@keyframes dealin{from{transform:translate(120px,-52px) rotate(9deg);opacity:0}50%{opacity:1}}
 @keyframes flipin{from{transform:rotateY(90deg) scale(.9)}}
 .total{display:inline-flex;align-items:center;gap:6px;background:rgba(0,0,0,.45);border:1px solid var(--line);border-radius:999px;padding:3px 10px;font:600 13px Inter;margin-top:6px}
 .total.bust{border-color:#7a3530;color:var(--lose)}
@@ -194,14 +194,14 @@ details.rules li{margin:4px 0}
 .dl-name{position:absolute;left:10px;bottom:8px;font:600 10px Oswald,sans-serif;letter-spacing:.2em;text-transform:uppercase;color:rgba(255,248,230,.75)}
 .dl-name::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:#ff4b3e;margin-right:6px;vertical-align:middle;animation:live 2s ease-in-out infinite}
 @keyframes live{50%{opacity:.25}}
-.dl-body{transform-origin:150px 150px;animation:breathe 4.2s ease-in-out infinite}
+.dl-body{will-change:transform;transform-origin:150px 150px;animation:breathe 4.2s ease-in-out infinite}
 @keyframes breathe{50%{transform:translateY(-1.2px) scaleY(1.012)}}
-.dl-head{transform-origin:150px 68px;animation:headsway 9s ease-in-out infinite}
+.dl-head{will-change:transform;transform-origin:150px 68px;animation:headsway 9s ease-in-out infinite}
 @keyframes headsway{0%,100%{transform:rotate(-1.2deg)}50%{transform:rotate(1.6deg)}}
 .dl-lid{transform-origin:center;transform:scaleY(0);animation:blink 6s ease-in-out infinite}
 .dl-lid:nth-of-type(2){animation-delay:.04s}
 @keyframes blink{0%,92%,100%{transform:scaleY(0)}94%,96%{transform:scaleY(1)}}
-.dl-arm{transition:transform .28s ease-out}
+.dl-arm{transition:transform .28s ease-out;will-change:transform}
 .dl-arm-r{transform-origin:178px 96px}
 .dl-arm-l{transform-origin:122px 96px}
 .is-dealing .dl-arm-r{transform:rotate(-16deg) translate(6px,-8px)}
@@ -214,16 +214,26 @@ details.rules li{margin:4px 0}
 .dealer-off .dealer-stage{display:none}
 
 /* ---------- win banner ---------- */
-.winbanner{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);z-index:9;text-align:center;pointer-events:none;background:radial-gradient(ellipse at center, rgba(0,0,0,.82) 0%, rgba(0,0,0,.45) 55%, rgba(0,0,0,0) 75%);padding:26px 70px;animation:wbin .35s ease-out}
+.winbanner{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);z-index:9;text-align:center;pointer-events:none;background:rgba(4,12,8,.86);border:1px solid rgba(242,199,92,.45);border-radius:18px;box-shadow:0 18px 44px rgba(0,0,0,.6);backdrop-filter:blur(3px);padding:20px 54px;animation:wbin .35s ease-out}
 .winbanner.out{animation:wbout .5s ease-in forwards}
 @keyframes wbin{from{opacity:0;transform:translate(-50%,-50%) scale(.82)}}
 @keyframes wbout{to{opacity:0;transform:translate(-50%,-62%) scale(1.04)}}
-.wb-lbl{display:block;font:600 15px Oswald,sans-serif;letter-spacing:.42em;color:#f7e3a8;text-transform:uppercase}
+.wb-lbl{display:block;font:600 16px Oswald,sans-serif;letter-spacing:.38em;color:#f7e3a8;text-transform:uppercase;margin-bottom:2px}
 .wb-amt{display:block;font:600 clamp(30px,6vw,52px)/1.1 Oswald,sans-serif;letter-spacing:.02em;background:linear-gradient(180deg,#fff6d2,#f2c75c 45%,#b9842a);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:0 2px 12px rgba(242,199,92,.35)}
+.winbanner.lose{border-color:rgba(217,68,58,.6)}
+.winbanner.push{border-color:rgba(207,224,214,.5)}
+.winbanner.lose .wb-lbl{color:#ffb3ac}
+.winbanner.lose .wb-amt{background:linear-gradient(180deg,#ffd7d2,#e05b4f 45%,#8d241d);-webkit-background-clip:text;background-clip:text;text-shadow:0 2px 12px rgba(217,68,58,.35)}
+.winbanner.push .wb-lbl{color:#cfe0d6}
+.winbanner.push .wb-amt{background:linear-gradient(180deg,#ffffff,#cdd8d2 45%,#8fa298);-webkit-background-clip:text;background-clip:text;text-shadow:0 2px 12px rgba(255,255,255,.25)}
 .winbanner .spark{position:absolute;width:14px;height:14px;background:radial-gradient(circle,#fff 0 20%,rgba(255,238,180,.9) 35%,transparent 70%);animation:sparkle 1.6s ease-out infinite}
 .winbanner .s1{left:8%;top:18%}.winbanner .s2{right:10%;top:26%;animation-delay:.25s}
 .winbanner .s3{left:16%;bottom:16%;animation-delay:.5s}.winbanner .s4{right:14%;bottom:22%;animation-delay:.75s}
 @keyframes sparkle{0%{transform:scale(.3) rotate(0);opacity:0}30%{transform:scale(1.2) rotate(45deg);opacity:1}100%{transform:scale(.4) rotate(120deg);opacity:0}}
+@media (prefers-reduced-motion: reduce){
+  .dl-body,.dl-head,.dl-lid,.card.deal,.winbanner .spark{animation:none!important}
+  .card.deal{opacity:1}
+}
 @media (max-width:760px){
   .dealer-stage{max-width:215px}
   .dl-bubble{font-size:11px;padding:4px 10px}

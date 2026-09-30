@@ -132,8 +132,10 @@ function finish() {
   if (round.panda8) said += '. Panda eight';
   K.dealer.speak(said);
   K.dealer.state(result.net > 0 ? 'win' : result.net < 0 ? 'lose' : 'idle');
-  if (result.net > 0) { K.play('stack', 0.1, 0.85); K.winBanner(document.querySelector('.felt'), result.net); }
-  else if (result.net < 0) K.play('collide', 0.1, 0.6);
+  var felt = document.querySelector('.felt');
+  if (result.net > 0) { K.play('stack', 0.1, 0.85); K.resultBanner(felt, 'win', result.net); }
+  else if (result.net < 0) { K.play('collide', 0.1, 0.6); K.resultBanner(felt, 'lose', result.net); }
+  else { K.play('handle', 0.1, 0.5); K.resultBanner(felt, 'push', result.back); }
   saveShoe(); render();
   setTimeout(function () {
     if (phase !== 'result') return;
