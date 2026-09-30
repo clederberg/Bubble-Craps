@@ -51,6 +51,37 @@ function clearAll() {
   BET_KEYS.forEach(function (k) { st.bets[k] = 0; });
   K.play('handle', 0, 0.7); K.save(); render();
 }
+/* The same bet stays up after a coup, so Deal just repeats it. */
+function restoreBets() {
+  if (!st.last) return;
+  var want = BET_KEYS.reduce(function (t, k) { return t + (st.last[k] || 0); }, 0);
+  if (!want) return;
+  if (want > bank()) {
+    BET_KEYS.forEach(function (k) { st.bets[k] = 0; });
+    K.toast('Not enough left to repeat that bet');
+    return;
+  }
+  BET_KEYS.forEach(function (k) { st.bets[k] = (!ez() && (k === 'dragon' || k === 'panda')) ? 0 : (st.last[k] || 0); });
+}
+function doubleAndDeal() {
+  if (phase !== 'bet') return;
+  var base = stake() ? st.bets : st.last;
+  if (!base || !BET_KEYS.reduce(function (t, k) { return t + (base[k] || 0); }, 0)) return K.toast('Place a bet first');
+  var capped = false, next = {};
+  BET_KEYS.forEach(function (k) {
+    var lim = (k === 'player' || k === 'banker' || k === 'tie') ? BAC.LIMITS.main : BAC.LIMITS.side;
+    var d = (base[k] || 0) * 2;
+    if (d > lim) { d = lim; if (base[k]) capped = true; }
+    next[k] = d;
+  });
+  var total = BET_KEYS.reduce(function (t, k) { return t + next[k]; }, 0);
+  if (total > bank()) return K.toast('Not enough in your bankroll to double that bet');
+  BET_KEYS.forEach(function (k) { st.bets[k] = next[k]; });
+  if (capped) K.toast('Held at the table maximum');
+  K.play('stack', 0, 0.8);
+  K.save(); render();
+  deal();
+}
 function rebet(andDeal) {
   if (phase !== 'bet') return;
   if (!st.last) return K.toast('No previous bet to repeat');
@@ -107,7 +138,7 @@ function finish() {
   setTimeout(function () {
     if (phase !== 'result') return;
     phase = 'bet';
-    BET_KEYS.forEach(function (k) { st.bets[k] = 0; });
+    restoreBets();
     K.save(); render();
   }, 2400);
 }
@@ -301,7 +332,7 @@ function renderStatus() {
   K.setText($('squeeze'), st.squeeze ? 'Squeeze: On' : 'Squeeze: Off');
   $('deal').disabled = phase !== 'bet';
   $('squeeze').disabled = phase !== 'bet';
-  $('rebet').disabled = phase !== 'bet' || !st.last;
+  $('rebet').disabled = phase !== 'bet' || (!stake() && !st.last);
   $('clear').disabled = phase !== 'bet' || !stake();
 }
 function mountDealer() {
@@ -370,7 +401,7 @@ document.querySelector('.modes').addEventListener('click', function (e) {
   K.save(); render();
 });
 $('deal').addEventListener('click', deal);
-$('rebet').addEventListener('click', function () { rebet(true); });
+$('rebet').addEventListener('click', doubleAndDeal);
 $('clear').addEventListener('click', clearAll);
 $('squeeze').addEventListener('click', function () {
   st.squeeze = !st.squeeze;

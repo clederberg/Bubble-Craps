@@ -11,6 +11,8 @@
     resplitAces: false, hitSplitAces: false, blackjack: [3, 2], insurance: [2, 1]
   };
   // Match the Dealer, 6 decks: each player card matching the dealer up card.
+  // 6 decks: each matching card pays, so two matches pay both.
+  // 1 match 4:1 \u00b7 2 matches 8:1 \u00b7 1 suited 9:1 \u00b7 suited + non-suited 13:1 \u00b7 2 suited 18:1
   var MTD = { unsuited: 4, suited: 9 };
   // Buster Blackjack, 6 decks: pays on the number of cards in the dealer's busted hand.
   var BUSTER = { 3: 2, 4: 2, 5: 4, 6: 18, 7: 50, 8: 250 };
@@ -63,19 +65,25 @@
     return startPlay(G);
   }
 
+  function mtdName(suited, plain) {
+    if (suited === 2) return 'two suited matches';
+    if (suited === 1 && plain === 1) return 'suited + non-suited';
+    if (plain === 2) return 'two matches';
+    if (suited === 1) return 'suited match';
+    return 'match';
+  }
   function resolveMatchTheDealer(G) {
     var up = G.dealer[0];
     G.spots.forEach(function (sp) {
       if (!sp.mtd) return;
-      var pay = 0, hits = [];
+      var pay = 0, suited = 0, plain = 0;
       sp.hands[0].cards.forEach(function (c) {
         if (c.r !== up.r) return;
-        var suited = c.s === up.s;
-        pay += sp.mtd * (suited ? MTD.suited : MTD.unsuited);
-        hits.push((suited ? 'suited ' : '') + c.r);
+        if (c.s === up.s) { suited++; pay += sp.mtd * MTD.suited; }
+        else { plain++; pay += sp.mtd * MTD.unsuited; }
       });
       sp.side.push(pay
-        ? { k: 'mtd', win: true, amount: pay + sp.mtd, net: pay, note: hits.join(' + ') }
+        ? { k: 'mtd', win: true, amount: pay + sp.mtd, net: pay, note: mtdName(suited, plain) }
         : { k: 'mtd', win: false, amount: 0, net: -sp.mtd, note: 'no match' });
     });
   }

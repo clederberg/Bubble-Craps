@@ -14,7 +14,8 @@ Free-play craps and crapless craps on a real table layout, with 3D dice. Play mo
 - Double on any two cards, double after split, split to four hands, split aces get one card, late surrender, insurance 2:1, dealer peeks.
 - **Even money:** a blackjack against a dealer ace is offered 1:1 on the spot instead of insurance.
 - **Play up to three hands at once**, each with its own bets.
-- **Side bets:** Match the Dealer (each of your first two cards matching the dealer's up card pays 4:1, or 9:1 suited) and Buster Blackjack (dealer busts: 3-4 cards 2:1, 5 cards 4:1, 6 cards 18:1, 7 cards 50:1, 8+ cards 250:1, paid even if you busted).
+- **Side bets:** Match the Dealer (1 match 4:1, 2 matches 8:1, 1 suited match 9:1, suited + non-suited 13:1, 2 suited matches 18:1) and Buster Blackjack (dealer busts: 3-4 cards 2:1, 5 cards 4:1, 6 cards 18:1, 7 cards 50:1, 8+ cards 250:1, paid even if you busted).
+- Your bet stays up between hands, so Deal repeats it, and **2X** doubles the bet and deals.
 - Cards are dealt one at a time in table order, the hole card flips after you act, and the dealer draws with a pause between cards.
 - The side bet paytables are printed on the felt, and **REPEAT** beside DEAL replays your last bet in one tap.
 - An illustrated dealer deals from the shoe, calls the hand and reacts to the result. No play is ever suggested; the **?** button on the table opens the basic strategy chart ("the book").

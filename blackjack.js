@@ -56,6 +56,35 @@ function clearBets() {
   st.bets.forEach(function (b) { b.bet = b.mtd = b.buster = 0; });
   K.play('handle', 0, 0.7); K.save(); render();
 }
+/* After a hand the same bet stays on the table, so Deal just repeats it. */
+function restoreBets() {
+  if (!st.last) return;
+  var want = st.last.reduce(function (t, b) { return t + b.bet + b.mtd + b.buster; }, 0);
+  if (!want) return;
+  if (want > bank()) {
+    st.bets.forEach(function (b) { b.bet = b.mtd = b.buster = 0; });
+    K.toast('Not enough left to repeat that bet');
+    return;
+  }
+  st.bets = st.last.map(function (b) { return { bet: b.bet, mtd: b.mtd, buster: b.buster }; });
+}
+function doubleAndDeal() {
+  if (phase !== 'bet') return;
+  var base = atStake() ? st.bets : (st.last || null);
+  if (!base || !base.reduce(function (t, b) { return t + b.bet + b.mtd + b.buster; }, 0)) return K.toast('Place a bet first');
+  var capped = false;
+  var next = base.map(function (b) {
+    function cap(v, lim) { var d = v * 2; if (d > lim) { d = lim; if (v) capped = true; } return d; }
+    return { bet: cap(b.bet, BJ.LIMITS.main), mtd: cap(b.mtd, BJ.LIMITS.side), buster: cap(b.buster, BJ.LIMITS.side) };
+  });
+  var total = next.reduce(function (t, b) { return t + b.bet + b.mtd + b.buster; }, 0);
+  if (total > bank()) return K.toast('Not enough in your bankroll to double that bet');
+  st.bets = next;
+  if (capped) K.toast('Held at the table maximum');
+  K.play('stack', 0, 0.8);
+  K.save(); render();
+  deal();
+}
 function rebet(andDeal) {
   if (phase !== 'bet') return;
   if (!st.last) return K.toast('No previous bet to repeat');
@@ -220,7 +249,7 @@ function finish() {
     if (phase !== 'result') return;
     phase = 'bet';
     limits = null;
-    st.bets.forEach(function (b) { b.bet = b.mtd = b.buster = 0; });
+    restoreBets();
     K.save(); render();
   }, 2200);
 }
@@ -399,8 +428,7 @@ function renderStatus() {
   var s = K.load();
   setText('sound', !s.sound ? 'Audio: Off' : s.voice ? 'Audio: All' : 'Audio: FX');
   $('deal').disabled = phase !== 'bet';
-  $('rebet').disabled = phase !== 'bet' || !st.last;
-  $('rebet').textContent = st.last ? 'REPEAT' : 'REPEAT';
+  $('rebet').disabled = phase !== 'bet' || (!atStake() && !st.last);
   $('clear').disabled = phase !== 'bet' || !atStake();
 }
 function liveStake() {
@@ -540,7 +568,7 @@ $('deal').addEventListener('click', deal);
 $('bookBtn').addEventListener('click', openBook);
 $('bookClose').addEventListener('click', function () { var d = $('bookDlg'); if (d.close) d.close(); else d.removeAttribute('open'); });
 $('bookDlg').addEventListener('click', function (e) { if (e.target === this) { var d = $('bookDlg'); if (d.close) d.close(); else d.removeAttribute('open'); } });
-$('rebet').addEventListener('click', function () { rebet(true); });
+$('rebet').addEventListener('click', doubleAndDeal);
 $('clear').addEventListener('click', clearBets);
 $('sound').addEventListener('click', function () {
   var s = K.load();

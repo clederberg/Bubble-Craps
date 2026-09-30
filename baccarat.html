@@ -29,10 +29,9 @@
 .side .who b{font:700 20px/1 "Noto Serif SC", serif;letter-spacing:0}
 .side.player .who{color:var(--blue)}
 .side.banker .who{color:#ff9a90}
-.side .hand{justify-content:center}
-.side .hand .card+.card{margin-left:4px}
-.side .hand .squeezer+.card,.side .hand .card+.squeezer{margin-left:4px}
-.squeezer{position:relative;width:var(--cw);height:calc(var(--cw)*1.4);flex:none;perspective:800px;cursor:grab;touch-action:none}
+.side .hand{width:calc(var(--cw) * 2.35);height:calc(var(--cw)*1.4)}
+.side .hand .card{left:calc(var(--i, 0) * (var(--cw) * 0.6 + 4px))}
+.squeezer{position:absolute;top:0;left:calc(var(--i, 0) * (var(--cw) * 0.6 + 4px));width:var(--cw);height:calc(var(--cw)*1.4);flex:none;perspective:800px;cursor:grab;touch-action:none}
 .squeezer.dragging{cursor:grabbing}
 .squeezer .sq-face,.squeezer .sq-back{position:absolute;inset:0}
 .squeezer .card{width:100%;height:100%}
@@ -163,7 +162,7 @@
       </div>
     </div>
   </div>
-  <p class="hint">Tap a spot to bet, then Deal. Space deals, B resets your bankroll. Right-click a spot to clear it.</p>
+  <p class="hint">Tap a spot to bet, then Deal. Your bet stays up between coups, and 2X doubles it. Space deals, B resets your bankroll. Right-click a spot to clear it.</p>
   <details class="rules" id="rules"></details>
 </div>
 
@@ -179,7 +178,7 @@
       <button class="stat bankbtn" id="bankBtn" type="button" title="Reset bankroll (B)"><small>Bankroll <i class="rs">&#8635;</i></small><b id="bank">$0</b></button>
       <div class="stat"><small>At stake</small><b id="atstake">$0</b></div>
     </div>
-    <button class="go-btn alt" id="rebet" title="Repeat your last bet and deal">REPEAT</button>
+    <button class="go-btn alt" id="rebet" title="Double the bet and deal">2X</button>
     <button class="go-btn" id="deal">DEAL</button>
   </div>
 </div>
