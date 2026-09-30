@@ -280,14 +280,16 @@
       var retrigger = sc >= game.free.trigger;
       if (retrigger) { left += game.free.retrigger; retriggers++; }
       total += amount;
+      /* `of` is the round total as it stands on this spin, which grows when a
+         retrigger lands, so the counter never reads "10 of 5". */
       rounds.push({ stops: stops, grid: grid, read: read, wins: r.wins, amount: amount,
-        hold: hold, wildReels: wildReels, retrigger: retrigger, index: i + 1 });
+        hold: hold, wildReels: wildReels, retrigger: retrigger, index: i + 1, of: left });
       i++;
     }
     var floor = Math.round((game.scatterPays[trigCount] || game.scatterPays[game.free.trigger]) * totalBet);
     var topUp = 0;
     if (total < floor) { topUp = floor - total; total = floor; }
-    return { spins: count, played: i, rounds: rounds, total: total, multiplier: game.free.multiplier,
+    return { spins: count, awarded: left, played: i, rounds: rounds, total: total, multiplier: game.free.multiplier,
       boost: boost, pickLabel: pick.label || boost, jackpots: jackpots, holds: holds,
       retriggers: retriggers, topUp: topUp, floor: floor };
   }

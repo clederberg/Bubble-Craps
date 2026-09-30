@@ -438,7 +438,7 @@ function runFree(res, done) {
   function play() {
     if (i >= fg.rounds.length) return endFree();
     var round = fg.rounds[i++];
-    K.setHTML($('winline'), freeBadge + 'Free game ' + i + ' of ' + fg.spins);
+    K.setHTML($('winline'), freeBadge + 'Free game ' + i + ' of ' + round.of);
     spinReels(round.stops, { reels: g.freeReels, boost: fg.boost }, function () {
       round.wildReels.forEach(function (x) {
         var reel = $('reels').querySelector('[data-col="' + x + '"]');
@@ -454,7 +454,7 @@ function runFree(res, done) {
       if (cells.length) { markWins(cells); fx('coinRun', round.amount / totalBet()); }
       K.setHTML($('winline'), freeBadge + 'Free game ' + i + ' of ' + fg.spins
         + (round.amount ? ' · ' + money(round.amount) : ''));
-      if (round.retrigger) K.toast('Three shofars: ' + g.free.retrigger + ' more free games');
+      if (round.retrigger) K.toast('Three shofars: ' + g.free.retrigger + ' more free games, ' + round.of + ' in total');
       if (round.hold) {
         later(function () { runHold(round.hold, function () { later(play, 400); }, 'Hold &amp; Spin'); }, 500);
       } else later(play, round.amount ? 900 : 520);
