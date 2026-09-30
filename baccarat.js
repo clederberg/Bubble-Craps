@@ -85,7 +85,7 @@ function step() {
     K.play('deal', 0, 0.75);
     K.dealer.state('dealing');
     render();
-    timer = setTimeout(step, reveal <= 4 ? 320 : 520);
+    timer = setTimeout(step, reveal <= 4 ? 430 : 720);
     return;
   }
   finish();
@@ -177,11 +177,11 @@ function renderCards() {
   ord.forEach(function (o, pos) {
     var side = o[0], idx = o[1], card = side === 'p' ? round.player[idx] : round.banker[idx];
     if (pos < reveal) {
-      html[side] += K.cardHTML(card, pos >= seen ? 'deal' : '');
+      html[side] += K.cardHTML(card, pos >= seen ? 'deal' : '', idx);
       faceCount[side]++;
     } else if (pos === reveal && (squeezing() || phase === 'deal')) {
       if (squeezing()) {
-        html[side] += '<div class="squeezer" data-peel="' + pos + '" style="--peel:0">'
+        html[side] += '<div class="squeezer" data-peel="' + pos + '" style="--peel:0;--i:' + idx + '">'
           + '<div class="sq-face">' + K.cardHTML(card) + '</div>'
           + '<div class="sq-back">' + K.cardHTML(null) + '</div>'
           + '<span class="sq-hint">drag to peel</span></div>';

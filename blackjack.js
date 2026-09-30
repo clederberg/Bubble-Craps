@@ -67,14 +67,29 @@ function rebet(andDeal) {
 }
 
 /* ---------- staged dealing ---------- */
-var STEP = 270, FLIP = 480, DRAW = 700;
+var STEP = 400, FLIP = 650, DRAW = 850, SPLIT_STEP = 340;
 function clearTimers() { timers.forEach(clearTimeout); timers = []; }
 function later(fn, ms) { timers.push(setTimeout(fn, ms)); }
 function handKey(si, hi) { return 's' + si + 'h' + hi; }
 function limitFor(key, full) { return limits && limits[key] !== undefined ? limits[key] : full; }
-function fullLimits() {
-  limits = { d: G.dealer.length };
+function fullLimits(keepDealer) {
+  var dealerShown = keepDealer ? Math.min((limits && limits.d) || 2, 2) : G.dealer.length;
+  limits = { d: dealerShown };
   G.spots.forEach(function (sp, si) { sp.hands.forEach(function (h, hi) { limits[handKey(si, hi)] = h.cards.length; }); });
+}
+/* Reveal a list of cards one at a time. */
+function stageReveal(steps, gap, done) {
+  animating = true;
+  render();
+  steps.forEach(function (s, i) {
+    later(function () {
+      limits[s.key] = s.to;
+      K.play('deal', 0, 0.75);
+      K.dealer.state('dealing');
+      render();
+      if (i === steps.length - 1) { animating = false; render(); if (done) done(); }
+    }, (gap || STEP) * (i + 1));
+  });
 }
 function runDealSequence(done) {
   limits = { d: 0 };
@@ -98,10 +113,13 @@ function runDealSequence(done) {
 }
 function revealDealer(done) {
   animating = true;
+  if (!limits) limits = { d: 2 };
+  limits.d = Math.min(limits.d || 2, 2);
   render();
   later(function () {
     G.dealerHole = false;
     K.play('shove', 0, 0.55);
+    K.dealer.state('dealing');
     render();
     var extra = G.dealer.length - 2;
     for (var i = 0; i < extra; i++) {
@@ -163,7 +181,25 @@ function act(action) {
   if (action === 'surrender') K.say('Surrender');
   if (before && BJ.total(before.cards) > 21) K.say('Bust');
   saveShoe();
-  fullLimits();
+  if (action === 'split') {
+    var sp2 = G.spots[G.active ? G.active.spot : 0] || sp;
+    fullLimits(true);
+    var keys = [];
+    sp2.hands.forEach(function (hnd, hi) {
+      var key = handKey(sp2.seat, hi);
+      if (hnd.cards.length === 2 && limits[key] === 2 && keys.length < 2 && hnd.fromSplit) {
+        limits[key] = 1;
+        keys.push({ key: key, to: 2 });
+      }
+    });
+    if (keys.length) {
+      return stageReveal(keys, SPLIT_STEP, function () {
+        if (G.phase !== 'player') return revealDealer(finish);
+        render();
+      });
+    }
+  }
+  fullLimits(true);
   if (G.phase !== 'player') { render(); return revealDealer(finish); }
   render();
 }
@@ -261,9 +297,9 @@ function renderDealer() {
   var lim = limitFor('d', cards.length);
   if (!lim) { K.setHTML($('dealerHand'), ''); K.setHTML($('dealerTotal'), ''); return; }
   var upTo = Math.min(lim, cards.length);
-  h += K.cardHTML(cards[0], fresh('d', 0));
-  if (G.dealerHole && upTo > 1) h += K.cardHTML(null, fresh('d', 1));
-  else for (var i = 1; i < upTo; i++) h += K.cardHTML(cards[i], i === 1 && !G.dealerHole ? 'flip' : fresh('d', i));
+  h += K.cardHTML(cards[0], fresh('d', 0), 0);
+  if (G.dealerHole && upTo > 1) h += K.cardHTML(null, fresh('d', 1), 1);
+  else for (var i = 1; i < upTo; i++) h += K.cardHTML(cards[i], i === 1 && !G.dealerHole ? 'flip' : fresh('d', i), i);
   markSeen('d', upTo);
   K.setHTML($('dealerHand'), h);
   var visible = cards.slice(0, upTo);
@@ -278,39 +314,35 @@ function renderSpots() {
     var activeSpot = G.active && G.spots[G.active.spot] && G.spots[G.active.spot].seat === i;
     h += '<div class="spot' + (activeSpot ? ' active' : '') + (!b.bet && !sp ? ' empty' : '') + '" data-spot="' + i + '">';
     h += '<span class="seat">Seat ' + (i + 1) + '</span>';
+    h += '<div class="hands">';
     if (sp) {
-      h += '<div class="hands">';
       sp.hands.forEach(function (hand, hi) {
         var on = activeSpot && G.active.hand === hi;
         var key = handKey(sp.seat, hi);
         var vis = hand.cards.slice(0, limitFor(key, hand.cards.length));
         h += '<div class="hbox' + (on ? ' on' : '') + '"><div class="hand">'
-          + vis.map(function (c, ci) { return K.cardHTML(c, fresh(key, ci)); }).join('') + '</div>';
+          + vis.map(function (c, ci) { return K.cardHTML(c, fresh(key, ci), ci); }).join('') + '</div>';
         markSeen(key, vis.length);
-        h += ''
-          + (vis.length ? totalPill(vis, vis.length === hand.cards.length ? hand : { cards: vis, fromSplit: true }) : '')
+        h += (vis.length ? totalPill(vis, vis.length === hand.cards.length ? hand : { cards: vis, fromSplit: true }) : '<span class="total ghost">&nbsp;</span>')
           + '<span class="bet"><i class="disc" style="background:' + K.chipColor(hand.bet)[0] + '"></i>' + money(hand.bet)
           + (hand.doubled ? ' dbl' : '') + (hand.surrendered ? ' surr' : '') + '</span></div>';
       });
-      h += '</div>';
-      var extra = [];
-      if (sp.mtd) extra.push('MTD ' + money(sp.mtd));
-      if (sp.buster) extra.push('Buster ' + money(sp.buster));
-      if (sp.ins) extra.push('Insurance ' + money(sp.ins));
-      if (sp.even) extra.push('Even money');
-      if (extra.length) h += '<span class="seat">' + extra.join(' · ') + '</span>';
-      var rows = lastResult ? lastResult.rows.filter(function (r) { return G.spots[r.spot] && G.spots[r.spot].seat === i; }) : [];
-      if (rows.length) {
-        var net = rows.reduce(function (a, r) { return a + r.net; }, 0);
-        h += '<div class="res ' + (net > 0 ? 'win' : net < 0 ? 'lose' : 'push') + '">' + money(net, true) + '</div>';
-      }
-    } else {
-      h += '<div class="circles">'
-        + circle(i, 'bet', 'Main<br>bet', b.bet, 'main')
-        + circle(i, 'mtd', 'Match<br>dealer', b.mtd, 'side')
-        + circle(i, 'buster', 'Buster', b.buster, 'side')
-        + '</div>';
     }
+    h += '</div>';
+    var main = sp ? sp.bet : b.bet, mtd = sp ? sp.mtd : b.mtd, buster = sp ? sp.buster : b.buster;
+    h += '<div class="circles' + (sp ? ' locked' : '') + '">'
+      + circle(i, 'bet', 'Main<br>bet', main, 'main')
+      + circle(i, 'mtd', 'Match<br>dealer', mtd, 'side')
+      + circle(i, 'buster', 'Buster', buster, 'side')
+      + '</div>';
+    if (sp && sp.ins) h += '<span class="seat">Insurance ' + money(sp.ins) + '</span>';
+    else if (sp && sp.even) h += '<span class="seat">Even money</span>';
+    else h += '<span class="seat sub">&nbsp;</span>';
+    var rows = lastResult ? lastResult.rows.filter(function (r) { return G.spots[r.spot] && G.spots[r.spot].seat === i; }) : [];
+    if (rows.length) {
+      var net = rows.reduce(function (a, r) { return a + r.net; }, 0);
+      h += '<div class="res ' + (net > 0 ? 'win' : net < 0 ? 'lose' : 'push') + '">' + money(net, true) + '</div>';
+    } else h += '<div class="res">&nbsp;</div>';
     h += '</div>';
   }
   K.setHTML($('spots'), h);
