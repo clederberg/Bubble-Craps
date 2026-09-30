@@ -1,6 +1,7 @@
 (function () {
 'use strict';
-var K = window.Casino, S = window.Slots, G = window.Games;
+var K = window.Casino, S = window.Slots, G = window.Games, FX = window.SlotFX;
+function fx(name) { var a = arguments; return FX && FX[name] ? FX[name].apply(null, [].slice.call(a, 1)) : null; }
 var g = G.pinball();
 var st = K.game('slots-pinball', { bet: 100, credits: 1, auto: false });
 if (!st.credits) st.credits = 1;
@@ -49,10 +50,11 @@ function spinReels(stops, done) {
     var dur = 700 + i * 320;
     col.style.transition = 'transform ' + dur + 'ms cubic-bezier(.18,.7,.24,1)';
     col.style.transform = 'translateY(' + (-lead * cell) + 'px)';
-    later(function () { K.play('shove', 0, 0.4); }, dur - 30);
+    for (var t = 0; t < 8; t++) later(function () { fx('tick'); }, 70 + t * (dur / 9));
     later(function () {
       col.style.transition = 'none'; col.style.transform = 'translateY(0)';
       col.innerHTML = column(reel, stops[i], 1);
+      fx('reelStop', i);
       if (i === g.reels.length - 1) done();
     }, dur + 20);
   });
@@ -93,14 +95,14 @@ function runBonus(res) {
   ball.style.opacity = '1';
   ball.style.left = '50%';
   ball.style.top = (TOP_Y - 6) + '%';
-  K.play('shuffle', 0, 0.45);
+  fx('whoosh');
   K.setText($('headline'), 'Ball bonus');
   (function fall() {
     if (step >= ROWS) {
       var cell = pf.querySelector('[data-slot="' + drop.slot + '"]');
       ball.style.top = '84%';
       if (cell) cell.classList.add('hit');
-      K.play('stack', 0, 0.95);
+      fx('pocket');
       var tag = document.createElement('div');
       tag.className = 'pfwin';
       tag.textContent = drop.mult + 'x · ' + money(drop.amount);
@@ -119,7 +121,7 @@ function runBonus(res) {
     pos += drop.path[step];
     ball.style.left = (50 + (pos - (step + 1) / 2) * STEP_X).toFixed(2) + '%';
     ball.style.top = (TOP_Y + (step + 1) * ROW_Y).toFixed(2) + '%';
-    K.play('shove', 0, 0.3);
+    fx('bumper');
     step++;
     later(fall, 280);
   })();
@@ -133,10 +135,12 @@ function spin() {
   spinning = true;
   K.addBank(-totalBet());
   K.setText($('lastwin'), 'WIN $0');
+  $('winrow').className = 'winrow none';
+  K.setHTML($('winrow'), '<span class="lbl">Line</span><span class="pay">Spinning</span>');
   K.setHTML($('events'), '');
   $('spin').disabled = true;
   pullLever();
-  K.play('lay', 0, 0.5);
+  fx('ratchet');
   render();
   var stops = S.spinStops(g), grid = S.gridAt(g, stops);
   var res = G.pinballWin(g, grid, st.bet, st.credits);
@@ -145,16 +149,27 @@ function spin() {
     payOut(res, 0);
   });
 }
+function winRowHTML(res, bonusAmount) {
+  var total = (res ? res.total : 0) + (bonusAmount || 0);
+  if (!res) return '<span class="lbl">Line</span><span class="pay">Pull to play</span>';
+  var parts = res.wins.map(function (w) { return K.esc(w.note) + ' pays ' + money(w.amount); });
+  if (bonusAmount) parts.push('ball bonus pays ' + money(bonusAmount));
+  if (!parts.length) return '<span class="lbl">Line</span><span class="pay">No win</span>';
+  return '<span class="lbl">Line</span><span class="pay">' + parts.join(' &middot; ') + '</span>';
+}
 function payOut(res, bonusAmount) {
   var total = res.total + bonusAmount;
   K.addBank(total);
   spinning = false;
   $('spin').disabled = false;
   K.setText($('lastwin'), 'WIN ' + money(total));
+  var wr = $('winrow');
+  wr.className = 'winrow' + (total ? '' : ' none');
+  K.setHTML(wr, winRowHTML(res, bonusAmount));
   K.setHTML($('events'), res.wins.map(function (w) {
     return '<span class="ev win">' + K.esc(w.note) + ' ' + money(w.amount) + '</span>';
   }).join('') + (bonusAmount ? '<span class="ev win">Ball bonus ' + money(bonusAmount) + '</span>' : ''));
-  if (total) { K.play('stack', 0, 0.8); if (total >= totalBet() * 40) K.winBanner($('window'), total); }
+  if (total) { fx('coinRun', total / totalBet()); if (total >= totalBet() * 40) K.winBanner($('window'), total); }
   K.save(); render();
   if (st.auto && bank() >= totalBet()) later(spin, 900);
 }
@@ -192,7 +207,7 @@ function wireLever() {
     var dy = Math.max(0, Math.min(PULL, (e.clientY || 0) - startY));
     arm.classList.add('snap');
     setArm(0);
-    if (dy >= PULL * 0.5) { K.play('handle', 0, 0.6); spin(); }
+    if (dy >= PULL * 0.5) { fx('ratchet'); spin(); }
   }
   knob.addEventListener('pointerup', release);
   knob.addEventListener('pointercancel', release);
@@ -259,6 +274,7 @@ function render() {
   }
   if (!$('reels').children.length) drawBoard(S.spinStops(g));
   if (!$('playfield').children.length) drawPlayfield();
+  if (!$('winrow').children.length) { $('winrow').className = 'winrow none'; K.setHTML($('winrow'), winRowHTML(null)); }
 }
 function setCredits(n, andSpin) {
   if (spinning) return;

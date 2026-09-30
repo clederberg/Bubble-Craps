@@ -1,11 +1,14 @@
 (function () {
 'use strict';
-var K = window.Casino, S = window.Slots, G = window.Games;
+var K = window.Casino, S = window.Slots, G = window.Games, FX = window.SlotFX;
 var g = G.lights();
-var st = K.game('slots-lights', { lines: 25, lineBet: 100, auto: false, last: null });
+var st = K.game('slots-lights', { lines: 25, lineBet: 100, auto: false, jp: null });
 if (!st.lines) st.lines = 25;
 if (!st.lineBet) st.lineBet = 100;
-var spinning = false, timers = [];
+/* the four meters, held as multiples of the total bet */
+if (!st.jp) st.jp = { grand: g.jackpots.seed.grand, major: g.jackpots.seed.major,
+  minor: g.jackpots.seed.minor, mini: g.jackpots.seed.mini };
+var spinning = false, timers = [], lastRows = null, freeBadge = '';
 
 function $(id) { return document.getElementById(id); }
 function money(c, s) { return K.money(c, s); }
@@ -13,6 +16,7 @@ function bank() { return K.bank(); }
 function totalBet() { return st.lines * st.lineBet; }
 function later(fn, ms) { timers.push(setTimeout(fn, ms)); }
 function clearTimers() { timers.forEach(clearTimeout); timers = []; }
+function fx(name) { var a = arguments; return FX && FX[name] ? FX[name].apply(null, [].slice.call(a, 1)) : null; }
 
 /* ---------- symbols ---------- */
 function art(def) {
@@ -22,24 +26,28 @@ function symHTML(sym, cls) {
   var def = g.symbols[sym] || { ch: '?', cls: '' };
   return '<div class="sym ' + def.cls + (cls ? ' ' + cls : '') + '" data-sym="' + sym + '"><i></i>' + art(def) + '</div>';
 }
-function reelColumn(reel, stop, rows) {
+function reelColumn(reel, stop, rows, boost) {
   var out = '';
-  for (var r = 0; r < rows; r++) out += symHTML(reel[(stop + r) % reel.length]);
+  for (var r = 0; r < rows; r++) {
+    var sym = reel[(stop + r) % reel.length];
+    if (boost && sym === g.free.token) sym = boost;
+    out += symHTML(sym);
+  }
   return out;
 }
 
 /* ---------- board ---------- */
-function drawBoard(stops, winCells) {
-  var h = '';
-  g.reels.forEach(function (reel, i) {
-    h += '<div class="reel"><div class="col" data-reel="' + i + '">' + reelColumn(reel, stops[i], g.rows) + '</div></div>';
+function drawBoard(stops, reels, boost) {
+  var set = reels || g.reels, h = '';
+  set.forEach(function (reel, i) {
+    h += '<div class="reel" data-col="' + i + '"><div class="col" data-reel="' + i + '">'
+      + reelColumn(reel, stops[i], g.rows, boost) + '</div></div>';
   });
   K.setHTML($('reels'), h);
-  if (winCells) markWins(winCells);
 }
 function markWins(cells) {
   var all = $('reels').querySelectorAll('.sym');
-  all.forEach(function (el) { el.classList.add('dim'); });
+  all.forEach(function (el) { el.classList.add('dim'); el.classList.remove('win'); });
   cells.forEach(function (c) {
     var col = $('reels').querySelector('[data-reel="' + c[0] + '"]');
     if (!col) return;
@@ -47,30 +55,60 @@ function markWins(cells) {
     if (el) { el.classList.remove('dim'); el.classList.add('win'); }
   });
 }
+function clearMarks() {
+  $('reels').querySelectorAll('.sym').forEach(function (el) { el.classList.remove('dim', 'win'); });
+}
+function cellsOf(wins) {
+  var cells = [];
+  wins.forEach(function (w) { w.path.forEach(function (row, i) { cells.push([i, row]); }); });
+  return cells;
+}
 
 /* ---------- spin animation ---------- */
-function spinReels(stops, done) {
+function spinReels(stops, opts, done) {
+  opts = opts || {};
+  var reels = opts.reels || g.reels, boost = opts.boost;
   var cell = parseFloat(getComputedStyle($('machine')).getPropertyValue('--cell')) || 76;
-  var lead = 14;
-  g.reels.forEach(function (reel, i) {
+  var lead = 14, last = reels.length - 1;
+  $('reels').querySelectorAll('.reel').forEach(function (el) {
+    el.classList.remove('wildreel');
+    var s = el.querySelector('.scrolldrop'); if (s) s.remove();
+  });
+  reels.forEach(function (reel, i) {
     var col = $('reels').querySelector('[data-reel="' + i + '"]');
     if (!col) return;
     var start = (stops[i] - lead + reel.length * 4) % reel.length;
-    col.innerHTML = reelColumn(reel, start, lead + g.rows);
+    col.innerHTML = reelColumn(reel, start, lead + g.rows, boost);
     col.style.transition = 'none';
     col.style.transform = 'translateY(0)';
     void col.offsetWidth;
-    var dur = 620 + i * 190;
+    var dur = 620 + i * 190 + (i === last && opts.tease ? 900 : 0);
     col.style.transition = 'transform ' + dur + 'ms cubic-bezier(.16,.72,.25,1)';
     col.style.transform = 'translateY(' + (-lead * cell) + 'px)';
-    later(function () { K.play('shove', 0, 0.35); }, dur - 40);
+    for (var t = 0; t < 7; t++) later(function () { fx('tick'); }, 80 + t * (dur / 8));
+    if (i === last && opts.tease) later(function () { fx('anticipate', 0.85); }, 620 + (last - 1) * 190);
     later(function () {
       col.style.transition = 'none';
       col.style.transform = 'translateY(0)';
-      col.innerHTML = reelColumn(reel, stops[i], g.rows);
-      if (i === g.reels.length - 1) done();
+      col.innerHTML = reelColumn(reel, stops[i], g.rows, boost);
+      if (i === last && opts.tease) fx('stopAnticipate');
+      fx('reelStop', i);
+      if (i === last) done();
     }, dur + 20);
   });
+}
+/* is the last reel worth a drum roll? two feature symbols already showing */
+function teaseWorthy(stops) {
+  var grid = S.gridAt(g, stops);
+  var candles = 0, pans = 0, shofars = 0;
+  for (var i = 0; i < grid.length - 1; i++) {
+    grid[i].forEach(function (s) {
+      if (s === g.coin) candles++;
+      if (s === g.bonus) pans++;
+      if (s === g.scatter) shofars++;
+    });
+  }
+  return candles >= 4 || pans >= 2 || shofars >= 2;
 }
 
 /* ---------- a spin ---------- */
@@ -85,24 +123,27 @@ function spin() {
   K.addBank(-bet);
   K.setHTML($('winline'), '');
   K.setHTML($('events'), '');
+  freeBadge = '';
   $('spin').disabled = true;
-  K.play('lay', 0, 0.5);
-  var res = S.play(g, st.lines, st.lineBet);
-  st.last = { lines: st.lines, lineBet: st.lineBet };
+  /* every spin feeds the meters */
+  g.jackpots.order.forEach(function (t) { st.jp[t] += g.jackpots.rate[t]; });
+  var res = S.play(g, st.lines, st.lineBet, st.jp);
   K.save();
   render();
-  spinReels(res.stops, function () { settle(res); });
+  paintPanel(null);
+  spinReels(res.stops, { tease: teaseWorthy(res.stops) }, function () { settle(res); });
 }
 function settle(res) {
-  var cells = [];
-  res.wins.forEach(function (w) { w.path.forEach(function (row, i) { cells.push([i, row]); }); });
+  var cells = cellsOf(res.wins);
   if (cells.length) markWins(cells);
   if (res.lineTotal) {
-    K.play('stack', 0, 0.7);
+    fx('coinRun', res.lineTotal / res.totalBet);
     K.setHTML($('winline'), 'Line wins ' + money(res.lineTotal) + (res.wins.length > 1 ? ' on ' + res.wins.length + ' lines' : ''));
   }
+  paintPanel(res);
   var queue = [];
-  if (res.hold) queue.push(function (next) { runHold(res, next); });
+  if (res.hold) queue.push(function (next) { runHold(res.hold, next, 'Light the Menorah'); });
+  if (res.latke) queue.push(function (next) { runLatke(res, next); });
   if (res.free) queue.push(function (next) { runFree(res, next); });
   (function step() {
     if (!queue.length) return finish(res);
@@ -111,24 +152,79 @@ function settle(res) {
 }
 function finish(res) {
   K.addBank(res.total);
+  /* a jackpot that was paid drops its meter back to the seed */
+  res.jackpots.forEach(function (j) { st.jp[j.tier] = g.jackpots.seed[j.tier]; });
   spinning = false;
+  freeBadge = '';
   $('spin').disabled = false;
-  K.setHTML($('events'), res.wins.slice(0, 6).map(function (w) {
+  K.setHTML($('events'), res.wins.slice(0, 4).map(function (w) {
     return '<span class="ev win">' + K.esc(g.symbols[w.sym].name + ' x' + w.count) + ' ' + money(w.amount) + '</span>';
   }).join('') + (res.hold ? '<span class="ev win">Hold &amp; spin ' + money(res.hold.total) + '</span>' : '')
-    + (res.free ? '<span class="ev win">Free games ' + money(res.free.total) + '</span>' : ''));
+    + (res.latke ? '<span class="ev win">Latke bonus ' + money(res.latke.total) + '</span>' : '')
+    + (res.free ? '<span class="ev win">Free games ' + money(res.free.total) + '</span>' : '')
+    + res.jackpots.map(function (j) {
+      return '<span class="ev win">' + j.tier.toUpperCase() + ' jackpot ' + money(j.amount) + '</span>';
+    }).join(''));
   if (res.total > 0) {
     K.setHTML($('winline'), 'You win ' + money(res.total));
     if (res.total >= res.totalBet * 10) K.winBanner($('machine'), res.total);
   } else K.setHTML($('winline'), '');
+  paintPanel(res);
   K.save(); render();
   if (st.auto && bank() >= totalBet()) later(spin, 900);
 }
 
-/* ---------- hold & spin: one respin per press ---------- */
+/* ---------- the win breakdown ---------- */
+function rowIcon(sym) {
+  var def = g.symbols[sym];
+  if (!def) return '';
+  return def.svg ? '<svg viewBox="0 0 48 48">' + def.svg + '</svg>' : '<span class="glyph">' + def.ch + '</span>';
+}
+function paintPanel(res) {
+  var host = $('winpanel');
+  if (!res) {
+    lastRows = null;
+    K.setHTML(host, '<h4>This spin</h4><div class="wp-rows"><div class="wp-empty">Spin to see every line that pays.</div></div>');
+    return;
+  }
+  var rows = [];
+  res.wins.forEach(function (w) {
+    rows.push({ icon: rowIcon(w.sym), label: 'Line ' + (w.line + 1) + ' pays', amount: w.amount,
+      note: g.symbols[w.sym].name + ' x' + w.count, path: w.path });
+  });
+  rows.sort(function (a, b) { return b.amount - a.amount; });
+  if (res.scatterPay) rows.push({ icon: rowIcon(g.scatter), label: res.scatterCount + ' shofars pay', amount: res.scatterPay, feat: true });
+  if (res.hold) rows.push({ icon: rowIcon(g.coin), label: 'Hold &amp; spin', amount: res.hold.total, feat: true });
+  if (res.latke) rows.push({ icon: rowIcon(g.bonus), label: 'Latke bonus', amount: res.latke.total, feat: true });
+  if (res.free) rows.push({ icon: rowIcon(g.scatter), label: 'Free games', amount: res.free.total, feat: true });
+  var h = '<h4>This spin</h4><div class="wp-rows">';
+  if (!rows.length) h += '<div class="wp-empty">No win this spin.</div>';
+  rows.forEach(function (r, i) {
+    h += '<div class="wp-row' + (r.feat ? ' feat' : '') + '" data-row="' + i + '">' + r.icon
+      + '<span class="ln">' + r.label + (r.note ? ' <small>' + K.esc(r.note) + '</small>' : '') + '</span>'
+      + '<span class="amt">' + money(r.amount) + '</span></div>';
+  });
+  h += '</div><div class="wp-total"><span>Total</span><b>' + money(res.total) + '</b></div>';
+  K.setHTML(host, h);
+  lastRows = rows;
+}
+$('winpanel').addEventListener('mouseover', function (e) {
+  var row = e.target.closest('[data-row]');
+  if (!row || !lastRows || spinning) return;
+  var r = lastRows[+row.dataset.row];
+  $('winpanel').querySelectorAll('.wp-row').forEach(function (el) { el.classList.remove('hot'); });
+  row.classList.add('hot');
+  if (r && r.path) markWins(r.path.map(function (rw, i) { return [i, rw]; }));
+});
+$('winpanel').addEventListener('mouseleave', function () {
+  if (spinning || !lastRows) return;
+  $('winpanel').querySelectorAll('.wp-row').forEach(function (el) { el.classList.remove('hot'); });
+  clearMarks();
+});
+
+/* ---------- effects ---------- */
 function flash() {
-  var m = $('machine');
-  var f = document.createElement('div');
+  var m = $('machine'), f = document.createElement('div');
   f.className = 'flash';
   m.appendChild(f);
   setTimeout(function () { f.remove(); }, 320);
@@ -138,23 +234,25 @@ function shake() {
   m.classList.remove('shake'); void m.offsetWidth; m.classList.add('shake');
   setTimeout(function () { m.classList.remove('shake'); }, 600);
 }
-function runHold(res, done) {
-  var ov = $('overlay'), hs = res.hold, idx = 0, busy = false, shown = 0;
+
+/* ---------- hold and spin: one respin per press ---------- */
+var FLAME = '<svg viewBox="0 0 48 48" aria-hidden="true">'
+  + '<path d="M24 1.6c5.6 6.8 7.6 10.4 7.6 13.6a7.6 7.6 0 0 1-15.2 0c0-3.2 2-6.8 7.6-13.6z" fill="#ff9d2e"/>'
+  + '<path d="M24 8.6c2.8 3.6 3.8 5.6 3.8 7.2a3.8 3.8 0 0 1-7.6 0c0-1.6 1-3.6 3.8-7.2z" fill="#fff0ae"/>'
+  + '<rect x="19" y="19" width="10" height="24" rx="2.6" fill="#fdf4e0"/>'
+  + '<rect x="19" y="19" width="3.4" height="24" rx="1.6" fill="#e6d7bb"/></svg>';
+function runHold(hs, done, title) {
+  var ov = $('overlay'), idx = 0, busy = false;
   ov.hidden = false;
-  K.play('shuffle', 0, 0.45);
+  fx('arkOpen');
   K.setHTML(ov,
-    '<h3>Light the Menorah</h3>'
+    '<h3>' + K.esc(title || 'Light the Menorah') + '</h3>'
     + '<div class="hold-head"><div class="pips" id="pips"></div><div class="meter" id="meter">' + money(0) + '</div></div>'
     + '<div class="hold-grid" id="hgrid"></div>'
     + '<div class="respins" id="respins"></div>'
     + '<button class="holdspin" id="holdspin">Spin</button>');
   var grid = $('hgrid'), meter = $('meter'), btn = $('holdspin');
 
-  var FLAME = '<svg viewBox="0 0 48 48" aria-hidden="true">'
-    + '<path d="M24 1.6c5.6 6.8 7.6 10.4 7.6 13.6a7.6 7.6 0 0 1-15.2 0c0-3.2 2-6.8 7.6-13.6z" fill="#ff9d2e"/>'
-    + '<path d="M24 8.6c2.8 3.6 3.8 5.6 3.8 7.2a3.8 3.8 0 0 1-7.6 0c0-1.6 1-3.6 3.8-7.2z" fill="#fff0ae"/>'
-    + '<rect x="19" y="19" width="10" height="24" rx="2.6" fill="#fdf4e0"/>'
-    + '<rect x="19" y="19" width="3.4" height="24" rx="1.6" fill="#e6d7bb"/></svg>';
   function cellHTML(v, fresh) {
     if (!v) return '<div class="hold-cell"></div>';
     return '<div class="hold-cell on' + (v.jackpot ? ' jp' : '') + (fresh ? ' fresh' : '') + '">'
@@ -177,46 +275,38 @@ function runHold(res, done) {
     K.setText($('respins'), step.respins === 1 ? 'Last respin' : step.respins + ' respins left');
     paintPips(step.respins);
   }
-
-  paintGrid(hs.steps[0]);
-  paintMeter(hs.steps[0]);
-  label(hs.steps[0]);
-  shown = hs.steps[0].board.filter(Boolean).length;
+  paintGrid(hs.steps[0]); paintMeter(hs.steps[0]); label(hs.steps[0]);
 
   function reveal(step, prev, after) {
-    // land the new candles one at a time so you can watch them come in
-    var fresh = [];
-    for (var i = 0; i < 15; i++) if (step.board[i] && !prev[i]) fresh.push(i);
+    var fresh = [], i;
+    for (i = 0; i < 15; i++) if (step.board[i] && !prev[i]) fresh.push(i);
     var mix = prev.slice(), n = 0;
     function next() {
       if (n >= fresh.length) return after(fresh.length);
-      var i = fresh[n++];
-      mix[i] = step.board[i];
-      paintGrid({ board: mix }, [i]);
+      var at = fresh[n++];
+      mix[at] = step.board[at];
+      paintGrid({ board: mix }, [at]);
       paintMeter({ board: mix }, true);
-      if (step.board[i].jackpot) { K.play('stack', 0, 1); flash(); shake(); }
-      else K.play('lay', 0, 0.55 + Math.min(0.35, n * 0.06));
-      later(next, step.board[i].jackpot ? 700 : 260);
+      if (step.board[at].jackpot) { fx('jackpot', step.board[at].jackpot); flash(); shake(); }
+      else fx('candle', n);
+      later(next, step.board[at].jackpot ? 900 : 260);
     }
     if (!fresh.length) return after(0);
     next();
   }
-
   function press() {
-    if (busy) return;
-    if (idx >= hs.steps.length - 1) return;
-    busy = true;
-    btn.disabled = true;
+    if (busy || idx >= hs.steps.length - 1) return;
+    busy = true; btn.disabled = true;
     idx++;
     var step = hs.steps[idx], prev = hs.steps[idx - 1].board;
     K.setText($('respins'), 'Spinning');
     grid.classList.add('frame-lit');
-    K.play('shove', 0, 0.4);
+    fx('tick');
     later(function () {
       grid.classList.remove('frame-lit');
       reveal(step, prev, function (landed) {
         label(step);
-        if (landed) { K.play('shuffle', 0, 0.35); K.setText($('respins'), 'Respins reset to 3'); later(function () { label(step); }, 700); }
+        if (landed) { K.setText($('respins'), 'Respins reset to 3'); later(function () { label(step); }, 700); }
         busy = false;
         if (idx >= hs.steps.length - 1) return endHold();
         btn.disabled = false;
@@ -224,57 +314,172 @@ function runHold(res, done) {
       });
     }, 520);
   }
-
   function endHold() {
     btn.disabled = true;
     var filled = hs.filled === 15;
     K.setHTML(ov, '<h3>' + (filled ? 'Grand Jackpot' : 'Hold &amp; Spin pays ' + money(hs.total)) + '</h3>'
       + '<div class="meter">' + money(hs.total) + '</div>'
       + '<p>' + (filled ? 'All fifteen lit.' : hs.filled + ' of 15 candles lit') + '</p>');
-    K.play('stack', 0, 0.95);
+    fx(filled ? 'jackpot' : 'coinRun', filled ? 'grand' : hs.total / totalBet());
     if (filled) { flash(); shake(); K.winBanner($('machine'), hs.total); }
     later(function () { ov.hidden = true; done(); }, filled ? 2800 : 1500);
   }
-
   btn.addEventListener('click', press);
-  ov.__press = press;
   if (st.auto) later(press, 800);
+}
+
+/* ---------- the latke round ---------- */
+var LATKE_ART = '<svg class="latke-art" viewBox="0 0 48 48">' + G.ART.latke + '</svg>';
+function runLatke(res, done) {
+  var ov = $('overlay'), lr = res.latke, idx = 0, running = 0, busy = false;
+  ov.hidden = false;
+  fx('whoosh');
+  K.setHTML(ov, '<h3>Latke Bonus</h3><p>Pick a pan. Every latke pays, an empty pan ends it.</p>'
+    + '<div class="latke-meter"><div class="meter" id="lkmeter">' + money(0) + '</div></div>'
+    + '<div class="latke-stage" id="lkstage"></div>');
+  var stage = $('lkstage'), meter = $('lkmeter');
+
+  var idleTimer = null;
+  function armIdle() {
+    if (idleTimer) clearTimeout(idleTimer);
+    idleTimer = setTimeout(function () {
+      var pan = stage.querySelector('.panwrap:not(.picked)');
+      if (pan && !busy) pan.click();
+    }, 20000);
+    timers.push(idleTimer);
+  }
+  function deal() {
+    if (idx >= lr.picks.length) return endLatke();
+    busy = false;
+    var n = 4, h = '';
+    for (var i = 0; i < n; i++) {
+      var top = 10 + (i % 2) * 38 + Math.random() * 8;
+      var left = 3 + i * 24 + Math.random() * 3;
+      h += '<div class="panwrap" data-pan="' + i + '" style="left:' + left + '%;top:' + top + '%;width:26%;height:40%;'
+        + 'animation:panin .5s ease-out ' + (i * 0.07).toFixed(2) + 's both">'
+        + '<svg viewBox="0 0 48 48">' + G.ART.pan + '</svg>'
+        + '<div class="latke">' + LATKE_ART + '</div><div class="tag"></div></div>';
+    }
+    K.setHTML(stage, h);
+    later(function () {
+      stage.querySelectorAll('.panwrap').forEach(function (el) { el.classList.add('float'); });
+    }, 620);
+    fx('whoosh');
+    armIdle();
+  }
+  stage.addEventListener('click', function (e) {
+    var pan = e.target.closest('[data-pan]');
+    if (!pan || busy || idx >= lr.picks.length) return;
+    busy = true;
+    var pick = lr.picks[idx++];
+    pan.classList.add('picked', 'done');
+    var tag = pan.querySelector('.tag');
+    if (pick.empty) {
+      pan.classList.add('empty');
+      tag.textContent = 'EMPTY';
+      fx('thud');
+      later(endLatke, 1200);
+      return;
+    }
+    fx('sizzle');
+    if (pick.jackpot) {
+      tag.textContent = pick.label;
+      running += pick.amount;
+      meter.textContent = money(running);
+      meter.classList.remove('pop'); void meter.offsetWidth; meter.classList.add('pop');
+      fx('jackpot', pick.jackpot);
+      flash(); shake();
+      later(endLatke, 2200);
+      return;
+    }
+    tag.textContent = money(pick.amount);
+    running += pick.amount;
+    meter.textContent = money(running);
+    meter.classList.remove('pop'); void meter.offsetWidth; meter.classList.add('pop');
+    later(deal, 1000);
+  });
+  function endLatke() {
+    if (idleTimer) clearTimeout(idleTimer);
+    K.setHTML(ov, '<h3>Latke bonus pays ' + money(lr.total) + '</h3><div class="meter">' + money(lr.total) + '</div>');
+    fx('coinRun', lr.total / totalBet());
+    later(function () { ov.hidden = true; done(); }, 1600);
+  }
+  later(deal, 700);
 }
 
 /* ---------- free games ---------- */
 function runFree(res, done) {
   var ov = $('overlay'), fg = res.free, i = 0;
   ov.hidden = false;
-  K.setHTML(ov, '<h3>' + fg.spins + ' Free Games</h3><p>All wins pay ' + fg.multiplier + 'x</p>');
-  K.play('shuffle', 0, 0.4);
-  flash();
+  var def = g.symbols[fg.boost];
+  K.setHTML(ov, '<h3>Free Games</h3>'
+    + '<div class="ark" id="ark"><svg viewBox="0 0 48 48">' + G.ART.ark + '</svg>'
+    + '<div class="glow"></div><div class="door l"></div><div class="door r"></div>'
+    + '<div class="pick">' + symHTML(fg.boost) + '</div></div>'
+    + '<p id="arkline">The ark is opening</p>');
+  fx('arkOpen');
+  later(function () { $('ark').classList.add('open'); fx('scroll'); }, 500);
+  later(function () {
+    $('ark').classList.add('reveal');
+    fx('reveal');
+    K.setText($('arkline'), def.name + ' is boosted for ' + fg.spins + ' free games');
+  }, 1500);
   later(function () {
     ov.hidden = true;
-    (function next() {
-      if (i >= fg.rounds.length) {
-        ov.hidden = false;
-        K.setHTML(ov, '<h3>Free games pay ' + money(fg.total) + '</h3><div class="meter">' + money(fg.total) + '</div>');
-        later(function () { ov.hidden = true; done(); }, 1700);
-        return;
-      }
-      var round = fg.rounds[i++];
-      K.setHTML($('winline'), 'Free game ' + i + ' of ' + fg.spins);
-      spinReels(round.stops, function () {
-        var cells = [];
-        round.wins.forEach(function (w) { w.path.forEach(function (row, x) { cells.push([x, row]); }); });
-        if (cells.length) { markWins(cells); K.play('stack', 0, 0.6); }
-        K.setHTML($('winline'), 'Free game ' + i + ' of ' + fg.spins + (round.amount ? ' · ' + money(round.amount) : ''));
-        later(next, round.amount ? 900 : 500);
+    freeBadge = '<span class="fgbadge">' + symHTML(fg.boost) + ' boosted</span> ';
+    drawBoard(fg.rounds.length ? fg.rounds[0].stops : S.spinStops(g, g.freeReels), g.freeReels, fg.boost);
+    play();
+  }, 3000);
+
+  function play() {
+    if (i >= fg.rounds.length) return endFree();
+    var round = fg.rounds[i++];
+    K.setHTML($('winline'), freeBadge + 'Free game ' + i + ' of ' + fg.spins);
+    spinReels(round.stops, { reels: g.freeReels, boost: fg.boost }, function () {
+      round.wildReels.forEach(function (x) {
+        var reel = $('reels').querySelector('[data-col="' + x + '"]');
+        if (!reel) return;
+        reel.classList.add('wildreel');
+        var drop = document.createElement('div');
+        drop.className = 'scrolldrop';
+        drop.innerHTML = '<b>Wild</b>';
+        reel.appendChild(drop);
+        fx('scroll');
       });
-    })();
-  }, 1600);
+      var cells = cellsOf(round.wins);
+      if (cells.length) { markWins(cells); fx('coinRun', round.amount / totalBet()); }
+      K.setHTML($('winline'), freeBadge + 'Free game ' + i + ' of ' + fg.spins
+        + (round.amount ? ' · ' + money(round.amount) : ''));
+      if (round.retrigger) K.toast('Three shofars: ' + g.free.retrigger + ' more free games');
+      if (round.hold) {
+        later(function () { runHold(round.hold, function () { later(play, 400); }, 'Hold &amp; Spin'); }, 500);
+      } else later(play, round.amount ? 900 : 520);
+    });
+  }
+  function endFree() {
+    ov.hidden = false;
+    K.setHTML(ov, '<h3>Free games pay ' + money(fg.total) + '</h3><div class="meter">' + money(fg.total) + '</div>'
+      + (fg.topUp ? '<p>Topped up to the minimum ' + money(fg.floor) + '</p>' : ''));
+    fx('coinRun', fg.total / totalBet());
+    later(function () {
+      ov.hidden = true;
+      freeBadge = '';
+      drawBoard(res.stops);
+      var cells = cellsOf(res.wins);
+      if (cells.length) markWins(cells);
+      done();
+    }, 1800);
+  }
 }
 
 /* ---------- chrome ---------- */
 function jackpotHTML() {
-  var j = g.hold.jackpots, bet = totalBet();
-  return [['grand', 'Grand', j.grand], ['major', 'Major', j.major], ['minor', 'Minor', j.minor], ['mini', 'Mini', j.mini]]
-    .map(function (x) { return '<div class="jp ' + x[0] + '"><b>' + x[1] + '</b><span>' + money(x[2] * bet) + '</span></div>'; }).join('');
+  var bet = totalBet();
+  return [['grand', 'Grand'], ['major', 'Major'], ['minor', 'Minor'], ['mini', 'Mini']]
+    .map(function (x) {
+      return '<div class="jp ' + x[0] + '"><b>' + x[1] + '</b><span data-jp="' + x[0] + '">'
+        + money(Math.round(st.jp[x[0]] * bet)) + '</span></div>';
+    }).join('');
 }
 function payHTML() {
   var rows = '';
@@ -287,10 +492,13 @@ function payHTML() {
       + '<td class="num">' + p[3] + '</td><td class="num">' + p[4] + '</td><td class="num">' + p[5] + '</td></tr>';
   });
   return '<table><tr><td></td><td></td><td class="num">3</td><td class="num">4</td><td class="num">5</td></tr>' + rows + '</table>'
-    + '<p class="note">Pays are multiples of the bet per line, left to right on a played line. The star is wild and stands in for everything except candles and shofars.</p>'
+    + '<p class="note">Pays are multiples of the bet per line, left to right on a played line. The star is wild and stands in for everything except candles, shofars and pans.</p>'
     + '<p class="note"><b>Candles:</b> six or more anywhere lock in place and start Light the Menorah with three respins. Press spin yourself for each respin — every new candle resets the count. Light all fifteen for the Grand.</p>'
     + '<p class="note"><b>Shofars:</b> three, four or five pay ' + g.scatterPays[3] + 'x, ' + g.scatterPays[4] + 'x and ' + g.scatterPays[5] + 'x the total bet and start '
-    + g.free.spins[3] + ', ' + g.free.spins[4] + ' or ' + g.free.spins[5] + ' free games at ' + g.free.multiplier + 'x.</p>';
+    + g.free.spins[3] + ', ' + g.free.spins[4] + ' or ' + g.free.spins[5] + ' free games. The ark opens and a scroll picks one symbol to boost for the round: it lands in stacks, and a full stack turns that reel wild. Candles come thicker in free games and only '
+    + g.free.holdTrigger + ' are needed for Hold &amp; Spin, so the feature can fire inside the round. Three more shofars add ' + g.free.retrigger + ' spins. <b>A free games round never pays nothing</b> — it pays at least the shofar award that started it.</p>'
+    + '<p class="note"><b>Pans:</b> three or more start the Latke Bonus. Pick a flying pan, every latke pays and a pan can hold a jackpot. An empty pan ends the round.</p>'
+    + '<p class="note"><b>Jackpots:</b> the four meters grow with every spin and reset to their seed when won. They are held as multiples of your bet, so the odds are the same whatever you bet and the figures shown rise with your bet.</p>';
 }
 function iconColor(s) {
   return ({ MENORAH: '#ffd970', DREIDEL: '#bcd9ff', POMEGRANATE: '#ff8a8a', CHALLAH: '#f0c07a', WILD: '#8fc4ff',
@@ -314,7 +522,8 @@ function render() {
   }
   bk.dataset.v = bank();
   K.setText($('totalbet'), money(totalBet()));
-  K.setText($('subline'), 'Five reels · ' + st.lines + ' lines at ' + money(st.lineBet) + ' · six candles start the hold & spin');
+  K.setText($('subline'), 'Five reels · ' + st.lines + ' lines at ' + money(st.lineBet)
+    + ' · candles, shofars and pans all start something');
   K.setText($('headline'), spinning ? 'Good luck' : 'Pick your lines and spin');
   var s = K.load();
   K.setText($('sound'), !s.sound ? 'Audio: Off' : s.voice ? 'Audio: All' : 'Audio: FX');
@@ -329,7 +538,7 @@ function render() {
       K.save(); K.play('lay', 0, 0.4); render();
     });
   }
-  if (!$('reels').children.length) drawBoard(S.spinStops(g));
+  if (!$('reels').children.length) { drawBoard(S.spinStops(g)); paintPanel(null); }
 }
 
 /* ---------- reset dialog ---------- */

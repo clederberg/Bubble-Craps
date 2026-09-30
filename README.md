@@ -9,12 +9,30 @@ Free-play craps and crapless craps on a real table layout, with 3D dice. Play mo
 
 ## Festival of Lights (`lights.html`)
 
-Five reels, three rows, with **5, 25 or 50 lines** selectable and the chip rack setting the bet per line. A Hanukkah-themed machine: menorahs, dreidels, pomegranates and challah, with Hebrew letters on the low pays and a Star of David wild.
+Five reels, three rows, with **5, 25 or 50 lines** selectable and the chip rack setting the bet per line. A Hanukkah-themed machine: menorahs, dreidels, pomegranates and challah, with Hebrew letters on the low pays and a Star of David wild. All the artwork is hand-drawn SVG.
 
-- **Light the Menorah (hold & spin):** six or more candles lock in place and start three respins that reset every time another candle lands. **You press spin yourself for each respin** and the new candles land one at a time. Light all fifteen positions for the **Grand**. Candles also carry Mini, Minor and Major jackpots, all scaled to your total bet.
-- **Free games:** three, four or five shofars pay 2x, 10x or 50x the bet and start 8, 12 or 20 free games with every win doubled.
-- The star is wild. Fixed reel strips, so the odds are the same for everyone, every session.
-- Measured return to player about 94%: roughly 59% from the lines, 23% from the hold & spin, 9% from free games and 2% from shofar pays. The feature hits about 1 spin in 290.
+**Four progressive jackpots.** Grand, Major, Minor and Mini are live meters that grow with every spin and reset to their seed when won. They are held as **multiples of your total bet** (seeds 1000x, 200x, 25x and 10x), not as fixed dollar amounts, so the odds are identical whatever you bet and the figures on the ladder rise with your bet. They grow by 0.012x, 0.007x, 0.004x and 0.003x of your bet per spin.
+
+- **Light the Menorah (hold & spin):** six or more candles lock in place and start three respins that reset every time another candle lands. **You press spin yourself for each respin** and the new candles land one at a time. Light all fifteen for the Grand. Candle cells can also carry Mini, Minor and Major.
+- **Free games:** three, four or five shofars pay 2x, 10x or 50x the bet and start 8, 12 or 20 free games. **The ark opens and a scroll unrolls to reveal one boosted symbol** for the round: it lands in stacks on a separate set of free-game reels, and a full stack unrolls a scroll down that reel and turns it wild. A better symbol is rarer and comes with fewer spins. Candles come thicker in free games and **only five are needed for the hold & spin**, so the feature fires inside the round about a quarter of the time; the round pauses, you play it, then your remaining spins resume. Three more shofars add 5 spins. **A round can never pay nothing** — it pays at least the shofar award that started it, topped up at the end if the spins came up short (that floor is used on about 18% of rounds).
+- **Latke Bonus:** three or more pans start a pick round. Pans fly past, you tap one, a latke lands in it and pays. An empty pan ends the round, and a pan can hold any of the four jackpots.
+- **Win breakdown:** the panel to the right of the reels lists every line that paid, like "Line 3 pays $25", with the feature payouts as their own rows and a total that matches the spin. Hovering a row lights that line on the reels.
+
+Measured return to player **93.6% to 93.8%** across the three line counts, made up of roughly 48% lines, 22% free games, 11% hold & spin, 3% latke bonus, 2.4% shofar pays and 6.7% jackpots. Each meter's growth rate is set to the long-run cost of that jackpot, so the meters fund themselves.
+
+| | hits | pays |
+|---|---|---|
+| Free games | 1 in 107 spins | 22x the bet on average, 8.1 spins |
+| Hold & spin | 1 in 242 spins, 1 in 30 free spins | 26x the bet on average |
+| Latke bonus | 1 in 737 spins | 24x the bet on average, 4.4 pans picked |
+| Mini | 1 in 831 spins | seeds at 10x the bet |
+| Minor | 1 in 3,161 spins | seeds at 25x the bet |
+| Major | 1 in 18,229 spins | seeds at 200x the bet |
+| Grand | 1 in 100,603 spins | seeds at 1000x the bet |
+
+A meter that has been climbing for a long time is worth more than its seed, so a fat meter is genuinely good value, the way a real progressive is. Because the meters are multiples of your bet rather than dollars, that edge does not depend on betting small.
+
+Fixed reel strips, so the odds are the same for everyone, every session.
 
 ## Pinball Classic (`pinball.html`)
 
@@ -116,6 +134,7 @@ Dice and chip sounds are real recordings from Kenney's [Casino Audio](https://ke
 - `bj.js` / `bac.js` blackjack and baccarat rules
 - `slots.js` / `games.js` the slot engine and both machines
 - `lights.html` / `lights.js` and `pinball.html` / `pinball.js` the two slots
+- `slotfx.js` the slot sound engine, synthesized in the browser with the Web Audio API
 - `test-bj.js` / `test-bac.js` / `test-slots.js` their tests (`node test-bj.js`)
 - `app.js` table drawing, dice, animations, sound
 - `layout.js` table layouts (desktop and phone)

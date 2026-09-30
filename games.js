@@ -43,6 +43,22 @@
       '<rect x="5.5" y="36.5" width="11" height="6" rx="3"/></g>' +
       '<ellipse class="hole" cx="43.6" cy="11.9" rx="2.6" ry="6.9"/>' +
       '<g class="stroke thin"><path d="M38 12.6c-7 1.2-12.6 3.6-17 7.2"/></g>',
+    pan:
+      '<g class="pan-h"><rect x="29" y="15.5" width="18" height="5.4" rx="2.7" transform="rotate(-14 29 18)"/></g>' +
+      '<g class="fill"><path d="M4.6 22c.6 6.4 6.2 11.2 13.4 11.2S30.8 28.4 31.4 22z"/></g>' +
+      '<g class="rim"><ellipse cx="18" cy="22" rx="14" ry="5.2"/></g>' +
+      '<g class="inner"><ellipse cx="18" cy="22" rx="10.8" ry="3.7"/></g>',
+    latke:
+      '<g class="fill"><path d="M24 9c9.4 0 17 6.2 17 13.8S33.4 37 24 37 7 30.4 7 22.8 14.6 9 24 9z"/></g>' +
+      '<g class="crisp"><path d="M14 19c4-2.4 7.6-2.4 11 0"/><path d="M17 26c4-2.4 8-2.4 12 0"/>' +
+      '<path d="M26 15c3 .6 5.4 1.8 7 3.6"/></g>',
+    ark:
+      '<g class="case"><path d="M6 15c0-5 4-9 9-9h18c5 0 9 4 9 9v27H6z"/></g>' +
+      '<g class="crown"><path d="M18 6l3-4 3 4 3-4 3 4"/></g>',
+    scroll:
+      '<g class="paper"><rect x="12" y="8" width="24" height="32" rx="2"/></g>' +
+      '<g class="roller"><rect x="6" y="4" width="7" height="40" rx="3.5"/><rect x="35" y="4" width="7" height="40" rx="3.5"/></g>' +
+      '<g class="text"><path d="M17 16h14"/><path d="M17 21h14"/><path d="M17 26h10"/><path d="M17 31h12"/></g>',
     candle:
       '<g><rect x="19" y="19" width="10" height="24" rx="2.6" fill="#fdf4e0"/>' +
       '<rect x="19" y="19" width="3.4" height="24" rx="1.6" fill="#e6d7bb"/>' +
@@ -54,6 +70,7 @@
     WILD: { name: 'Star', cls: 'w-star', svg: ART.star },
     CANDLE: { name: 'Candle', cls: 'w-candle', svg: ART.candle },
     SHOFAR: { name: 'Shofar', cls: 'w-shofar', svg: ART.shofar },
+    PAN: { name: 'Frying Pan', cls: 'w-pan', svg: ART.pan },
     MENORAH: { name: 'Menorah', cls: 'w-menorah', svg: ART.menorah },
     DREIDEL: { name: 'Dreidel', cls: 'w-dreidel', svg: ART.dreidel },
     POMEGRANATE: { name: 'Pomegranate', cls: 'w-pom', svg: ART.pomegranate },
@@ -66,23 +83,45 @@
   };
   // counts per reel; reels 1 and 5 hold one fewer wild so the feature is not too common
   var LIGHT_REELS = [
-    { MENORAH: 2, DREIDEL: 3, POMEGRANATE: 4, CHALLAH: 4, ALEF: 6, SHIN: 6, HEY: 7, GIMEL: 7, NUN: 7, WILD: 1, CANDLE: 8, SHOFAR: 2 },
-    { MENORAH: 2, DREIDEL: 3, POMEGRANATE: 4, CHALLAH: 4, ALEF: 6, SHIN: 6, HEY: 7, GIMEL: 7, NUN: 7, WILD: 2, CANDLE: 8, SHOFAR: 2 },
-    { MENORAH: 3, DREIDEL: 3, POMEGRANATE: 4, CHALLAH: 4, ALEF: 6, SHIN: 6, HEY: 6, GIMEL: 7, NUN: 7, WILD: 2, CANDLE: 8, SHOFAR: 2 },
-    { MENORAH: 2, DREIDEL: 3, POMEGRANATE: 4, CHALLAH: 4, ALEF: 6, SHIN: 6, HEY: 7, GIMEL: 7, NUN: 7, WILD: 2, CANDLE: 8, SHOFAR: 2 },
-    { MENORAH: 2, DREIDEL: 3, POMEGRANATE: 4, CHALLAH: 4, ALEF: 6, SHIN: 6, HEY: 7, GIMEL: 7, NUN: 7, WILD: 1, CANDLE: 8, SHOFAR: 2 }
+    { MENORAH: 2, DREIDEL: 3, POMEGRANATE: 4, CHALLAH: 4, ALEF: 6, SHIN: 6, HEY: 7, GIMEL: 7, NUN: 6, WILD: 1, CANDLE: 8, SHOFAR: 2, PAN: 1 },
+    { MENORAH: 2, DREIDEL: 3, POMEGRANATE: 4, CHALLAH: 4, ALEF: 6, SHIN: 6, HEY: 7, GIMEL: 7, NUN: 6, WILD: 2, CANDLE: 8, SHOFAR: 2, PAN: 1 },
+    { MENORAH: 3, DREIDEL: 3, POMEGRANATE: 4, CHALLAH: 4, ALEF: 6, SHIN: 6, HEY: 6, GIMEL: 7, NUN: 6, WILD: 2, CANDLE: 8, SHOFAR: 2, PAN: 1 },
+    { MENORAH: 2, DREIDEL: 3, POMEGRANATE: 4, CHALLAH: 4, ALEF: 6, SHIN: 6, HEY: 7, GIMEL: 7, NUN: 6, WILD: 2, CANDLE: 8, SHOFAR: 2, PAN: 1 },
+    { MENORAH: 2, DREIDEL: 3, POMEGRANATE: 4, CHALLAH: 4, ALEF: 6, SHIN: 6, HEY: 7, GIMEL: 7, NUN: 6, WILD: 1, CANDLE: 8, SHOFAR: 2, PAN: 1 }
+  ];
+  /* The free-game reel set: thicker with candles, and carrying stacks of the
+     boosted symbol, which rides the strip as a placeholder token. */
+  var FREE_REELS = [
+    { MENORAH: 1, DREIDEL: 2, POMEGRANATE: 3, CHALLAH: 3, ALEF: 4, SHIN: 4, HEY: 5, GIMEL: 5, NUN: 5, WILD: 2, CANDLE: 7, SHOFAR: 2 },
+    { MENORAH: 1, DREIDEL: 2, POMEGRANATE: 3, CHALLAH: 3, ALEF: 4, SHIN: 4, HEY: 5, GIMEL: 5, NUN: 5, WILD: 2, CANDLE: 7, SHOFAR: 2 },
+    { MENORAH: 1, DREIDEL: 2, POMEGRANATE: 3, CHALLAH: 3, ALEF: 4, SHIN: 4, HEY: 5, GIMEL: 5, NUN: 5, WILD: 2, CANDLE: 7, SHOFAR: 2 },
+    { MENORAH: 1, DREIDEL: 2, POMEGRANATE: 3, CHALLAH: 3, ALEF: 4, SHIN: 4, HEY: 5, GIMEL: 5, NUN: 5, WILD: 2, CANDLE: 7, SHOFAR: 2 },
+    { MENORAH: 1, DREIDEL: 2, POMEGRANATE: 3, CHALLAH: 3, ALEF: 4, SHIN: 4, HEY: 5, GIMEL: 5, NUN: 5, WILD: 2, CANDLE: 7, SHOFAR: 2 }
+  ];
+  /* Which symbol the scroll reveals. A better symbol comes with fewer spins. */
+  var FREE_PICKS = [
+    { sym: 'NUN', w: 40, spinAdj: 0 },
+    { sym: 'GIMEL', w: 40, spinAdj: 0 },
+    { sym: 'HEY', w: 30, spinAdj: 0 },
+    { sym: 'SHIN', w: 16, spinAdj: -1 },
+    { sym: 'ALEF', w: 14, spinAdj: -1 },
+    { sym: 'CHALLAH', w: 9, spinAdj: -2 },
+    { sym: 'POMEGRANATE', w: 6, spinAdj: -3 },
+    { sym: 'DREIDEL', w: 3, spinAdj: -4 },
+    { sym: 'MENORAH', w: 1.5, spinAdj: -5 },
+    { sym: 'WILD', w: 0.5, spinAdj: -6 }
   ];
   var LIGHT_PAYS = {
-    MENORAH:     { 3: 94, 4: 470, 5: 1750 },
-    DREIDEL:     { 3: 63, 4: 314, 5: 1150 },
-    POMEGRANATE: { 3: 47, 4: 188, 5: 700 },
-    CHALLAH:     { 3: 37, 4: 157, 5: 540 },
-    ALEF:        { 3: 25, 4: 96, 5: 350 },
-    SHIN:        { 3: 23, 4: 73, 5: 290 },
-    HEY:         { 3: 13, 4: 63, 5: 232 },
-    GIMEL:       { 3: 13, 4: 47, 5: 178 },
-    NUN:         { 3: 13, 4: 47, 5: 178 },
-    WILD:        { 3: 125, 4: 732, 5: 3500 }
+    MENORAH:     { 3: 83, 4: 415, 5: 1544 },
+    DREIDEL:     { 3: 56, 4: 277, 5: 1014 },
+    POMEGRANATE: { 3: 41, 4: 166, 5: 617 },
+    CHALLAH:     { 3: 32, 4: 138, 5: 476 },
+    ALEF:        { 3: 22, 4: 84, 5: 309 },
+    SHIN:        { 3: 20, 4: 65, 5: 256 },
+    HEY:         { 3: 12, 4: 56, 5: 205 },
+    GIMEL:       { 3: 12, 4: 41, 5: 157 },
+    NUN:         { 3: 12, 4: 41, 5: 157 },
+    WILD:        { 3: 110, 4: 646, 5: 3087 }
   };
   var LIGHT_ORDER = ['MENORAH', 'DREIDEL', 'POMEGRANATE', 'CHALLAH', 'ALEF', 'SHIN', 'HEY', 'GIMEL', 'NUN', 'WILD'];
   function lights() {
@@ -93,24 +132,56 @@
       symbols: LIGHT_SYMBOLS,
       order: LIGHT_ORDER,
       reels: LIGHT_REELS.map(function (c, i) { return S.strip(c, 8100 + i); }),
+      freeReels: FREE_REELS.map(function (c, i) { return S.stackStrip(c, 8200 + i, 'BOOST', 2, 3); }),
       pays: LIGHT_PAYS,
       wild: 'WILD',
       coin: 'CANDLE',
       scatter: 'SHOFAR',
-      special: ['CANDLE', 'SHOFAR'],
+      bonus: 'PAN',
+      special: ['CANDLE', 'SHOFAR', 'PAN'],
       lineOptions: [5, 25, 50],
       scatterPays: { 3: 2, 4: 10, 5: 50 },
-      free: { trigger: 3, spins: { 3: 8, 4: 12, 5: 20 }, multiplier: 2 },
+      /* The four meters, held as multiples of the total bet. Each spin adds
+         `rate` to each meter; winning one pays it out and drops it back to the
+         seed. Kept in multiples so the odds do not change with bet size. */
+      jackpots: {
+        order: ['grand', 'major', 'minor', 'mini'],
+        seed: { grand: 1000, major: 200, minor: 25, mini: 10 },
+        rate: { grand: 0.012, major: 0.007, minor: 0.004, mini: 0.003 }
+      },
+      free: {
+        trigger: 3,
+        spins: { 3: 8, 4: 12, 5: 20 },
+        multiplier: 1,
+        token: 'BOOST',
+        picks: FREE_PICKS,
+        minSpins: 4,
+        holdTrigger: 5,
+        retrigger: 5
+      },
+      /* The latke round: pick a flying pan, a latke lands in it and pays.
+         An empty pan ends it, and so does a jackpot. */
+      latke: {
+        trigger: 3,
+        reveals: [
+          { mult: 2, w: 16 }, { mult: 3, w: 14 }, { mult: 6, w: 11 },
+          { mult: 10, w: 8 }, { mult: 20, w: 4 }, { mult: 50, w: 1.5 },
+          { jackpot: 'mini', label: 'MINI', w: 2 },
+          { jackpot: 'minor', label: 'MINOR', w: 0.7 },
+          { jackpot: 'major', label: 'MAJOR', w: 0.12 },
+          { jackpot: 'grand', label: 'GRAND', w: 0.012 },
+          { empty: true, w: 13 }
+        ]
+      },
       hold: {
         trigger: 6,
-        landChance: 0.09,
-        jackpots: { mini: 10, minor: 25, major: 200, grand: 1000 },
+        landChance: 0.05,
         coins: [
           { mult: 1, w: 0.38 }, { mult: 2, w: 0.24 }, { mult: 3, w: 0.15 },
           { mult: 5, w: 0.11 }, { mult: 10, w: 0.07 }, { mult: 20, w: 0.03 },
-          { mult: 10, w: 0.012, label: 'MINI', jackpot: 'mini' },
-          { mult: 25, w: 0.003, label: 'MINOR', jackpot: 'minor' },
-          { mult: 200, w: 0.0008, label: 'MAJOR', jackpot: 'major' }
+          { label: 'MINI', w: 0.02, jackpot: 'mini' },
+          { label: 'MINOR', w: 0.005, jackpot: 'minor' },
+          { label: 'MAJOR', w: 0.0008, jackpot: 'major' }
         ]
       }
     };
@@ -209,7 +280,7 @@
     return { path: path, slot: pocket, mult: g.pins.pockets[pocket], amount: g.pins.pockets[pocket] * bet * cr };
   }
 
-  var api = { lights: lights, pinball: pinball, pinballWin: pinballWin, pinballBonus: pinballBonus,
+  var api = { lights: lights, FREE_PICKS: FREE_PICKS, pinball: pinball, pinballWin: pinballWin, pinballBonus: pinballBonus,
     LIGHT_SYMBOLS: LIGHT_SYMBOLS, LIGHT_ORDER: LIGHT_ORDER, PIN_SYMBOLS: PIN_SYMBOLS, ART: ART };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.Games = api;
