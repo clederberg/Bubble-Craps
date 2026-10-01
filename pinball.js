@@ -61,70 +61,96 @@ function spinReels(stops, done) {
 }
 
 /* ---------- the playfield up top ---------- */
-var ROWS = g.pins.rows, STEP_X = 13.71, TOP_Y = 14, ROW_Y = 10;
-function pocketHTML() {
-  return g.pins.pockets.map(function (v, i) {
-    return '<div data-slot="' + i + '" class="' + (v >= 10 ? 'big' : '') + '">' + v + 'x</div>';
+/* Where each target sits, in the same order as the paytable: the big award is
+   up at the top where the ball has to work to reach it. */
+var SPOTS = [
+  { x: 14, y: 70 }, { x: 62, y: 74 }, { x: 24, y: 44 },
+  { x: 74, y: 44 }, { x: 44, y: 56 }, { x: 49, y: 20 }
+];
+var LAUNCH = { x: 93, y: 90 };
+function targetHTML() {
+  return g.shot.targets.map(function (t, i) {
+    var sp = SPOTS[i] || { x: 50, y: 50 };
+    return '<div class="target' + (t.credits >= 50 ? ' big' : '') + '" data-target="' + i + '"'
+      + ' style="left:' + sp.x + '%;top:' + sp.y + '%"><b>' + t.credits + '</b><small>credits</small></div>';
   }).join('');
 }
 function drawPlayfield() {
-  var h = '<div class="bonuslamp">Ball bonus</div>';
-  h += '<i class="bumper" style="left:15%;top:10%"></i><i class="bumper" style="left:85%;top:10%"></i>';
-  for (var r = 0; r < ROWS; r++) {
-    for (var c = 0; c <= r; c++) {
-      var x = 50 + (c - r / 2) * STEP_X, y = TOP_Y + (r + 0.5) * ROW_Y;
-      h += '<i class="peg" data-peg="' + r + '-' + c + '" style="left:' + x.toFixed(2) + '%;top:' + y.toFixed(2) + '%"></i>';
-    }
-  }
-  h += '<div class="pockets">' + pocketHTML() + '</div>';
-  h += '<i class="ball" id="ball" style="left:50%;top:' + (TOP_Y - 6) + '%;opacity:.45"></i>';
+  var h = '<div class="bonuslamp">Shot bonus</div>';
+  h += '<i class="bumper" style="left:18%;top:24%"></i><i class="bumper" style="left:80%;top:24%"></i>';
+  h += '<i class="bumper" style="left:49%;top:37%"></i>';
+  h += '<div class="lane"></div>';
+  h += targetHTML();
+  h += '<div class="shotline" id="shotline"></div>';
+  h += '<i class="ball" id="ball" style="left:' + LAUNCH.x + '%;top:' + LAUNCH.y + '%;opacity:.45"></i>';
   K.setHTML($('playfield'), h);
 }
-function refreshPockets() {
-  var cells = $('playfield').querySelectorAll('.pockets div');
-  cells.forEach(function (el, i) {
-    el.classList.remove('hit');
-    el.textContent = g.pins.pockets[i] + 'x';
-  });
+function resetTargets() {
+  $('playfield').querySelectorAll('.target').forEach(function (el) { el.classList.remove('hit'); });
 }
 function runBonus(res) {
-  var pf = $('playfield'), drop = G.pinballBonus(g, st.bet, st.credits);
-  refreshPockets();
+  var pf = $('playfield'), bonus = G.pinballBonus(g, st.bet, st.credits);
+  resetTargets();
   pf.classList.remove('idle'); pf.classList.add('live');
-  var ball = $('ball'), pos = 0, step = 0;
+  var ball = $('ball'), line = $('shotline'), i = 0, running = 0;
   ball.style.opacity = '1';
-  ball.style.left = '50%';
-  ball.style.top = (TOP_Y - 6) + '%';
-  fx('whoosh');
-  K.setText($('headline'), 'Ball bonus');
-  (function fall() {
-    if (step >= ROWS) {
-      var cell = pf.querySelector('[data-slot="' + drop.slot + '"]');
-      ball.style.top = '84%';
-      if (cell) cell.classList.add('hit');
-      fx('pocket');
-      var tag = document.createElement('div');
-      tag.className = 'pfwin';
-      tag.textContent = drop.mult + 'x · ' + money(drop.amount);
-      pf.appendChild(tag);
+  K.setText($('headline'), 'Shot bonus');
+  function say(txt) { K.setHTML(line, txt); }
+  function park() {
+    ball.style.transitionDuration = '.25s';
+    ball.style.left = LAUNCH.x + '%';
+    ball.style.top = LAUNCH.y + '%';
+  }
+  function shoot() {
+    if (i >= bonus.shots.length) return finishBonus();
+    var sh = bonus.shots[i++];
+    var sp = SPOTS[sh.target] || { x: 50, y: 50 };
+    say('Shot ' + i + ' of ' + bonus.count + (running ? ' \u00b7 ' + money(running) + ' so far' : ''));
+    fx('ratchet');
+    // up the lane first, then across to the target
+    ball.style.transitionDuration = '.34s';
+    ball.style.left = LAUNCH.x + '%';
+    ball.style.top = '34%';
+    later(function () {
+      ball.style.transitionDuration = '.42s';
+      ball.style.left = sp.x + '%';
+      ball.style.top = sp.y + '%';
+    }, 340);
+    later(function () {
+      var el = pf.querySelector('[data-target="' + sh.target + '"]');
+      if (el) {
+        el.classList.add('hit');
+        var tag = document.createElement('div');
+        tag.className = 'award';
+        tag.textContent = '+' + sh.credits;
+        tag.style.left = sp.x + '%';
+        tag.style.top = sp.y + '%';
+        pf.appendChild(tag);
+        setTimeout(function () { tag.remove(); }, 1100);
+      }
+      running += sh.amount;
+      fx(sh.credits >= 50 ? 'pocket' : 'bumper');
+      say('Shot ' + i + ' of ' + bonus.count + ' \u00b7 ' + sh.credits + ' credits \u00b7 ' + money(running));
       later(function () {
-        tag.remove();
-        pf.classList.remove('live'); pf.classList.add('idle');
-        ball.style.opacity = '.45';
-        ball.style.left = '50%'; ball.style.top = (TOP_Y - 6) + '%';
-        payOut(res, drop.amount);
-      }, 1800);
-      return;
-    }
-    var peg = pf.querySelector('[data-peg="' + step + '-' + Math.min(step, pos) + '"]');
-    if (peg) { peg.classList.add('hit'); later(function () { peg.classList.remove('hit'); }, 320); }
-    pos += drop.path[step];
-    ball.style.left = (50 + (pos - (step + 1) / 2) * STEP_X).toFixed(2) + '%';
-    ball.style.top = (TOP_Y + (step + 1) * ROW_Y).toFixed(2) + '%';
-    fx('bumper');
-    step++;
-    later(fall, 280);
-  })();
+        if (el) el.classList.remove('hit');
+        park();
+        later(shoot, 320);
+      }, 620);
+    }, 800);
+  }
+  function finishBonus() {
+    say(bonus.count + (bonus.count === 1 ? ' shot paid ' : ' shots paid ') + money(bonus.total)
+      + (bonus.maxed ? '' : ' \u00b7 play max credits for all five'));
+    fx('coinRun', bonus.total / totalBet());
+    later(function () {
+      pf.classList.remove('live'); pf.classList.add('idle');
+      ball.style.opacity = '.45';
+      K.setHTML(line, '');
+      resetTargets();
+      payOut(res, bonus.total);
+    }, 1900);
+  }
+  later(shoot, 500);
 }
 
 /* ---------- a spin ---------- */
@@ -225,6 +251,8 @@ function payTableHTML() {
     ? row('Three sevens &middot; max credits', g.pays.SEVEN.max, 'maxrow')
     : row('Three sevens', g.pays.SEVEN[3]) + '<tr class="maxrow"><td>Three sevens on 2 credits</td><td class="num">'
       + g.pays.SEVEN.max + 'x</td><td class="num">' + money(g.pays.SEVEN.max * b) + '</td></tr>';
+  var lo = g.shot.targets[0].credits, hi = g.shot.targets[g.shot.targets.length - 1].credits;
+  var shots = g.shot.shots[cr] || 1;
   return '<table>'
     + sevens
     + row('Three triple bars', g.pays.BAR3[3])
@@ -235,10 +263,12 @@ function payTableHTML() {
     + row('Three cherries', g.pays.CHERRY[3])
     + row('Two cherries from the left', g.pays.CHERRY[2])
     + row('One cherry from the left', g.pays.CHERRY[1])
-    + '<tr><td>Silver ball on the third reel</td><td class="num">bonus</td><td class="num">'
-      + money(g.pins.pockets.reduce(function (a, v) { return Math.min(a, v); }, 999) * b * cr) + ' to '
-      + money(g.pins.pockets.reduce(function (a, v) { return Math.max(a, v); }, 0) * b * cr) + '</td></tr>'
-    + '</table>';
+    + '<tr class="' + (cr >= g.maxCredits ? '' : 'maxrow') + '"><td>Silver ball on the third reel</td>'
+      + '<td class="num">' + shots + (shots === 1 ? ' shot' : ' shots') + '</td>'
+      + '<td class="num">' + money(lo * b) + ' to ' + money(hi * b) + ' a shot</td></tr>'
+    + '</table>'
+    + '<p class="note" style="margin:8px 0 0;font-size:12px;color:#cfd8e0">The ball is launched at the lit targets, worth '
+      + lo + ' to ' + hi + ' credits each. <b>Max credits gets all five shots</b>, a single credit gets one.</p>';
 }
 function render() {
   var bk = $('bank'), prev = +bk.dataset.v;
