@@ -193,6 +193,18 @@
 @keyframes panbob{0%,100%{transform:translateY(-4px) rotate(-2deg)}50%{transform:translateY(4px) rotate(2deg)}}
 .panwrap.float{animation:panbob 2.6s ease-in-out infinite}
 .latke-meter{display:flex;gap:14px;align-items:center;justify-content:center;flex-wrap:wrap}
+.buyrow{display:flex;align-items:center;gap:10px;width:100%;text-align:left;margin-bottom:7px;padding:10px 12px;cursor:pointer;
+  border-radius:12px;border:1px solid rgba(219,230,245,.25);background:linear-gradient(180deg,rgba(18,48,98,.8),rgba(5,14,32,.8));
+  color:var(--ink);font:inherit}
+.buyrow:hover{border-color:var(--gold);background:linear-gradient(180deg,rgba(28,68,136,.85),rgba(8,20,44,.85))}
+.buyrow:disabled{opacity:.42;cursor:default}
+.buyrow .nm{flex:1;min-width:0}
+.buyrow .nm b{display:block;font:600 14px Oswald,sans-serif;letter-spacing:.06em;text-transform:uppercase;color:#fff}
+.buyrow .nm small{display:block;color:var(--ink-2);font-size:12px;margin-top:1px}
+.buyrow .pr{font:700 16px Oswald,sans-serif;color:var(--gold);white-space:nowrap}
+.buyrow.free-play .pr{color:#8fd8c4}
+.cheatbar{margin:0 0 10px;padding:7px 11px;border-radius:999px;background:rgba(143,216,196,.14);border:1px solid rgba(143,216,196,.5);
+  color:#8fd8c4;font:600 11px Oswald,sans-serif;letter-spacing:.18em;text-transform:uppercase;text-align:center}
 /* ---- bet bar ---- */
 .betbar{display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap;margin-top:10px}
 .lines{display:flex;gap:4px;background:rgba(3,10,24,.6);border:1px solid rgba(219,230,245,.28);border-radius:999px;padding:3px}
@@ -261,6 +273,7 @@
     <div class="winline" id="winline"></div>
     <div class="betbar">
       <div class="lines" id="lines"></div>
+      <button class="tool" id="buyBtn">Buy feature</button>
       <button class="tool" id="paytableBtn">Paytable</button>
     </div>
   </div>
@@ -283,6 +296,13 @@
   </div>
 </div>
 <div class="toast" id="toast"></div>
+
+<dialog id="buyDlg" class="dlg" style="width:min(440px,calc(100% - 24px))">
+  <h2 id="buyTitle">Buy a feature</h2>
+  <p class="note" id="buyNote"></p>
+  <div id="buyList"></div>
+  <div class="dlg-actions"><button type="button" class="tool" id="buyClose">Close</button></div>
+</dialog>
 
 <dialog id="payDlg" class="dlg paytable-dlg" style="width:min(560px,calc(100% - 24px))">
   <h2>Festival of Lights paytable</h2>

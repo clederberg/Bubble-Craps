@@ -88,8 +88,8 @@ function drawPlayfield() {
 function resetTargets() {
   $('playfield').querySelectorAll('.target').forEach(function (el) { el.classList.remove('hit'); });
 }
-function runBonus(res) {
-  var pf = $('playfield'), bonus = G.pinballBonus(g, st.bet, st.credits);
+function runBonus(res, creditsOverride) {
+  var pf = $('playfield'), bonus = G.pinballBonus(g, st.bet, creditsOverride || st.credits);
   resetTargets();
   pf.classList.remove('idle'); pf.classList.add('live');
   var ball = $('ball'), line = $('shotline'), i = 0, running = 0;
@@ -240,6 +240,31 @@ function wireLever() {
   knob.addEventListener('click', function () { if (!spinning && !dragging) spin(); });
 }
 
+/* ---------- the key sequence: a free shot bonus, all shots ---------- */
+var KONAMI = ['arrowup', 'arrowup', 'arrowdown', 'arrowdown', 'arrowleft', 'arrowright',
+  'arrowleft', 'arrowright', 'b', 'a', 'enter'];
+var konamiAt = 0;
+function konami(e) {
+  var k = (e.key || '').toLowerCase();
+  if (k === KONAMI[konamiAt]) {
+    konamiAt++;
+    if (konamiAt === KONAMI.length) { konamiAt = 0; return 'done'; }
+    return 'eat';
+  }
+  konamiAt = (k === KONAMI[0]) ? 1 : 0;
+  return konamiAt ? 'eat' : 'pass';
+}
+function cheatBonus() {
+  if (spinning) return;
+  K.ac(); clearTimers();
+  spinning = true;
+  $('spin').disabled = true;
+  K.setHTML($('events'), '<span class="ev win">Cheat accepted</span>');
+  K.toast('Cheat accepted \u00b7 free shot bonus, all ' + g.shot.shots[g.maxCredits] + ' shots');
+  render();
+  runBonus({ total: 0, wins: [] }, g.maxCredits);
+}
+
 /* ---------- chrome ---------- */
 function payTableHTML() {
   var b = st.bet, cr = st.credits;
@@ -364,7 +389,11 @@ $('resetPresets').addEventListener('click', function (e) {
 });
 document.addEventListener('keydown', function (e) {
   if (e.metaKey || e.ctrlKey || e.altKey) return;
-  if ($('resetDlg').open || /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
+  if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
+  var seq = konami(e);
+  if (seq === 'done') { e.preventDefault(); return cheatBonus(); }
+  if (seq === 'eat') { e.preventDefault(); return; }
+  if ($('resetDlg').open) return;
   var k = e.key.toLowerCase();
   if (k === 'b') { e.preventDefault(); return openReset(); }
   if (k === '1') { e.preventDefault(); return setCredits(1, false); }

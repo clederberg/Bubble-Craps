@@ -195,6 +195,43 @@
   }
 
   /* ---------- one complete spin ---------- */
+  /* Buy a feature outright: no reels, just the feature, priced in the game
+     config. The meters still take their cut of the purchase. */
+  function buyFeature(game, which, lineCount, lineBet, jp) {
+    var totalBet = lineCount * lineBet;
+    var out = { stops: spinStops(game), grid: null, wins: [], lineTotal: 0, total: 0,
+      totalBet: totalBet, features: [], jackpots: [], bought: which };
+    if (which === 'hold') {
+      var cells = game.reels.length * game.rows, pool = [], i;
+      for (i = 0; i < cells; i++) pool.push(i);
+      var seeds = [], want = game.hold.trigger + (Math.random() < 0.35 ? 1 : 0);
+      while (seeds.length < want && pool.length) {
+        var at = pool.splice(Math.floor(Math.random() * pool.length), 1)[0];
+        seeds.push([Math.floor(at / game.rows), at % game.rows]);
+      }
+      var hs = holdAndSpin(game, totalBet, seeds, jp);
+      out.hold = hs;
+      out.total += hs.total;
+      hs.jackpots.forEach(function (j) { out.jackpots.push(j); });
+      out.features.push('hold');
+    } else if (which === 'latke') {
+      var lr = latkeRound(game, totalBet, jp);
+      lr.pans = game.latke.trigger;
+      out.latke = lr;
+      out.total += lr.total;
+      lr.jackpots.forEach(function (j) { out.jackpots.push(j); });
+      out.features.push('latke');
+    } else {
+      var spins = game.free.spins[game.free.trigger];
+      var fg = freeGames(game, spins, lineCount, lineBet, jp, game.free.trigger);
+      out.free = fg;
+      out.total += fg.total;
+      fg.jackpots.forEach(function (j) { out.jackpots.push(j); });
+      out.features.push('free');
+    }
+    return out;
+  }
+
   function play(game, lineCount, lineBet, jp) {
     var totalBet = lineCount * lineBet;
     var stops = spinStops(game), grid = gridAt(game, stops);
@@ -296,7 +333,7 @@
 
   var api = { buildLines: buildLines, strip: strip, stackStrip: stackStrip, rng32: rng32, spinStops: spinStops,
     gridAt: gridAt, countIn: countIn, positionsOf: positionsOf, evalLines: evalLines, holdAndSpin: holdAndSpin,
-    latkeRound: latkeRound, play: play, freeGames: freeGames, weighted: weighted, meterValue: meterValue };
+    latkeRound: latkeRound, buyFeature: buyFeature, play: play, freeGames: freeGames, weighted: weighted, meterValue: meterValue };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.Slots = api;
 })(this);

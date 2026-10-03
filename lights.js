@@ -545,6 +545,79 @@ function render() {
   if (!$('reels').children.length) { drawBoard(S.spinStops(g)); paintPanel(null); }
 }
 
+/* ---------- buying a feature ---------- */
+/* st.freebies is the stash the key sequence tops up: one free feature each. */
+if (!st.freebies) st.freebies = 0;
+function buyHTML() {
+  var bet = totalBet(), free = st.freebies > 0;
+  var h = free ? '<div class="cheatbar">' + st.freebies + ' free feature' + (st.freebies > 1 ? 's' : '') + ' unlocked</div>' : '';
+  h += g.buy.map(function (b) {
+    var cost = free ? 0 : b.price * bet;
+    var afford = cost <= bank();
+    return '<button class="buyrow' + (free ? ' free-play' : '') + '" data-buy="' + b.key + '"'
+      + (afford ? '' : ' disabled') + '>'
+      + '<span class="nm"><b>' + K.esc(b.label) + '</b><small>' + K.esc(b.note) + '</small></span>'
+      + '<span class="pr">' + (free ? 'FREE' : money(cost)) + '</span></button>';
+  }).join('');
+  return h;
+}
+function openBuy() {
+  if (spinning) return K.toast('Wait for the spin to finish');
+  K.setHTML($('buyList'), buyHTML());
+  K.setText($('buyNote'), st.freebies > 0
+    ? 'On the house. Pick one.'
+    : 'Priced at what the feature is worth over time, so buying is no better or worse than spinning for it. A jackpot meter that has been climbing makes it better.');
+  K.setText($('buyTitle'), st.freebies > 0 ? 'Free feature' : 'Buy a feature');
+  var d = $('buyDlg'); if (d.showModal) d.showModal(); else d.setAttribute('open', '');
+}
+function closeBuy() { var d = $('buyDlg'); if (d.close) d.close(); else d.removeAttribute('open'); }
+function runBought(which) {
+  var entry = null;
+  g.buy.forEach(function (b) { if (b.key === which) entry = b; });
+  if (!entry || spinning) return;
+  var free = st.freebies > 0, cost = free ? 0 : entry.price * totalBet();
+  if (cost > bank()) return K.toast('Not enough in your bankroll for that');
+  closeBuy();
+  K.ac(); clearTimers();
+  spinning = true;
+  if (free) st.freebies--;
+  else K.addBank(-cost);
+  /* a bought feature still feeds the meters, same as a spin */
+  g.jackpots.order.forEach(function (t) { st.jp[t] += g.jackpots.rate[t]; });
+  K.setHTML($('winline'), free ? 'Free feature' : 'Bought ' + entry.label + ' for ' + money(cost));
+  K.setHTML($('events'), '');
+  $('spin').disabled = true;
+  var res = S.buyFeature(g, which, st.lines, st.lineBet, st.jp);
+  res.bought = entry.label;
+  res.cost = cost;
+  K.save(); render(); paintPanel(null);
+  fx('reveal');
+  later(function () { settle(res); }, 400);
+}
+
+/* ---------- the key sequence ---------- */
+var KONAMI = ['arrowup', 'arrowup', 'arrowdown', 'arrowdown', 'arrowleft', 'arrowright',
+  'arrowleft', 'arrowright', 'b', 'a', 'enter'];
+var konamiAt = 0;
+function konami(e) {
+  var k = (e.key || '').toLowerCase();
+  if (k === KONAMI[konamiAt]) {
+    konamiAt++;
+    if (konamiAt === KONAMI.length) { konamiAt = 0; return 'done'; }
+    return 'eat';
+  }
+  konamiAt = (k === KONAMI[0]) ? 1 : 0;
+  return konamiAt ? 'eat' : 'pass';
+}
+function cheatUnlocked() {
+  st.freebies = (st.freebies || 0) + 1;
+  K.save();
+  fx('jackpot', 'major');
+  flash(); shake();
+  K.toast('Cheat accepted \u00b7 one free feature');
+  openBuy();
+}
+
 /* ---------- reset dialog ---------- */
 var MAX_BANK = 10000000;
 function parseDollars(v) { var n = parseFloat(String(v).replace(/[$,\s]/g, '')); return isFinite(n) ? Math.round(n * 100) : NaN; }
@@ -594,6 +667,12 @@ $('sound').addEventListener('click', function () {
   else { s.sound = true; s.voice = true; }
   K.save(); render();
 });
+$('buyBtn').addEventListener('click', openBuy);
+$('buyClose').addEventListener('click', closeBuy);
+$('buyList').addEventListener('click', function (e) {
+  var b = e.target.closest('[data-buy]');
+  if (b && !b.disabled) runBought(b.dataset.buy);
+});
 $('paytableBtn').addEventListener('click', function () {
   K.setHTML($('payBody'), payHTML());
   K.setText($('payNote'), 'Return to player about 94%. ' + st.lines + ' lines at ' + money(st.lineBet) + ' is ' + money(totalBet()) + ' a spin.');
@@ -610,7 +689,11 @@ $('resetPresets').addEventListener('click', function (e) {
 });
 document.addEventListener('keydown', function (e) {
   if (e.metaKey || e.ctrlKey || e.altKey) return;
-  if ($('resetDlg').open || $('payDlg').open || /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
+  if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
+  var seq = konami(e);
+  if (seq === 'done') { e.preventDefault(); return cheatUnlocked(); }
+  if (seq === 'eat') { e.preventDefault(); return; }
+  if ($('resetDlg').open || $('payDlg').open || $('buyDlg').open) return;
   var k = e.key.toLowerCase();
   if (k === 'b') { e.preventDefault(); return openReset(); }
   if (e.code === 'Space' || k === 'enter') {

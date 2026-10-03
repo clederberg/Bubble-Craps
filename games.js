@@ -159,6 +159,13 @@
         holdTrigger: 5,
         retrigger: 5
       },
+      /* Buying a feature costs its true long-run value divided by the game's
+         own return, so a purchase is worth the same as spinning for it. */
+      buy: [
+        { key: 'free', label: 'Free Games', price: 25, note: 'The ark opens and a symbol is boosted' },
+        { key: 'latke', label: 'Latke Bonus', price: 30, note: 'Pick pans until one comes up empty' },
+        { key: 'hold', label: 'Light the Menorah', price: 34, note: 'Hold and spin, jackpots in play' }
+      ],
       /* The latke round: pick a flying pan, a latke lands in it and pays.
          An empty pan ends it, and so does a jackpot. */
       latke: {

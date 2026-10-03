@@ -122,6 +122,27 @@ function jackpotRates(trials) {
   return { base: run(dist(g.reels), g.hold.trigger), free: run(dist(g.freeReels), g.free.holdTrigger) };
 }
 
+// buying a feature is priced at what the feature is worth
+g.buy.forEach(b => {
+  eq(['free','latke','hold'].indexOf(b.key) >= 0, true, 'every buy option maps to a real feature');
+  let sum = 0;
+  const runs = b.key === 'free' ? 4000 : 20000;
+  for (let i = 0; i < runs; i++) sum += S.buyFeature(g, b.key, 25, 100, null).total;
+  const value = sum / runs / 2500;
+  const ret = value / b.price;
+  eq(ret > 0.85 && ret < 1.02, true,
+    `buying ${b.key} returns ${(ret * 100).toFixed(1)}% of its price, near the game's own return`);
+});
+{
+  const r = S.buyFeature(g, 'hold', 25, 100, null);
+  eq(!!r.hold, true, 'buying the hold and spin runs one');
+  eq(r.hold.board.filter(Boolean).length >= g.hold.trigger, true, 'and it starts from a full trigger');
+  eq(S.buyFeature(g, 'latke', 25, 100, null).latke.picks.length > 0, true, 'buying the latke round deals pans');
+  const f = S.buyFeature(g, 'free', 25, 100, null);
+  eq(f.free.spins >= g.free.minSpins, true, 'buying free games awards the trigger count');
+  eq(f.total > 0, true, 'and the floor still applies');
+}
+
 // ---- return to player ----
 /* Measuring this off a plain run of spins is hopeless: the features are rare
    and enormous, so the sample swings by points. Instead price each piece from
