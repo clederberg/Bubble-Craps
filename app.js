@@ -16,7 +16,7 @@ if (S.sound === undefined) S.sound = true;
 if (S.voice === undefined) S.voice = true;
 if (S.askMove === undefined) S.askMove = true;
 if (!S.stats) S.stats = { n: 0, totals: [0,0,0,0,0,0,0,0,0,0,0,0,0], faces: [0,0,0,0,0,0,0] };
-var removeMode = false, rolling = false, L = null, hidden = {}, fresher = {}, movePoint = null;
+var removeMode = false, offMode = false, rolling = false, L = null, hidden = {}, fresher = {}, movePoint = null;
 
 function load() { try { var s = JSON.parse(localStorage.getItem(KEY)); return s && s.tables ? s : null; } catch (e) { return null; } }
 function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
@@ -140,10 +140,7 @@ function say(main, small) {
 /* ---------------- table rendering ---------------- */
 function isWide() { return $('tw').clientWidth >= 720; }
 function scale() { return $('tw').clientWidth / L.W; }
-function isOff(t, k) {
-  var p = C.parse(k);
-  return t.point === null && (p.type === 'place' || p.type === 'buy' || p.type === 'hard' || p.type === 'comeOdds');
-}
+function isOff(t, k) { return !C.isWorking(t, k); }
 function chipSVG(k, x, y, amount, R, off) {
   var col = chipColor(amount), h = '', stack = Math.min(3, Math.ceil(amount / 2500) - 1);
   for (var i = stack; i >= 1; i--) h += '<circle cx="0" cy="' + (i * 3) + '" r="' + R + '" fill="' + col[0] + '" stroke="rgba(0,0,0,.45)" stroke-width="1"/>';
@@ -167,7 +164,10 @@ function renderTable() {
       + '<text x="' + d.x + '" y="' + (d.y + 0.5) + '" text-anchor="middle" dominant-baseline="central" font-size="12" font-weight="700">' + d.n + '</text></g>';
   });
   L.spots.forEach(function (s) {
-    var a = C.amt(t, s.k), na = removeMode ? !!C.canRemove(t, s.k) : (!!C.canAdd(t, s.k) && !a);
+    var a = C.amt(t, s.k);
+    var na = removeMode ? !!C.canRemove(t, s.k)
+      : offMode ? !C.canToggle(t, s.k)
+      : (!!C.canAdd(t, s.k) && !a);
     var reason = C.canAdd(t, s.k);
     h += '<g class="spot' + (a ? ' has' : '') + (na ? ' na' : '') + '" data-k="' + s.k + '"><title>' + esc(s.tip + (reason && !a ? ' (' + reason + ')' : '')) + '</title>'
       + '<rect class="hit" x="' + s.x + '" y="' + s.y + '" width="' + s.w + '" height="' + s.h + '" rx="8"/>' + s.art + '</g>';
@@ -465,9 +465,17 @@ function render() {
   $('chips').innerHTML = CHIPS.map(function (d) { var c = d * 100; return '<button class="chip c' + d + '" data-chip="' + c + '" aria-pressed="' + (S.chip === c) + '" aria-label="$' + d + ' chip">' + chipText(c) + '</button>'; }).join('');
   $('removeMode').setAttribute('aria-pressed', removeMode);
   $('removeMode').textContent = removeMode ? 'Taking down' : 'Take down';
-  document.body.classList.toggle('is-taking', removeMode);
-  $('modebar').hidden = !removeMode;
-  $('modeChip').textContent = money(S.chip);
+  $('offMode').setAttribute('aria-pressed', offMode);
+  $('offMode').textContent = offMode ? 'Turning on/off' : 'Turn on/off';
+  var w = T().working;
+  $('workMode').setAttribute('aria-pressed', !!w);
+  $('workMode').textContent = w ? 'Come-out: Working' : 'Come-out: Off';
+  document.body.classList.toggle('is-taking', removeMode || offMode);
+  $('modebar').hidden = !(removeMode || offMode);
+  $('modebar').classList.toggle('offbar', offMode && !removeMode);
+  $('modeText').innerHTML = (offMode && !removeMode)
+    ? 'Tap a place, buy, lay or hardway bet to turn it off or back on'
+    : 'Tap a bet to take down <b>' + money(S.chip) + '</b>';
   $('sound').textContent = !S.sound ? 'Audio: Off' : S.voice ? 'Audio: All' : 'Audio: FX';
   $('sound').title = !S.sound ? 'All sound is muted' : S.voice ? 'Sound effects and stickman voice' : 'Sound effects only, no voice';
   $('rules').innerHTML = rulesHTML();
@@ -554,6 +562,13 @@ function closeBets() { var d = $('betsDlg'); if (d.close) d.close(); else d.remo
 function clickBet(k, forceRemove) {
   if (rolling) return;
   var t = T();
+  if (offMode && !forceRemove) {
+    if (!C.canToggle(t, k)) return toast('That bet is always working');
+    C.toggleOff(t, k);
+    chipClick();
+    save(); render();
+    return toast(C.label(k) + (C.isWorking(t, k) ? ' is working' : ' is off'));
+  }
   if (removeMode || forceRemove) {
     var r = C.remove(t, k, S.chip);
     if (!r.ok) return toast(r.reason);
@@ -581,7 +596,7 @@ function doRoll() {
   if (rolling) return;
   rolling = true;
   closeBets(); closeMove();
-  if (removeMode) { removeMode = false; render(); }
+  if (removeMode || offMode) { removeMode = false; offMode = false; render(); }
   $('roll').disabled = true;
   ac(); unlockVoice();
   var d1 = rnd(), d2 = rnd();
@@ -629,8 +644,15 @@ document.querySelector('.tabs').addEventListener('click', function (e) {
   var b = e.target.closest('[data-mode]'); if (!b || rolling) return;
   S.mode = b.dataset.mode; removeMode = false; closeBets(); save(); render();
 });
-$('removeMode').addEventListener('click', function () { removeMode = !removeMode; render(); });
-$('modeDone').addEventListener('click', function () { removeMode = false; render(); });
+$('removeMode').addEventListener('click', function () { removeMode = !removeMode; if (removeMode) offMode = false; render(); });
+$('offMode').addEventListener('click', function () { offMode = !offMode; if (offMode) removeMode = false; render(); });
+$('workMode').addEventListener('click', function () {
+  var t = T();
+  t.working = !t.working;
+  save(); render();
+  toast(t.working ? 'Place, buy and hardway bets are working on the come-out' : 'Bets are off on the come-out, the usual way');
+});
+$('modeDone').addEventListener('click', function () { removeMode = false; offMode = false; render(); });
 $('clear').addEventListener('click', function () {
   if (rolling) return;
   var back = C.removeAll(T());

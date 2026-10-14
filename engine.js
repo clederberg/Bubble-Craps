@@ -54,7 +54,30 @@
     }
   }
 
-  function newTable(mode) { return { mode: mode, point: null, bets: {}, atsHits: [], rolls: [] }; }
+  function newTable(mode) { return { mode: mode, point: null, bets: {}, atsHits: [], rolls: [], working: false, off: {} }; }
+
+  /* Is this bet live on the next roll?
+     Place, buy and hardway bets sit off on the come-out the way they do on a
+     real table, unless the table is set to working. Lays stay on. Any bet can
+     be called off by hand. This is the one place that decides it, so the
+     table art and the payout logic can never disagree. */
+  function isWorking(t, k) {
+    var p = parse(k);
+    if (['place', 'buy', 'hard', 'comeOdds', 'lay'].indexOf(p.type) < 0) return true;
+    if (t.off && t.off[k]) return false;
+    if (p.type === 'lay') return true;
+    return t.point !== null || !!t.working;
+  }
+  function canToggle(t, k) {
+    var p = parse(k);
+    return ['place', 'buy', 'hard', 'comeOdds', 'lay'].indexOf(p.type) >= 0 && amt(t, k) > 0;
+  }
+  function toggleOff(t, k) {
+    if (!canToggle(t, k)) return false;
+    if (!t.off) t.off = {};
+    if (t.off[k]) delete t.off[k]; else t.off[k] = 1;
+    return true;
+  }
   function amt(t, k) { return t.bets[k] || 0; }
 
   // '' when allowed, otherwise the reason it is not
@@ -135,6 +158,7 @@
     var extra = 0, p = parse(k);
     var pair = { pass: 'passOdds', dp: 'dpOdds' }[p.type];
     if (pair && !t.bets[k] && t.bets[pair]) { extra = t.bets[pair]; delete t.bets[pair]; }
+    if (!t.bets[k] && t.off) delete t.off[k];
     return { ok: true, removed: a + extra };
   }
   // Move a bet to another number (same kind), respecting table limits
@@ -153,7 +177,7 @@
   }
   function removeAll(t) {
     var back = 0;
-    Object.keys(t.bets).forEach(function (k) { if (!canRemove(t, k)) { back += t.bets[k]; delete t.bets[k]; } });
+    Object.keys(t.bets).forEach(function (k) { if (!canRemove(t, k)) { back += t.bets[k]; delete t.bets[k]; if (t.off) delete t.off[k]; } });
     // odds orphaned by a removed flat bet are returned as well
     ['passOdds', 'dpOdds'].forEach(function (k) {
       var flat = k === 'passOdds' ? 'pass' : 'dp';
@@ -167,6 +191,7 @@
     var s = d1 + d2, hard = d1 === d2, on = t.point !== null, m = MODES[t.mode], B = t.bets;
     var ev = [], back = 0, pointBefore = t.point;
     function has(k) { return B[k] > 0; }
+    function live(k) { return isWorking(t, k); }
     function win(k, profit, keep) {
       back += profit + (keep ? 0 : B[k]);
       ev.push({ k: k, r: 'win', net: profit, keep: !!keep });
@@ -206,19 +231,19 @@
     // Hardways (off on the come-out)
     [4, 6, 8, 10].forEach(function (n) {
       var k = 'hard:' + n;
-      if (!has(k) || !on) return;
+      if (!has(k) || !live(k)) return;
       if (s === n && hard) win(k, mul(B[k], HARD[n]), true);
       else if (s === n || s === 7) lose(k);
     });
     // Place / Buy (off on the come-out), Lay (always working)
     m.points.forEach(function (n) {
       var pk = 'place:' + n, bk = 'buy:' + n, lk = 'lay:' + n;
-      if (on && has(pk)) { if (s === n) win(pk, mul(B[pk], PLACE[n]), true); else if (s === 7) lose(pk); }
-      if (on && has(bk)) {
+      if (has(pk) && live(pk)) { if (s === n) win(pk, mul(B[pk], PLACE[n]), true); else if (s === 7) lose(pk); }
+      if (has(bk) && live(bk)) {
         if (s === n) win(bk, mul(B[bk], TRUE[n]) - Math.round(B[bk] * 0.05), true);
         else if (s === 7) lose(bk);
       }
-      if (has(lk)) {
+      if (has(lk) && live(lk)) {
         if (s === 7) { var w = mul(B[lk], inv(TRUE[n])); win(lk, w - Math.round(w * 0.05), true); }
         else if (s === n) lose(lk);
       }
@@ -229,10 +254,10 @@
       if (has(ck)) {
         if (s === n) {
           win(ck, B[ck], false);
-          if (has(co)) { if (on) win(co, mul(B[co], TRUE[n]), false); else giveBack(co, 'odds off on come-out'); }
+          if (has(co)) { if (live(co)) win(co, mul(B[co], TRUE[n]), false); else giveBack(co, 'odds were off'); }
         } else if (s === 7) {
           lose(ck);
-          if (has(co)) { if (on) lose(co); else giveBack(co, 'odds off on come-out'); }
+          if (has(co)) { if (live(co)) lose(co); else giveBack(co, 'odds were off'); }
         }
       }
       if (has(dk)) {
@@ -311,6 +336,7 @@
   var api = {
     TRUE: TRUE, PLACE: PLACE, HARD: HARD, PROPS: PROPS, ATS: ATS, MODES: MODES, ODDS_X: ODDS_X, LIMITS: LIMITS, LAY_WIN_X: LAY_WIN_X, maxFor: maxFor,
     parse: parse, label: label, newTable: newTable, amt: amt, canAdd: canAdd, add: add,
+    isWorking: isWorking, canToggle: canToggle, toggleOff: toggleOff,
     canRemove: canRemove, remove: remove, moveBet: moveBet, limitText: limitText, removeAll: removeAll, onTable: onTable, roll: roll
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

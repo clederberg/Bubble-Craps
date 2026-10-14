@@ -87,4 +87,62 @@ for (const mode of ['craps','crapless']) { const t=C.newTable(mode); let bank=1e
     for (const k in t.bets) assert.ok(t.bets[k]>0 && Number.isInteger(t.bets[k]), k);
   }
 }
+/* ---- working and off ---- */
+{
+  const T = () => { const t = C.newTable('craps'); C.add(t, 'place:6', 1200); return t; };
+  // the default: off on the come-out, so a six neither pays nor a seven takes it
+  let t = T();
+  eq(C.isWorking(t, 'place:6'), false, 'place bets sit off on the come-out by default');
+  eq(C.roll(t, 3, 3).net, 0, 'a six on the come-out pays nothing when the bet is off');
+  eq(C.amt(T(), 'place:6'), 1200, 'and the bet is still there');
+  t = T();
+  eq(C.roll(t, 3, 4).net, 0, 'a seven on the come-out costs nothing when the bet is off');
+  eq(C.amt(t, 'place:6'), 1200, 'the bet survives the seven');
+
+  // turned on for the come-out, it plays for real both ways
+  t = T(); t.working = true;
+  eq(C.isWorking(t, 'place:6'), true, 'the table can be set to working');
+  eq(C.roll(t, 3, 3).net, 1400, 'a working six on the come-out pays 7 to 6');
+  t = T(); t.working = true;
+  eq(C.roll(t, 3, 4).net, -1200, 'and a working bet loses to the seven');
+
+  // calling one bet off by hand, with a point on
+  t = T(); t.point = 8;
+  eq(C.isWorking(t, 'place:6'), true, 'bets work once a point is set');
+  eq(C.toggleOff(t, 'place:6'), true, 'a place bet can be called off');
+  eq(C.isWorking(t, 'place:6'), false, 'and then it is off');
+  eq(C.roll(t, 3, 4).net, 0, 'an off bet is not lost to the seven');
+  t = T(); t.point = 8; C.toggleOff(t, 'place:6');
+  eq(C.roll(t, 3, 3).net, 0, 'nor does it get paid');
+  C.toggleOff(t, 'place:6');
+  eq(C.isWorking(t, 'place:6'), true, 'tapping again turns it back on');
+
+  // lays keep working on the come-out, the way they do on a real table
+  const l = C.newTable('craps');
+  C.add(l, 'lay:4', 2000);
+  eq(C.isWorking(l, 'lay:4'), true, 'lay bets work on the come-out');
+  eq(C.roll(l, 3, 4).net > 0, true, 'so a come-out seven pays the lay');
+
+  // line bets are never off
+  const pl = C.newTable('craps');
+  C.add(pl, 'pass', 500);
+  eq(C.isWorking(pl, 'pass'), true, 'the pass line is always working');
+  eq(C.canToggle(pl, 'pass'), false, 'and cannot be called off');
+
+  // come odds come back rather than being lost when they are off
+  const co = C.newTable('craps');
+  co.point = 5; C.add(co, 'come', 500);
+  C.roll(co, 3, 3);                      // the come bet travels to the six
+  C.add(co, 'comeOdds:6', 600);
+  co.point = null;                       // back to a come-out
+  eq(C.isWorking(co, 'comeOdds:6'), false, 'come odds are off on the come-out');
+  const r = C.roll(co, 3, 4);
+  eq(r.ev.some(e => e.k === 'comeOdds:6' && e.r === 'push'), true, 'off odds are returned, not lost');
+
+  // taking a bet down clears its off flag
+  const rm = T(); rm.point = 8; C.toggleOff(rm, 'place:6');
+  C.remove(rm, 'place:6');
+  eq(!rm.off['place:6'], true, 'removing a bet forgets that it was off');
+}
+
 console.log('all passed', n, 'asserts + 400k sim rolls');

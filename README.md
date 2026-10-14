@@ -7,6 +7,15 @@ Free-play craps and crapless craps on a real table layout, with 3D dice. Play mo
 
 **Play:** open `index.html`, or turn on GitHub Pages (below).
 
+### Working and off
+
+Place, buy and hardway bets sit **off on the come-out** by default, the way they do on a real table: they neither pay nor lose. Two controls change that.
+
+- **Come-out: Off / Working** turns the whole table on for come-out rolls, the equivalent of telling the dealer your bets are working. Useful if you skip the line bet and play place and buy numbers only.
+- **Turn on/off** is a mode: tap any place, buy, lay or hardway bet to call it off or back on. An off bet greys out, and it is neither paid nor taken while it sits there.
+
+Lay bets work on the come-out unless you call them off. Line bets and come bets are contract bets and cannot be turned off. Come odds are off on the come-out by default and are **returned rather than lost** if a seven shows while they are off.
+
 ## Festival of Lights (`lights.html`)
 
 Five reels, three rows, with **5, 25 or 50 lines** selectable and the chip rack setting the bet per line. A Hanukkah-themed machine: menorahs, dreidels, pomegranates and challah, with Hebrew letters on the low pays and a Star of David wild. All the artwork is hand-drawn SVG.

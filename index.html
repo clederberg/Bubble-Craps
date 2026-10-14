@@ -41,8 +41,11 @@ h1 span{color:var(--gold)}
 .broke{max-width:calc(100vw - 20px);white-space:normal;text-align:left;position:absolute;left:50%;bottom:calc(100% + 10px);transform:translateX(-50%);display:flex;align-items:center;gap:12px;background:#111;border:1px solid var(--gold);border-radius:14px;padding:8px 8px 8px 16px;box-shadow:0 10px 30px rgba(0,0,0,.6);font-weight:600}
 .broke[hidden]{display:none}
 body.is-broke .toast,body.is-taking .toast{transform:translateX(-50%) translateY(-70px)}
+#modebar.offbar{border-color:#7ab7ff}
+#modebar.offbar .go{background:#2f7fd6}
 .modebar{border-color:var(--red);white-space:nowrap;font-size:13px;gap:10px;padding:6px 6px 6px 14px}
 .modebar .go{height:34px;padding:0 14px}
+.offtag{font:700 7px Oswald,sans-serif;letter-spacing:.06em}
 .modebar .go{background:var(--red);color:#fff}
 body.is-taking .spot.has rect.hit{stroke:var(--red)}
 body.is-taking .chipg{filter:drop-shadow(0 0 4px rgba(217,68,58,.9))}
@@ -275,7 +278,7 @@ details.fair p{margin:10px 0}
 </div>
 
 <div class="dock">
-  <div class="broke modebar" id="modebar" hidden><span>Tap a bet to take down <b id="modeChip">$25</b></span><button type="button" class="go" id="modeDone">Done</button></div>
+  <div class="broke modebar" id="modebar" hidden><span id="modeText">Tap a bet to take down <b id="modeChip">$25</b></span><button type="button" class="go" id="modeDone">Done</button></div>
   <div class="broke" id="broke" hidden><span>You’re out of chips.</span><button type="button" class="go" id="brokeReset">Reset to $1,000</button></div>
   <div class="wrap">
     <div class="dockstats">
@@ -284,6 +287,8 @@ details.fair p{margin:10px 0}
     </div>
     <div class="chips" id="chips"></div>
     <div class="tools">
+      <button class="tool" id="workMode" aria-pressed="false">Come-out: Off</button>
+      <button class="tool" id="offMode" aria-pressed="false">Turn on/off</button>
       <button class="tool" id="removeMode" aria-pressed="false">Take down</button>
       <button class="tool" id="clear">Clear</button>
       <button class="tool" id="sound" aria-pressed="false">Audio: All</button>
