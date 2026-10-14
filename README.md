@@ -9,12 +9,17 @@ Free-play craps and crapless craps on a real table layout, with 3D dice. Play mo
 
 ### Working and off
 
-Place, buy and hardway bets sit **off on the come-out** by default, the way they do on a real table: they neither pay nor lose. Two controls change that.
+Every place, buy, lay, hardway and come-odds bet carries its own setting, so you can work one number and leave the rest alone.
 
-- **Come-out: Off / Working** turns the whole table on for come-out rolls, the equivalent of telling the dealer your bets are working. Useful if you skip the line bet and play place and buy numbers only.
-- **Turn on/off** is a mode: tap any place, buy, lay or hardway bet to call it off or back on. An off bet greys out, and it is neither paid nor taken while it sits there.
+- **auto** is the house default. Place, buy and hardway bets sit off on the come-out the way they do on a real table. Lays stay on.
+- **working** means the bet plays on every roll, come-out included. The equivalent of telling the dealer "my hard four is working".
+- **off** means the bet is off until you turn it back on, point or no point.
 
-Lay bets work on the come-out unless you call them off. Line bets and come bets are contract bets and cannot be turned off. Come odds are off on the come-out by default and are **returned rather than lost** if a seven shows while they are off.
+**Turn on/off** is a mode next to Take down: tap a bet to cycle it through those three. A chip wears a green **ON** badge when you have set it working through a come-out, and a black **OFF** badge whenever it is not live. So to work only the hard four, put it out and tap it once. Nothing else moves.
+
+**Come-out: Off / Working** is a shortcut that flips the whole table for come-out rolls. It only moves bets still on auto, so a number you have set yourself keeps the setting you gave it. Handy if you skip the line bet and play place and buy numbers only.
+
+Line bets and come bets are contract bets and cannot be turned off. Come odds are off on the come-out by default and are **returned rather than lost** if a seven shows while they are off.
 
 ## Festival of Lights (`lights.html`)
 

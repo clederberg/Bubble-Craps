@@ -145,4 +145,60 @@ for (const mode of ['craps','crapless']) { const t=C.newTable(mode); let bank=1e
   eq(!rm.off['place:6'], true, 'removing a bet forgets that it was off');
 }
 
+/* ---- each bet carries its own working setting ---- */
+{
+  // work just the hard four on the come-out, leave everything else alone
+  const t = C.newTable('craps');
+  C.add(t, 'hard:4', 500); C.add(t, 'place:6', 1200); C.add(t, 'place:8', 1200);
+  eq(C.setState(t, 'hard:4', 'working'), true, 'a single bet can be set working');
+  eq(C.isWorking(t, 'hard:4'), true, 'the hard four works on the come-out');
+  eq(C.isWorking(t, 'place:6'), false, 'while the place bets stay off');
+  eq(C.isWorking(t, 'place:8'), false, 'all of them');
+  eq(C.roll(t, 2, 2).net, 3500, 'a come-out hard four pays 7 to 1 on its own');
+
+  const u = C.newTable('craps');
+  C.add(u, 'hard:4', 500); C.add(u, 'place:6', 1200);
+  C.setState(u, 'hard:4', 'working');
+  eq(C.roll(u, 3, 4).net, -500, 'the seven takes only the working bet');
+  eq(C.amt(u, 'place:6'), 1200, 'the off place bet survives it');
+
+  // the three states cycle in order
+  const c = C.newTable('craps');
+  C.add(c, 'place:5', 1000);
+  eq(C.betState(c, 'place:5'), 'auto', 'bets start on the house default');
+  eq(C.cycleState(c, 'place:5'), 'working', 'first tap sets it working');
+  eq(C.cycleState(c, 'place:5'), 'off', 'second tap turns it off');
+  eq(C.cycleState(c, 'place:5'), 'auto', 'third tap puts it back to default');
+
+  // a bet set off stays off even once a point is on
+  const o = C.newTable('craps');
+  C.add(o, 'place:9', 1000);
+  C.setState(o, 'place:9', 'off');
+  o.point = 6;
+  eq(C.isWorking(o, 'place:9'), false, 'an off bet stays off with a point on');
+  eq(C.roll(o, 3, 4).net, 0, 'and the seven cannot take it');
+
+  // a bet set working stays working through a point, which is the default anyway
+  const w = C.newTable('craps');
+  C.add(w, 'place:9', 1000);
+  C.setState(w, 'place:9', 'working');
+  w.point = 6;
+  eq(C.isWorking(w, 'place:9'), true, 'a working bet is live with a point on too');
+
+  // the table-wide switch only moves bets left on auto
+  const g = C.newTable('craps');
+  C.add(g, 'place:6', 1200); C.add(g, 'place:8', 1200);
+  C.setState(g, 'place:8', 'off');
+  g.working = true;
+  eq(C.isWorking(g, 'place:6'), true, 'the come-out switch turns on the auto bet');
+  eq(C.isWorking(g, 'place:8'), false, 'but leaves a bet you set off alone');
+
+  // settings do not outlive the bet
+  const r = C.newTable('craps');
+  C.add(r, 'place:4', 1000);
+  C.setState(r, 'place:4', 'working');
+  C.remove(r, 'place:4');
+  eq(C.betState(r, 'place:4'), 'auto', 'taking a bet down forgets its setting');
+}
+
 console.log('all passed', n, 'asserts + 400k sim rolls');

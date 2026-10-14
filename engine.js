@@ -54,29 +54,53 @@
     }
   }
 
-  function newTable(mode) { return { mode: mode, point: null, bets: {}, atsHits: [], rolls: [], working: false, off: {} }; }
+  function newTable(mode) { return { mode: mode, point: null, bets: {}, atsHits: [], rolls: [], working: false, off: {}, on: {} }; }
 
   /* Is this bet live on the next roll?
-     Place, buy and hardway bets sit off on the come-out the way they do on a
-     real table, unless the table is set to working. Lays stay on. Any bet can
-     be called off by hand. This is the one place that decides it, so the
-     table art and the payout logic can never disagree. */
-  function isWorking(t, k) {
-    var p = parse(k);
-    if (['place', 'buy', 'hard', 'comeOdds', 'lay'].indexOf(p.type) < 0) return true;
-    if (t.off && t.off[k]) return false;
-    if (p.type === 'lay') return true;
-    return t.point !== null || !!t.working;
-  }
+     Every place, buy, lay, hardway and come-odds bet carries its own setting:
+
+       auto     the house default: place, buy and hardway bets sit off on the
+                come-out the way they do on a real table, lays stay on
+       working  works on every roll, come-out included, which is the equivalent
+                of telling the dealer "my hard four is working"
+       off      off until you turn it back on
+
+     The table-wide come-out switch only moves bets still on auto, so setting
+     one number working leaves the rest alone. This is the one place that
+     decides it, so the table art and the payout logic can never disagree. */
+  var TOGGLEABLE = ['place', 'buy', 'hard', 'comeOdds', 'lay'];
   function canToggle(t, k) {
-    var p = parse(k);
-    return ['place', 'buy', 'hard', 'comeOdds', 'lay'].indexOf(p.type) >= 0 && amt(t, k) > 0;
+    return TOGGLEABLE.indexOf(parse(k).type) >= 0 && amt(t, k) > 0;
   }
-  function toggleOff(t, k) {
+  function betState(t, k) {
+    if (TOGGLEABLE.indexOf(parse(k).type) < 0) return 'always';
+    if (t.off && t.off[k]) return 'off';
+    if (t.on && t.on[k]) return 'working';
+    return 'auto';
+  }
+  function setState(t, k, state) {
     if (!canToggle(t, k)) return false;
     if (!t.off) t.off = {};
-    if (t.off[k]) delete t.off[k]; else t.off[k] = 1;
+    if (!t.on) t.on = {};
+    delete t.off[k]; delete t.on[k];
+    if (state === 'off') t.off[k] = 1;
+    else if (state === 'working') t.on[k] = 1;
     return true;
+  }
+  function cycleState(t, k) {
+    var next = { auto: 'working', working: 'off', off: 'auto' }[betState(t, k)];
+    return setState(t, k, next) ? next : null;
+  }
+  function toggleOff(t, k) {
+    return setState(t, k, betState(t, k) === 'off' ? 'auto' : 'off');
+  }
+  function isWorking(t, k) {
+    var p = parse(k);
+    if (TOGGLEABLE.indexOf(p.type) < 0) return true;
+    if (t.off && t.off[k]) return false;
+    if (t.on && t.on[k]) return true;
+    if (p.type === 'lay') return true;
+    return t.point !== null || !!t.working;
   }
   function amt(t, k) { return t.bets[k] || 0; }
 
@@ -158,7 +182,7 @@
     var extra = 0, p = parse(k);
     var pair = { pass: 'passOdds', dp: 'dpOdds' }[p.type];
     if (pair && !t.bets[k] && t.bets[pair]) { extra = t.bets[pair]; delete t.bets[pair]; }
-    if (!t.bets[k] && t.off) delete t.off[k];
+    if (!t.bets[k]) { if (t.off) delete t.off[k]; if (t.on) delete t.on[k]; }
     return { ok: true, removed: a + extra };
   }
   // Move a bet to another number (same kind), respecting table limits
@@ -177,7 +201,7 @@
   }
   function removeAll(t) {
     var back = 0;
-    Object.keys(t.bets).forEach(function (k) { if (!canRemove(t, k)) { back += t.bets[k]; delete t.bets[k]; if (t.off) delete t.off[k]; } });
+    Object.keys(t.bets).forEach(function (k) { if (!canRemove(t, k)) { back += t.bets[k]; delete t.bets[k]; if (t.off) delete t.off[k]; if (t.on) delete t.on[k]; } });
     // odds orphaned by a removed flat bet are returned as well
     ['passOdds', 'dpOdds'].forEach(function (k) {
       var flat = k === 'passOdds' ? 'pass' : 'dp';
@@ -337,6 +361,7 @@
     TRUE: TRUE, PLACE: PLACE, HARD: HARD, PROPS: PROPS, ATS: ATS, MODES: MODES, ODDS_X: ODDS_X, LIMITS: LIMITS, LAY_WIN_X: LAY_WIN_X, maxFor: maxFor,
     parse: parse, label: label, newTable: newTable, amt: amt, canAdd: canAdd, add: add,
     isWorking: isWorking, canToggle: canToggle, toggleOff: toggleOff,
+    betState: betState, setState: setState, cycleState: cycleState,
     canRemove: canRemove, remove: remove, moveBet: moveBet, limitText: limitText, removeAll: removeAll, onTable: onTable, roll: roll
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

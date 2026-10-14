@@ -141,7 +141,15 @@ function say(main, small) {
 function isWide() { return $('tw').clientWidth >= 720; }
 function scale() { return $('tw').clientWidth / L.W; }
 function isOff(t, k) { return !C.isWorking(t, k); }
-function chipSVG(k, x, y, amount, R, off) {
+/* OFF when the bet is not live, ON when you have set it working yourself and
+   that is doing something the default would not. */
+function betMark(t, k) {
+  var st = C.betState(t, k);
+  if (st === 'off') return 'OFF';
+  if (st === 'working') return t.point === null ? 'ON' : null;
+  return C.isWorking(t, k) ? null : 'OFF';
+}
+function chipSVG(k, x, y, amount, R, mark) {
   var col = chipColor(amount), h = '', stack = Math.min(3, Math.ceil(amount / 2500) - 1);
   for (var i = stack; i >= 1; i--) h += '<circle cx="0" cy="' + (i * 3) + '" r="' + R + '" fill="' + col[0] + '" stroke="rgba(0,0,0,.45)" stroke-width="1"/>';
   h += '<circle r="' + (R + 1) + '" cy="1.5" fill="rgba(0,0,0,.35)"/>'
@@ -149,7 +157,13 @@ function chipSVG(k, x, y, amount, R, off) {
     + '<circle r="' + (R - 1.5) + '" fill="none" stroke="rgba(255,255,255,.9)" stroke-width="3" stroke-dasharray="' + (R * 0.42) + ' ' + (R * 0.42) + '"/>'
     + '<circle r="' + (R - 4.5) + '" fill="' + col[0] + '" stroke="rgba(255,255,255,.35)" stroke-width="1"/>'
     + '<text text-anchor="middle" dominant-baseline="central" font-size="' + (R * 0.62) + '" font-weight="700" fill="' + col[1] + '" font-family="Inter,sans-serif">' + chipText(amount) + '</text>';
-  if (off) h += '<rect x="' + (-R + 2) + '" y="' + (-R - 11) + '" width="' + (2 * R - 4) + '" height="11" rx="3" fill="#111" stroke="#fff" stroke-width=".8"/><text y="' + (-R - 5.2) + '" text-anchor="middle" dominant-baseline="central" font-size="8" font-weight="700" fill="#fff">OFF</text>';
+  if (mark) {
+    var badge = mark === 'ON'
+      ? { fill: '#1d7a46', edge: '#8ff0bb' }
+      : { fill: '#111', edge: '#fff' };
+    h += '<rect x="' + (-R + 2) + '" y="' + (-R - 11) + '" width="' + (2 * R - 4) + '" height="11" rx="3" fill="' + badge.fill
+      + '" stroke="' + badge.edge + '" stroke-width=".8"/><text y="' + (-R - 5.2) + '" text-anchor="middle" dominant-baseline="central" font-size="8" font-weight="700" fill="#fff">' + mark + '</text>';
+  }
   var cls = 'chipg' + (hidden[k] ? ' hidden' : '') + (fresher[k] ? ' newchip' : '');
   return '<g class="' + cls + '" data-chip="' + k + '"><g transform="translate(' + x + ' ' + y + ')">' + h + '</g></g>';
 }
@@ -176,7 +190,7 @@ function renderTable() {
   Object.keys(t.bets).forEach(function (k) {
     var an = L.anchors[k]; if (!an) return;
     if (/Odds:/.test(k) || k === 'passOdds' || k === 'dpOdds') { if (k === 'passOdds' || k === 'dpOdds') h += chipSVG(k, an.x, an.y, t.bets[k], L.chipR, false); return; }
-    h += chipSVG(k, an.x, an.y, t.bets[k], L.chipR, isOff(t, k));
+    h += chipSVG(k, an.x, an.y, t.bets[k], L.chipR, betMark(t, k));
   });
   // odds targets for come / don't come bets
   L.odds.forEach(function (o) {
@@ -184,7 +198,7 @@ function renderTable() {
     var a = C.amt(t, o.k), R = L.chipR;
     h += '<g class="oddsT spot" data-k="' + o.k + '"><title>' + esc(C.label(o.k)) + '</title><circle class="ring" cx="' + o.x + '" cy="' + o.y + '" r="' + R + '"/>'
       + (a ? '' : '<text x="' + o.x + '" y="' + (o.y + 0.5) + '" text-anchor="middle" dominant-baseline="central" font-size="8" font-weight="700" fill="#f2c75c">ODDS</text>') + '</g>';
-    if (a) h += chipSVG(o.k, o.x, o.y, a, R, isOff(t, o.k));
+    if (a) h += chipSVG(o.k, o.x, o.y, a, R, betMark(t, o.k));
   });
   h += '</svg>';
   $('svgHost').innerHTML = h;
@@ -474,7 +488,7 @@ function render() {
   $('modebar').hidden = !(removeMode || offMode);
   $('modebar').classList.toggle('offbar', offMode && !removeMode);
   $('modeText').innerHTML = (offMode && !removeMode)
-    ? 'Tap a place, buy, lay or hardway bet to turn it off or back on'
+    ? 'Tap a bet to cycle it: default, working on the come-out, then off'
     : 'Tap a bet to take down <b>' + money(S.chip) + '</b>';
   $('sound').textContent = !S.sound ? 'Audio: Off' : S.voice ? 'Audio: All' : 'Audio: FX';
   $('sound').title = !S.sound ? 'All sound is muted' : S.voice ? 'Sound effects and stickman voice' : 'Sound effects only, no voice';
@@ -564,10 +578,13 @@ function clickBet(k, forceRemove) {
   var t = T();
   if (offMode && !forceRemove) {
     if (!C.canToggle(t, k)) return toast('That bet is always working');
-    C.toggleOff(t, k);
+    var next = C.cycleState(t, k);
     chipClick();
     save(); render();
-    return toast(C.label(k) + (C.isWorking(t, k) ? ' is working' : ' is off'));
+    var say = next === 'working' ? ' works on every roll, come-out included'
+      : next === 'off' ? ' is off'
+      : ' is back to the house default';
+    return toast(C.label(k) + say);
   }
   if (removeMode || forceRemove) {
     var r = C.remove(t, k, S.chip);
