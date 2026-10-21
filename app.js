@@ -8,14 +8,22 @@ var SVGNS = 'http://www.w3.org/2000/svg';
 function fresh(mode, chip, sound, voice) {
   return { bank: START, mode: mode || 'craps', chip: chip || 500, sound: sound !== false, voice: voice !== false, askMove: !S || S.askMove !== false,
     tables: { craps: C.newTable('craps'), crapless: C.newTable('crapless') }, last: {}, dice: {},
-    stats: { n: 0, totals: [0,0,0,0,0,0,0,0,0,0,0,0,0], faces: [0,0,0,0,0,0,0] } };
+    stats: freshStats() };
+}
+function freshStats() {
+  return { n: 0, totals: [0,0,0,0,0,0,0,0,0,0,0,0,0], faces: [0,0,0,0,0,0,0],
+    hands: 0, longest: 0, points: 0, sevenOuts: 0, best: 0, worst: 0, won: 0, lost: 0 };
 }
 var S = load() || fresh();
 if (!S.dice) S.dice = {};
 if (S.sound === undefined) S.sound = true;
 if (S.voice === undefined) S.voice = true;
 if (S.askMove === undefined) S.askMove = true;
-if (!S.stats) S.stats = { n: 0, totals: [0,0,0,0,0,0,0,0,0,0,0,0,0], faces: [0,0,0,0,0,0,0] };
+if (!S.stats) S.stats = freshStats();
+['hands','longest','points','sevenOuts','best','worst','won','lost'].forEach(function (k) {
+  if (S.stats[k] === undefined) S.stats[k] = 0;
+});
+var askedKeepCome = false;
 var removeMode = false, offMode = false, rolling = false, L = null, hidden = {}, fresher = {}, movePoint = null;
 
 function load() { try { var s = JSON.parse(localStorage.getItem(KEY)); return s && s.tables ? s : null; } catch (e) { return null; } }
@@ -401,14 +409,25 @@ function summarize(res) {
   var head = res.d1 + ' + ' + res.d2 + ' = ' + res.s + ' · ' + c[0].replace(/!$/, '');
   var sub = res.pointAfter !== null ? 'Point is ' + res.pointAfter + '.' : 'Coming out.';
   if (res.ev.length) sub += ' Roll result: <span class="net ' + (res.net > 0 ? 'pos' : res.net < 0 ? 'neg' : '') + '">' + money(res.net, true) + '</span>';
-  var ev = res.ev.map(function (e) {
+  function chip(e) {
     var txt = C.label(e.k) + ' ';
-    if (e.r === 'win') txt += money(e.net, true);
+    if (e.r === 'win') txt += money(e.net, true) + (e.kept ? ' · stays up' : '');
     else if (e.r === 'lose') txt += money(e.net);
-    else if (e.r === 'move') txt += '→ ' + e.to.split(':')[1];
+    else if (e.r === 'move') txt += '\u2192 ' + e.to.split(':')[1];
     else txt += e.why ? '(' + e.why + ')' : 'push';
     return '<span class="ev ' + e.r + '">' + esc(txt) + '</span>';
-  }).join('');
+  }
+  /* A seven out takes everything down at once. Listing twenty losing bets
+     tells you nothing, so roll them into one line and keep the winners. */
+  var ev;
+  if (res.pointBefore !== null && res.s === 7) {
+    var lost = 0, n = 0, rest = [];
+    res.ev.forEach(function (e) {
+      if (e.r === 'lose') { lost += e.net; n++; } else rest.push(e);
+    });
+    ev = (n ? '<span class="ev lose">' + esc(money(lost) + ' down' + (n > 1 ? ' across ' + n + ' bets' : '')) + '</span>' : '')
+      + rest.map(chip).join('');
+  } else ev = res.ev.map(chip).join('');
   return { head: head, sub: sub, ev: ev };
 }
 var WAYS = [0,0,1,2,3,4,5,6,5,4,3,2,1];
@@ -439,14 +458,14 @@ function rulesHTML() {
     + '<li><b>Come-out:</b> 7 or 11 wins Pass, 2, 3 or 12 loses. Don’t Pass wins on 2 or 3 and pushes on 12. Any other number becomes the point.</li>'
     + '<li><b>Point on:</b> roll the point before a 7 and Pass wins. A 7 first and Don’t Pass wins.</li>'
     + '<li><b>Come / Don’t Come</b> work the same way starting on the next roll, then travel to their own number. Tap the gold ODDS circle next to a traveled bet to add odds.</li>'
-    + '<li><b>Odds (3-4-5x):</b> 3x on 4 and 10, 4x on 5 and 9, 5x on 6 and 8, paid at true odds. Don’t bettors can lay enough to win 6x their flat bet. Come odds are off on the come-out.</li>'
+    + '<li><b>Odds:</b> ' + C.MODES.craps.oddsText + ', paid at true odds. Don’t bettors can lay enough to win 6x their flat bet. Come odds are off on the come-out.</li>'
     + '<li><b>Place</b> pays 9:5 on 4/10, 7:5 on 5/9, 7:6 on 6/8. <b>Buy</b> and <b>Lay</b> pay true odds minus 5%.</li>'
     + '<li>Place, Buy and Hardways stay up after a win and are off on the come-out. Pass and Don’t Pass flats also stay up.</li>'
     + '<li><b>Table limits:</b> Pass, Don’t Pass, Come and Don’t Come up to $5,000. Place and Buy up to $25,000. Lay up to what wins $25,000 ($50,000 on 4/10, $37,500 on 5/9, $30,000 on 6/8). Field up to $5,000. Hardways, one-roll bets and Small/Tall/All up to $1,000.</li></ul>';
   return '<summary>How Crapless Craps works here</summary><ul>'
     + '<li><b>Come-out:</b> only 7 wins. Nothing loses. 2, 3, 11 and 12 become points along with 4 through 10.</li>'
     + '<li><b>Point on:</b> roll the point before a 7 to win. No Don’t Pass or Don’t Come.</li>'
-    + '<li><b>Odds (3-4-5x):</b> 3x on 2, 3, 4, 10, 11, 12 · 4x on 5 and 9 · 5x on 6 and 8. True odds pay 6:1 on 2/12, 3:1 on 3/11, 2:1 on 4/10, 3:2 on 5/9, 6:5 on 6/8.</li>'
+    + '<li><b>Odds:</b> ' + C.MODES.crapless.oddsText + '. True odds pay 6:1 on 2/12, 3:1 on 3/11, 2:1 on 4/10, 3:2 on 5/9, 6:5 on 6/8.</li>'
     + '<li><b>Place</b> 2/12 pays 11:2 and 3/11 pays 11:4, plus the usual 9:5, 7:5 and 7:6.</li>'
     + '<li><b>Table limits:</b> Pass and Come up to $5,000. Place and Buy up to $25,000. Lay up to what wins $25,000 ($150,000 on 2/12, $75,000 on 3/11). Field up to $5,000. Hardways, one-roll bets and Small/Tall/All up to $1,000.</li>'
     + '<li>Everything else works like the Craps tab.</li></ul>';
@@ -470,7 +489,8 @@ function render() {
   if (Ls) { $('headline').textContent = Ls.head; $('subline').innerHTML = Ls.sub; $('events').innerHTML = Ls.ev; }
   else {
     $('headline').textContent = t.point !== null ? 'Point is ' + t.point : 'Coming out · place your bets';
-    $('subline').textContent = C.MODES[S.mode].dont ? 'Odds 3x-4x-5x.' : 'Crapless: every number but 7 is a point. Odds 3x-4x-5x.';
+    $('subline').textContent = (C.MODES[S.mode].dont ? '' : 'Crapless: every number but 7 is a point. ')
+      + 'Odds ' + C.MODES[S.mode].oddsText + '. No table limits.';
     $('events').innerHTML = '';
   }
   $('hist').innerHTML = t.rolls.slice(0, 20).map(function (r) {
@@ -479,6 +499,8 @@ function render() {
   $('chips').innerHTML = CHIPS.map(function (d) { var c = d * 100; return '<button class="chip c' + d + '" data-chip="' + c + '" aria-pressed="' + (S.chip === c) + '" aria-label="$' + d + ' chip">' + chipText(c) + '</button>'; }).join('');
   $('removeMode').setAttribute('aria-pressed', removeMode);
   $('removeMode').textContent = removeMode ? 'Taking down' : 'Take down';
+  $('keepCome').setAttribute('aria-pressed', !!S.keepCome);
+  $('keepCome').textContent = S.keepCome ? 'Come bets: Stay up' : 'Come bets: Back';
   $('offMode').setAttribute('aria-pressed', offMode);
   $('offMode').textContent = offMode ? 'Turning on/off' : 'Turn on/off';
   var w = T().working;
@@ -607,6 +629,104 @@ function clickBet(k, forceRemove) {
   fresher[k] = true;
   save(); render();
 }
+/* Put the last layout back down. Come bets travel on their own, so those are
+   skipped, and anything the bankroll cannot cover is simply left out. */
+function repeatLayout() {
+  if (rolling) return;
+  var saved = S.layout;
+  if (!saved || !Object.keys(saved).length) return toast('No previous bets to repeat');
+  var t = T(), placed = 0, count = 0, skipped = 0;
+  Object.keys(saved).forEach(function (k) {
+    var p = C.parse(k);
+    if (p.type === 'comeOn' || p.type === 'dcOn') return;        // these arrive on their own
+    var want = saved[k];
+    if (C.canAdd(t, k)) { skipped++; return; }
+    var room = Math.min(want, S.bank - placed);
+    if (room <= 0) { skipped++; return; }
+    var a = C.add(t, k, room);
+    if (a.ok) { placed += a.added; count++; } else skipped++;
+  });
+  if (!count) return toast('Could not put any of that back down');
+  S.bank -= placed;
+  chipClick();
+  save(); render();
+  toast('Put back ' + money(placed) + ' on ' + count + (count === 1 ? ' bet' : ' bets')
+    + (skipped ? ' · ' + skipped + ' skipped' : ''));
+}
+
+/* A long hand deserves a scene. The page lights up harder the rarer it is. */
+function hype(n) {
+  var odds = C.handOdds(n);
+  var tier = n >= 40 ? 3 : n >= 20 ? 2 : 1;
+  var el = $('hype');
+  if (!el) return;
+  el.className = 'hype t' + tier;
+  el.innerHTML = '<div class="hypecard"><b>' + n + ' ROLLS</b>'
+    + '<span>1 in ' + odds.toLocaleString() + ' hands get this far</span></div>'
+    + (tier > 1 ? sparkles(tier === 3 ? 48 : 24) : '');
+  el.hidden = false;
+  document.body.classList.add('hyped');
+  if (tier > 1) { var tb = $('tw'); if (tb) { tb.classList.remove('shake'); void tb.offsetWidth; tb.classList.add('shake'); } }
+  play('stack', 0, tier === 3 ? 1 : 0.8);
+  if (tier > 1) setTimeout(function () { play('stack', 0, 0.9); }, 260);
+  say(n + ' rolls', tier === 3 ? 'Nobody is leaving this table' : 'Keep it going');
+  clearTimeout(hype.timer);
+  hype.timer = setTimeout(function () {
+    el.hidden = true;
+    document.body.classList.remove('hyped');
+    var tb = $('tw'); if (tb) tb.classList.remove('shake');
+  }, tier === 3 ? 4200 : tier === 2 ? 3200 : 2200);
+}
+function sparkles(n) {
+  var h = '';
+  for (var i = 0; i < n; i++) {
+    h += '<i class="spk" style="left:' + (Math.random() * 100).toFixed(1) + '%;'
+      + 'animation-delay:' + (Math.random() * 0.9).toFixed(2) + 's;'
+      + 'animation-duration:' + (1.5 + Math.random() * 1.6).toFixed(2) + 's;'
+      + '--h:' + Math.floor(Math.random() * 60 + 35) + '"></i>';
+  }
+  return h;
+}
+
+function openKeep() {
+  var d = $('keepDlg'); if (!d) return;
+  if (d.showModal) d.showModal(); else d.setAttribute('open', '');
+}
+function closeKeep() { var d = $('keepDlg'); if (d.close) d.close(); else d.removeAttribute('open'); }
+function setKeepCome(on) {
+  S.keepCome = !!on;
+  askedKeepCome = true;
+  save(); render(); closeKeep();
+  toast(on ? 'Come bets stay up when they hit' : 'Come bets come back when they hit');
+}
+function statsHTML() {
+  var st = S.stats;
+  var rate = st.hands ? (st.points / st.hands).toFixed(1) : '0.0';
+  var rows = [
+    ['Rolls', st.n.toLocaleString()],
+    ['Hands', st.hands.toLocaleString()],
+    ['Longest hand', st.longest + ' roll' + (st.longest === 1 ? '' : 's')
+      + (st.longest >= 10 ? ' · 1 in ' + C.handOdds(st.longest >= 10 ? nearestMilestone(st.longest) : 10).toLocaleString() : '')],
+    ['Points made', st.points.toLocaleString() + (st.hands ? ' · ' + rate + ' a hand' : '')],
+    ['Seven outs', st.sevenOuts.toLocaleString()],
+    ['Best roll', money(st.best, true)],
+    ['Worst roll', money(st.worst, true)],
+    ['Won / lost', money(st.won) + ' / ' + money(st.lost)]
+  ];
+  return '<table class="stats">' + rows.map(function (r) {
+    return '<tr><td>' + r[0] + '</td><td class="num">' + esc(String(r[1])) + '</td></tr>';
+  }).join('') + '</table>'
+    + '<p class="note">A hand is every roll one shooter makes before a seven out. The average is 8.53 rolls.</p>';
+}
+function nearestMilestone(n) {
+  var best = 10;
+  C.MILESTONES.forEach(function (m) { if (m <= n) best = m; });
+  return best;
+}
+function openStats() {
+  $('statsBody').innerHTML = statsHTML();
+  var d = $('statsDlg'); if (d.showModal) d.showModal(); else d.setAttribute('open', '');
+}
 function oddsAnchor(k) { for (var i = 0; i < L.odds.length; i++) if (L.odds[i].k === k) return L.odds[i]; return null; }
 
 function doRoll() {
@@ -619,9 +739,18 @@ function doRoll() {
   var d1 = rnd(), d2 = rnd();
   animateDice(d1, d2, function () {
     var t = T(), prev = JSON.parse(JSON.stringify(t.bets));
+    if (Object.keys(prev).length) S.layout = prev;
+    t.keepCome = !!S.keepCome;
     var res = C.roll(t, d1, d2);
     S.bank += res.back;
-    S.stats.n++; S.stats.totals[res.s]++; S.stats.faces[d1]++; S.stats.faces[d2]++;
+    var st = S.stats;
+    st.n++; st.totals[res.s]++; st.faces[d1]++; st.faces[d2]++;
+    if (res.net > st.best) st.best = res.net;
+    if (res.net < st.worst) st.worst = res.net;
+    if (res.net > 0) st.won += res.net; else st.lost -= res.net;
+    if (res.pointMade) st.points++;
+    if (res.hand > st.longest) st.longest = res.hand;
+    if (res.handOver) { st.hands++; st.sevenOuts++; }
     S.last[S.mode] = summarize(res);
     var c = callFor(res, S.mode);
     save();
@@ -631,8 +760,16 @@ function doRoll() {
     say(c[0], c[1]);
     $('roll').disabled = false;
     if (res.pointBefore !== null && res.pointAfter === null) S.prevPoint = res.pointBefore;
+    if (!res.handOver && C.MILESTONES.indexOf(res.hand) >= 0) hype(res.hand);
     if (res.pointBefore === null && res.pointAfter !== null && pointBets(t, res.pointAfter).length) {
       setTimeout(function () { openMove(res.pointAfter); }, 700);
+    }
+    /* The first time a come bet hits in a session, ask once whether these
+       should ride again instead of coming back. */
+    var comeHit = res.ev.some(function (e) { return e.r === 'win' && /^comeOn:/.test(e.k); });
+    if (comeHit && !askedKeepCome && !S.keepCome) {
+      askedKeepCome = true;
+      setTimeout(openKeep, 900);
     }
     save();
   });
@@ -662,6 +799,13 @@ document.querySelector('.tabs').addEventListener('click', function (e) {
   S.mode = b.dataset.mode; removeMode = false; closeBets(); save(); render();
 });
 $('removeMode').addEventListener('click', function () { removeMode = !removeMode; if (removeMode) offMode = false; render(); });
+$('repeat').addEventListener('click', repeatLayout);
+window.__hype = hype;   // so the test harness can look at the reaction without a 25-roll hand
+$('statsBtn').addEventListener('click', openStats);
+$('statsClose').addEventListener('click', function () { var d = $('statsDlg'); if (d.close) d.close(); else d.removeAttribute('open'); });
+$('keepYes').addEventListener('click', function () { setKeepCome(true); });
+$('keepNo').addEventListener('click', function () { setKeepCome(false); });
+$('keepCome').addEventListener('click', function () { setKeepCome(!S.keepCome); });
 $('offMode').addEventListener('click', function () { offMode = !offMode; if (offMode) removeMode = false; render(); });
 $('workMode').addEventListener('click', function () {
   var t = T();
@@ -783,7 +927,7 @@ $('resetDlg').addEventListener('click', function (e) { if (e.target === this) cl
 $('roll').addEventListener('click', doRoll);
 $('fair').addEventListener('click', function (e) {
   if (e.target.id !== 'resetStats') return;
-  S.stats = { n: 0, totals: [0,0,0,0,0,0,0,0,0,0,0,0,0], faces: [0,0,0,0,0,0,0] };
+  S.stats = freshStats();
   save(); render();
 });
 $('fairLink').addEventListener('click', function (e) {

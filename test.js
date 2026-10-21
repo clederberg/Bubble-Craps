@@ -34,23 +34,31 @@ t=T('craps',{'comeOn:5':1000,come:1000},8); r=C.roll(t,2,3); eq(r.back,2000); eq
 t=T('craps',{dc:1000},5); C.roll(t,6,6); eq(t.bets,{dc:1000});
 C.roll(t,2,2); eq(t.bets,{'dcOn:4':1000}); C.add(t,'dcOdds:4',100000); eq(t.bets['dcOdds:4'],12000,'lay 4 to win 6x');
 r=C.roll(t,3,4); eq(r.back,1000+1000+12000+6000);
-// 3-4-5x caps
-for (const [mode,n,x] of [['craps',4,3],['craps',10,3],['craps',5,4],['craps',9,4],['craps',6,5],['crapless',2,3],['crapless',3,3],['crapless',11,3],['crapless',12,3],['crapless',5,4],['crapless',8,5]]) {
+// odds caps: regular craps runs flat 5x, crapless keeps the 3-4-5x ladder
+for (const [mode,n,x] of [['craps',4,5],['craps',10,5],['craps',5,5],['craps',9,5],['craps',6,5],['craps',8,5],['crapless',2,3],['crapless',3,3],['crapless',11,3],['crapless',12,3],['crapless',5,4],['crapless',8,5]]) {
   const t=T(mode,{pass:1000},n); eq(C.add(t,'passOdds',100000).added,1000*x,mode+' pass odds on '+n);
   const u=T(mode,{['comeOn:'+n]:1000},4); eq(C.add(u,'comeOdds:'+n,100000).added,1000*x,mode+' come odds on '+n);
   eq(C.add(t,'passOdds',100).ok,false);
 }
 for (const [n,lay] of [[4,12000],[10,12000],[5,9000],[9,9000],[6,7200],[8,7200]]) { const t=T('craps',{dp:1000},n); eq(C.add(t,'dpOdds',100000).added,lay,'dp lay on '+n); }
-// table limits
-{ const t=T('craps',{}); let a=C.add(t,'pass',600000); eq([a.added, !!a.capped],[500000,true]); eq(C.add(t,'pass',100).ok,false);
-  eq(C.add(t,'dp',900000).added,500000);
-  t.point=6; eq(C.add(t,'come',700000).added,500000); eq(C.add(t,'dc',500001).added,500000);
-  eq(C.add(t,'place:6',3000000).added,2500000); eq(C.add(t,'buy:4',2600000).added,2500000);
-  eq(C.add(t,'lay:4',9e9).added,5000000,'lay 4 to win 25k'); eq(C.add(t,'lay:6',9e9).added,3000000); eq(C.add(t,'lay:9',9e9).added,3750000);
-  eq(C.add(t,'passOdds',9e9).added,2500000,'5x of 5k on 6');
-  eq(C.add(t,'field',9e9).added,500000); eq(C.add(t,'hard:8',9e9).added,100000); eq(C.add(t,'prop:horn',9e9).added,100000); eq(C.add(t,'prop:any7',9e9).added,100000); eq(C.add(t,'prop:ce',9e9).added,100000); }
-{ const t=T('craps',{}); eq(C.add(t,'ats:all',9e9).added,100000); eq(C.add(t,'ats:small',150000).capped!=='',true); }
-{ const t=T('crapless',{},4); eq(C.add(t,'lay:2',9e9).added,15000000); eq(C.add(t,'lay:11',9e9).added,7500000); eq(C.add(t,'place:12',9e9).added,2500000); }
+// no table limits: the bankroll is the only ceiling, odds stay capped as a multiple of the flat
+{ const t=T('craps',{}); let a=C.add(t,'pass',600000); eq([a.added, !!a.capped],[600000,false],'pass line takes any amount');
+  eq(C.add(t,'dp',900000).added,900000,"don't pass takes any amount");
+  t.point=6; eq(C.add(t,'come',700000).added,700000,'come takes any amount');
+  eq(C.add(t,'dc',5000001).added,5000001,"don't come takes any amount");
+  eq(C.add(t,'place:6',30000000).added,30000000,'place takes any amount');
+  eq(C.add(t,'buy:4',26000000).added,26000000,'buy takes any amount');
+  eq(C.add(t,'lay:4',9e8).added,9e8,'lay takes any amount');
+  eq(C.add(t,'field',9e8).added,9e8,'field takes any amount');
+  eq(C.add(t,'hard:8',9e8).added,9e8,'hardways take any amount');
+  eq(C.add(t,'prop:horn',9e8).added,9e8,'props take any amount');
+  // odds are still a multiple of the flat bet, which is a rule rather than a limit
+  eq(C.add(t,'passOdds',9e9).added,600000*5,'pass odds still cap at 5x the flat on 6'); }
+{ const t=T('craps',{}); eq(C.add(t,'ats:all',9e8).added,9e8,'all tall/small take any amount'); }
+{ const t=T('crapless',{},4);
+  eq(C.add(t,'lay:2',9e8).added,9e8,'crapless lay 2 takes any amount');
+  eq(C.add(t,'lay:11',9e8).added,9e8,'crapless lay 11 takes any amount');
+  eq(C.add(t,'place:12',9e8).added,9e8,'crapless place 12 takes any amount'); }
 // field & props
 t=T('craps',{field:1000,'prop:twelve':100,'prop:horn':400,'prop:ce':200,'prop:anyCraps':100}); r=C.roll(t,6,6);
 eq(r.back,3000+3000+2700+600+700,'field 3x, twelve 30, horn 27u, ce 3x, craps 7x');
@@ -68,9 +76,11 @@ eq(r.back,100+3400); eq(C.canAdd(t,'ats:tall')!=='',true); eq(C.canRemove(t,'ats
 r=C.roll(t,3,4); eq(t.bets,{}); eq(t.atsHits,[]); eq(C.canAdd(t,'ats:tall'),'');
 // moving bets between numbers
 { const t=T('craps',{'place:9':600},4); let r=C.moveBet(t,'place:9','place:4'); eq([r.ok,r.moved],[true,600]); eq(t.bets,{'place:4':600});
-  eq(C.moveBet(t,'place:9','place:5').ok,false);
-  t.bets['place:5']=2500000; r=C.moveBet(t,'place:4','place:5'); eq(r.ok,false,'target at table max');
-  t.bets['place:5']=2499900; r=C.moveBet(t,'place:4','place:5'); eq([r.moved,r.left],[100,500],'partial move'); }
+  eq(C.moveBet(t,'place:9','place:5').ok,false,'nothing on 9 to move');
+  // with no table max a move always goes in full, however big the target already is
+  t.bets['place:5']=2500000; r=C.moveBet(t,'place:4','place:5');
+  eq([r.ok,r.moved,r.left],[true,600,0],'the whole bet moves');
+  eq(C.amt(t,'place:5'),2500600,'and lands on top of what was there'); }
 { const t=T('crapless',{'buy:12':1000},5); eq(C.moveBet(t,'buy:12','buy:2').moved,1000); eq(C.moveBet(t,'buy:2','buy:7').ok,false); }
 // removal
 t=T('craps',{pass:1000,passOdds:2000,'place:6':600},6); eq(C.remove(t,'pass').ok,false); eq(C.removeAll(t),2600); eq(t.bets,{pass:1000});
@@ -201,4 +211,89 @@ for (const mode of ['craps','crapless']) { const t=C.newTable(mode); let bank=1e
   eq(C.betState(r, 'place:4'), 'auto', 'taking a bet down forgets its setting');
 }
 
+/* ---- keeping come bets up ---- */
+{
+  const setup = keep => { const t = C.newTable('craps'); t.point = 5;
+    t.bets = { 'comeOn:8': 1000, 'comeOdds:8': 5000 }; t.keepCome = keep; return t; };
+
+  // off: the flat and the odds both come back
+  let t = setup(false), r = C.roll(t, 4, 4);
+  eq(r.back, 1000 + 1000 + 6000 + 5000, 'come win returns flat, odds and both profits');
+  eq(t.bets, {}, 'and nothing is left on the number');
+
+  // on: the flat rides again, so only the profit comes back
+  t = setup(true); r = C.roll(t, 4, 4);
+  eq(r.back, 1000 + 6000 + 5000, 'keeping it up returns the profits and the odds, not the flat');
+  eq(r.kept, 1000, 'the flat is the part kept up');
+  eq(t.bets, { come: 1000 }, 'the flat waits in the come box');
+
+  // it must not travel again on the roll it won on
+  t = setup(true); C.roll(t, 4, 4);
+  eq(C.amt(t, 'comeOn:8'), 0, 'the kept bet does not jump straight back onto the 8');
+  r = C.roll(t, 3, 3);
+  eq(C.amt(t, 'comeOn:6'), 1000, 'it travels on the next roll like any come bet');
+
+  // a kept bet behaves like a normal come bet from there, including a seven out
+  t = setup(true); C.roll(t, 4, 4); C.roll(t, 3, 3);
+  r = C.roll(t, 3, 4);
+  eq(C.amt(t, 'comeOn:6'), 0, 'and it can be lost to the seven');
+
+  // keeping up does not change what a losing come bet does
+  t = setup(true); r = C.roll(t, 3, 4);
+  eq(r.kept, 0, 'nothing is kept up when the come bet loses');
+}
+
+
+
+/* ---- hand length ----------------------------------------------------------
+   A hand runs from a come-out to a seven-out, counting every roll including
+   the seven. The milestone odds are checked here against an exact Markov walk
+   over {come-out, 4, 5, 6, 8, 9, 10} rather than a simulation, so a typo in
+   the table fails the suite instead of looking plausible. */
+{
+  const P = s => [0,0,1,2,3,4,5,6,5,4,3,2,1][s] / 36;
+  const PTS = [4,5,6,8,9,10];
+  // state 0 is the come-out; 1..6 are the points above
+  let v = [1,0,0,0,0,0,0], alive = [1];
+  for (let k = 1; k <= 400; k++) {
+    const w = [0,0,0,0,0,0,0];
+    w[0] += v[0] * (P(7)+P(11)+P(2)+P(3)+P(12));          // come-out survives
+    PTS.forEach((p,i) => { w[i+1] += v[0] * P(p); });      // point established
+    PTS.forEach((p,i) => {
+      w[0] += v[i+1] * P(p);                               // point made, back to come-out
+      w[i+1] += v[i+1] * (1 - P(p) - P(7));                // nothing doing
+    });                                                    // P(7) leaks out: seven out
+    v = w;
+    alive.push(v.reduce((a,b)=>a+b,0));
+  }
+  const mean = alive.reduce((a,b)=>a+b,0);
+  eq(Math.abs(mean - 8.5255) < 0.001, true, 'mean hand is 8.53 rolls');
+
+  // alive[n-1] is P(hand reaches n rolls)
+  C.MILESTONES.filter(m => m <= 200).forEach(m => {
+    const exact = 1 / alive[m-1];
+    // the table stores rounded integers, so a half either way is fine
+    const slack = Math.max(0.5, exact * 0.005);
+    eq(Math.abs(C.handOdds(m) - exact) <= slack, true,
+      m + ' rolls is 1 in ' + Math.round(exact) + ', table says ' + C.handOdds(m));
+  });
+  eq(C.handOdds(10), 3, '10 rolls is 1 in 3, so the reaction there stays small');
+  eq(C.handOdds(20), 14, '20 rolls is 1 in 14');
+  eq(C.handOdds(50), 1161, '50 rolls is 1 in 1,161');
+  eq(C.handOdds(100) > 1.8e6 && C.handOdds(100) < 2e6, true, '100 rolls is about 1 in 1.9 million');
+  // past the table it extrapolates off the tail ratio, which must stay monotonic
+  eq(C.handOdds(250) > C.handOdds(200), true, 'the extrapolation keeps climbing');
+  eq(C.handOdds(201) > C.handOdds(200), true, 'and it climbs one roll at a time');
+
+  // the counter itself
+  let h = C.newTable('craps');
+  eq(h.hand, 0, 'a new table has no hand going');
+  let rr = C.roll(h, 3, 4); eq([rr.hand, rr.handOver], [1, false], 'a come-out seven is one roll, hand alive');
+  rr = C.roll(h, 2, 2); eq([rr.hand, h.point], [2, 4], 'point established on roll two');
+  rr = C.roll(h, 2, 2); eq([rr.hand, rr.pointMade, h.point], [3, true, null], 'point made, hand still going');
+  rr = C.roll(h, 3, 4); eq([rr.hand, rr.handOver], [4, false], 'a seven back on the come-out is a winner, not a seven out');
+  rr = C.roll(h, 2, 3); eq([rr.hand, h.point], [5, 5], 'new point on roll five');
+  rr = C.roll(h, 3, 4); eq([rr.hand, rr.handOver], [6, true], 'now the seven ends it, on roll six');
+  rr = C.roll(h, 2, 2); eq(rr.hand, 1, 'and the next roll starts a fresh hand');
+}
 console.log('all passed', n, 'asserts + 400k sim rolls');

@@ -86,7 +86,7 @@ Shots have to scale with credits for the two bet levels to return the same. An e
 
 ## Craps tables
 
-- **Craps:** Pass / Don't Pass, Come / Don't Come, 3-4-5x odds, Place, Buy, Lay, Field, Hardways, one-roll props, Horn, C & E, All Small / All Tall / Make 'Em All.
+- **Craps:** Pass / Don't Pass, Come / Don't Come, 5x odds on every point, Place, Buy, Lay, Field, Hardways, one-roll props, Horn, C & E, All Small / All Tall / Make 'Em All.
 - **Crapless:** every number except 7 is a point (2, 3, 11 and 12 included). No Don't bets.
 
 ## Payouts
@@ -94,7 +94,7 @@ Shots have to scale with credits for the two bet levels to return the same. An e
 | Bet | Pays |
 |---|---|
 | Pass / Come / Don't | 1:1 |
-| Odds (3-4-5x) | true odds: 2/12 6:1, 3/11 3:1, 4/10 2:1, 5/9 3:2, 6/8 6:5 |
+| Odds | true odds: 2/12 6:1, 3/11 3:1, 4/10 2:1, 5/9 3:2, 6/8 6:5 |
 | Place | 4/10 9:5, 5/9 7:5, 6/8 7:6, 3/11 11:4, 2/12 11:2 |
 | Buy / Lay | true odds, 5% commission on wins |
 | Field | 1:1, 2 pays 2x, 12 pays 3x |
@@ -103,27 +103,55 @@ Shots have to scale with credits for the two bet levels to return the same. An e
 | 2 or 12 / 3 or 11 | 30:1 / 15:1 |
 | All Small, All Tall / Make 'Em All | 34:1 / 175:1 |
 
-Odds limits: 3x on 2, 3, 4, 10, 11, 12 · 4x on 5 and 9 · 5x on 6 and 8. Don't bettors can lay enough to win 6x their flat bet.
+Odds: **regular craps runs flat 5x on every point**, pass line and come alike. Crapless keeps the 3-4-5x ladder (3x on 2, 3, 4, 10, 11, 12 · 4x on 5 and 9 · 5x on 6 and 8) since it carries the extra numbers. Don't bettors can lay enough to win 6x their flat bet.
 
 Place, Buy, Hardways and Come odds are off on the come-out roll.
+
+### A seven out reads as one line
+
+Taking twenty bets down at once used to print twenty red chips. Now it reads as a single total, with any winners (a Don't bet, a lay, a come bet in the box) still listed on their own.
 
 ## Bets on the new point
 
 When a number you have a Place or Buy bet on becomes the point, a prompt offers to move that bet to another number as either a Place or a Buy bet (the number that just hit is highlighted, and the numbers each bet type pays best on are underlined), take it down, or leave it up. Uncheck the box in that prompt to stop being asked.
 
-## Table limits
+## No table limits
 
-| Bet | Max |
+There are none. Your bankroll is the only ceiling on any bet.
+
+Odds are still capped as a multiple of the flat bet, because that is a rule of the game rather than a house limit: 5x on every point in regular craps, the 3-4-5x ladder in crapless, and enough to win 6x the flat on Don't odds.
+
+Reset bankroll goes up to $100,000.
+
+## Come bets
+
+When a come bet hits you can take the flat back or leave it riding in the Come box so it travels to the next number on its own. Odds always come back either way.
+
+The first time a come bet hits in a session you get asked once, and the **Come bets** button flips it any time after that. A bet left up waits in the Come box and travels on the *next* roll, not the one it just won on.
+
+## Repeat bets
+
+**Repeat bets** puts your last layout back down. Come and Don't Come bets sitting on a number are skipped, since those arrive on their own, and anything your bankroll cannot cover is left out. The toast says how much went back down and how many bets were skipped.
+
+## Session stats
+
+**Stats** shows rolls, hands, longest hand, points made per hand, seven outs, your best and worst single roll and the running won/lost, plus how far you are from the next hand milestone.
+
+## Long hands
+
+A hand runs from a come-out to a seven-out, counting every roll. The average hand is **8.53 rolls**, so getting deep is genuinely rare, and passing 10, 15, 20, 25, 30, 40, 50, 60, 75, 100, 125, 150, 175 or 200 rolls lights the whole page up with the odds against it.
+
+| Rolls | Odds |
 |---|---|
-| Pass, Don't Pass, Come, Don't Come | $5,000 |
-| Place, Buy | $25,000 |
-| Lay | whatever wins $25,000 ($50,000 on 4/10, $37,500 on 5/9, $30,000 on 6/8, $75,000 on 3/11, $150,000 on 2/12) |
-| Odds | 3-4-5x of the flat bet |
-| Field | $5,000 |
-| Hardways, one-roll bets, Horn, C & E | $1,000 |
-| All Small, All Tall, Make 'Em All | $1,000 |
+| 10 | 1 in 3 |
+| 20 | 1 in 14 |
+| 30 | 1 in 60 |
+| 50 | 1 in 1,161 |
+| 75 | 1 in 46,920 |
+| 100 | 1 in 1,895,441 |
+| 150 | 1 in 3.09 billion |
 
-Reset bankroll goes up to $100,000. Lay and Don't odds always work.
+Those are exact, computed by walking the Markov chain over the come-out and the six point states, not simulated. `test.js` recomputes the whole table independently and fails if a number drifts. Ten rolls happens about every third hand, so that one gets a slim banner; 20 and up get the full scene.
 
 ## Fair dice
 
@@ -135,6 +163,7 @@ Each die is drawn from the browser's cryptographic random number generator (`cry
 - After a Come or Don't Come bet travels to a number, tap the gold **ODDS** circle beside it to add odds.
 - Right-click, long-press, or switch on **Take down** to remove chips.
 - Tap **On table** in the bottom bar for a list of every bet, with buttons to take one chip or the whole bet down.
+- **Repeat bets** puts your last layout back down, **Stats** opens the session summary.
 - **Space** or **R** rolls.
 - **B** opens Reset bankroll, **Shift+B** resets straight to your last amount. You can also tap Bankroll on the bottom bar, and a one-tap reset appears when you run out of chips.
 

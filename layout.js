@@ -174,8 +174,8 @@
       + T(X1 - 14, y + ph / 2, '1:1', 11, { a: 'end', fill: GOLD }), 'Pass Line · 1:1', { x: X0 + R + 12, y: y + ph / 2 });
     y += ph + 6;
     var oh = 36;
-    spot('passOdds', X0, y, FW, oh, T(X0 + FW / 2, y + oh / 2, 'PASS LINE ODDS · 3X 4X 5X · TRUE ODDS', wide ? 13 : 11, { f: OSW, ls: 2 }),
-      'Pass odds · 3x on 4,10' + (dont ? '' : ',2,3,11,12') + ' · 4x on 5,9 · 5x on 6,8', { x: X0 + R + 12, y: y + oh / 2 });
+    spot('passOdds', X0, y, FW, oh, T(X0 + FW / 2, y + oh / 2, 'PASS LINE ODDS · ' + (m.oddsLabel || '3X 4X 5X') + ' · TRUE ODDS', wide ? 13 : 11, { f: OSW, ls: 2 }),
+      'Pass odds · ' + m.oddsText, { x: X0 + R + 12, y: y + oh / 2 });
     y += oh;
     var mainBottom = y;
 

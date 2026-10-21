@@ -20,12 +20,18 @@
     tall: { name: 'All Tall', nums: [8, 9, 10, 11, 12], pay: 34 },
     all: { name: "Make 'Em All", nums: [2, 3, 4, 5, 6, 8, 9, 10, 11, 12], pay: 175 }
   };
+  /* Regular craps runs flat 5x odds on every point, pass line and come alike.
+     Crapless keeps the 3-4-5x ladder, since it carries the extra numbers. */
+  var ODDS_FLAT5 = { 4: 5, 5: 5, 6: 5, 8: 5, 9: 5, 10: 5 };
+  var ODDS_345 = { 2: 3, 3: 3, 4: 3, 10: 3, 11: 3, 12: 3, 5: 4, 9: 4, 6: 5, 8: 5 };
   var MODES = {
-    craps: { name: 'Craps', points: [4, 5, 6, 8, 9, 10], dont: true },
-    crapless: { name: 'Crapless', points: [2, 3, 4, 5, 6, 8, 9, 10, 11, 12], dont: false }
+    craps: { name: 'Craps', points: [4, 5, 6, 8, 9, 10], dont: true, odds: ODDS_FLAT5, oddsText: '5x on every point', oddsLabel: '5X' },
+    crapless: { name: 'Crapless', points: [2, 3, 4, 5, 6, 8, 9, 10, 11, 12], dont: false, odds: ODDS_345,
+      oddsText: '3x on 2,3,4,10,11,12 \u00b7 4x on 5,9 \u00b7 5x on 6,8', oddsLabel: '3X 4X 5X' }
   };
-  // 3-4-5x odds: 3x on 2,3,4,10,11,12 · 4x on 5,9 · 5x on 6,8. Lay odds may win up to 6x the flat bet.
-  var ODDS_X = { 2: 3, 3: 3, 4: 3, 10: 3, 11: 3, 12: 3, 5: 4, 9: 4, 6: 5, 8: 5 };
+  var ODDS_X = ODDS_345;
+  function oddsX(t, n) { var o = (MODES[t.mode] || MODES.craps).odds; return o[n] || 0; }
+  // Lay odds may win up to 6x the flat bet.
   var LAY_WIN_X = 6;
   var NAMES = { pass: 'Pass Line', passOdds: 'Pass Odds', dp: "Don't Pass", dpOdds: "Don't Pass Odds", come: 'Come', dc: "Don't Come", field: 'Field' };
 
@@ -54,7 +60,19 @@
     }
   }
 
-  function newTable(mode) { return { mode: mode, point: null, bets: {}, atsHits: [], rolls: [], working: false, off: {}, on: {} }; }
+  /* P(a hand lasts at least n rolls), from the Markov chain over come-out and
+     the six point states. Worked out once and tabulated, so the table can tell
+     you how rare the roll you just made is. */
+  var HAND_ODDS = { 10: 3, 15: 7, 20: 14, 25: 29, 30: 60, 40: 265, 50: 1161, 60: 5100,
+    75: 46920, 100: 1895441, 125: 76570775, 150: 3093257037, 175: 124960953047, 200: 5050668757641 };
+  var MILESTONES = [10, 15, 20, 25, 30, 40, 50, 60, 75, 100, 125, 150, 175, 200];
+  function handOdds(n) {
+    if (HAND_ODDS[n]) return HAND_ODDS[n];
+    // past the table, each further roll survives with probability 0.86241
+    return Math.round(HAND_ODDS[200] / Math.pow(0.86241, n - 200));
+  }
+
+  function newTable(mode) { return { mode: mode, point: null, bets: {}, atsHits: [], rolls: [], working: false, off: {}, on: {}, hand: 0 }; }
 
   /* Is this bet live on the next roll?
      Every place, buy, lay, hardway and come-odds bet carries its own setting:
@@ -126,7 +144,9 @@
     return 'Unknown bet';
   }
   // Table limits (cents). Lay bets are capped by what they win.
-  var LIMITS = { line: 500000, place: 2500000, layWin: 2500000, field: 500000, side: 100000 };
+  /* No table limits: your bankroll is the only ceiling. Odds are still capped
+     as a multiple of the flat bet, the way every real table does it. */
+  var LIMITS = { line: Infinity, place: Infinity, layWin: Infinity, field: Infinity, side: Infinity };
   function dollars(c) { return '$' + (c / 100).toLocaleString('en-US', { maximumFractionDigits: 2 }); }
   function maxFor(t, k) {
     var p = parse(k);
@@ -136,9 +156,9 @@
       case 'field': return LIMITS.field;
       case 'hard': case 'prop': case 'ats': return LIMITS.side;
       case 'lay': return mul(LIMITS.layWin, TRUE[p.n]);
-      case 'passOdds': return amt(t, 'pass') * ODDS_X[t.point];
+      case 'passOdds': return amt(t, 'pass') * oddsX(t, t.point);
       case 'dpOdds': return mul(amt(t, 'dp') * LAY_WIN_X, TRUE[t.point]);
-      case 'comeOdds': return amt(t, 'comeOn:' + p.n) * ODDS_X[p.n];
+      case 'comeOdds': return amt(t, 'comeOn:' + p.n) * oddsX(t, p.n);
       case 'dcOdds': return mul(amt(t, 'dcOn:' + p.n) * LAY_WIN_X, TRUE[p.n]);
     }
     return Infinity;
@@ -146,14 +166,13 @@
   function limitText(t, k) {
     var p = parse(k), n = p.n !== null ? p.n : t.point;
     switch (p.type) {
-      case 'pass': case 'dp': case 'come': case 'dc': return 'Table max on ' + label(k) + ' is ' + dollars(LIMITS.line);
-      case 'place': case 'buy': return 'Table max on ' + label(k) + ' is ' + dollars(LIMITS.place);
-      case 'field': return 'Table max on the Field is ' + dollars(LIMITS.field);
-      case 'hard': case 'prop': case 'ats': return 'Table max on ' + label(k) + ' is ' + dollars(LIMITS.side);
-      case 'lay': return 'Table max on ' + label(k) + ' is ' + dollars(maxFor(t, k)) + ' (to win ' + dollars(LIMITS.layWin) + ')';
       case 'dpOdds': case 'dcOdds': return 'Lay odds max: win ' + LAY_WIN_X + 'x your flat bet';
+      case 'passOdds': case 'comeOdds': return 'Odds max on ' + n + ' is ' + oddsX(t, n) + 'x';
     }
-    return 'Odds max on ' + n + ' is ' + ODDS_X[n] + 'x';
+    /* Everything else runs with no table limit, so the only thing that can
+       stop a bet is the bankroll. */
+    var m = maxFor(t, k);
+    return m === Infinity ? 'Not enough in your bankroll' : 'Max on ' + label(k) + ' is ' + dollars(m);
   }
   function add(t, k, c) {
     var r = canAdd(t, k);
@@ -213,7 +232,10 @@
 
   function roll(t, d1, d2) {
     var s = d1 + d2, hard = d1 === d2, on = t.point !== null, m = MODES[t.mode], B = t.bets;
-    var ev = [], back = 0, pointBefore = t.point;
+    var ev = [], back = 0, pointBefore = t.point, kept = 0;
+    /* A hand is every roll one shooter makes, and it ends only on a seven out.
+       The mean is 8.53 rolls, so a long one is worth noticing. */
+    t.hand = (t.hand || 0) + 1;
     function has(k) { return B[k] > 0; }
     function live(k) { return isWorking(t, k); }
     function win(k, profit, keep) {
@@ -277,7 +299,17 @@
       var ck = 'comeOn:' + n, co = 'comeOdds:' + n, dk = 'dcOn:' + n, dO = 'dcOdds:' + n;
       if (has(ck)) {
         if (s === n) {
-          win(ck, B[ck], false);
+          /* Keep it up: the flat rides again in the Come box instead of coming
+             back to you. Self-funding, so the bankroll only sees the profit. */
+          if (t.keepCome) {
+            var flat = B[ck];
+            back += flat;
+            ev.push({ k: ck, r: 'win', net: flat, keep: true, kept: true });
+            delete B[ck];
+            /* Held back until the come box has been read, so the bet rides on
+               the next roll rather than travelling again on this one. */
+            kept += flat;
+          } else win(ck, B[ck], false);
           if (has(co)) { if (live(co)) win(co, mul(B[co], TRUE[n]), false); else giveBack(co, 'odds were off'); }
         } else if (s === 7) {
           lose(ck);
@@ -354,7 +386,13 @@
     t.rolls.unshift({ d1: d1, d2: d2, s: s });
     if (t.rolls.length > 40) t.rolls.length = 40;
     var net = ev.reduce(function (a, e) { return a + e.net; }, 0);
-    return { s: s, hard: hard, d1: d1, d2: d2, ev: ev, back: back, net: net, pointBefore: pointBefore, pointAfter: t.point };
+    if (kept) B.come = (B.come || 0) + kept;
+    var handOver = pointBefore !== null && s === 7, handLength = t.hand;
+    if (handOver) t.hand = 0;
+    var pointMade = pointBefore !== null && s === pointBefore;
+    return { s: s, hard: hard, d1: d1, d2: d2, ev: ev, back: back, net: net, kept: kept,
+      hand: handLength, handOver: handOver, pointMade: pointMade,
+      pointBefore: pointBefore, pointAfter: t.point };
   }
 
   var api = {
@@ -362,6 +400,7 @@
     parse: parse, label: label, newTable: newTable, amt: amt, canAdd: canAdd, add: add,
     isWorking: isWorking, canToggle: canToggle, toggleOff: toggleOff,
     betState: betState, setState: setState, cycleState: cycleState,
+    handOdds: handOdds, MILESTONES: MILESTONES,
     canRemove: canRemove, remove: remove, moveBet: moveBet, limitText: limitText, removeAll: removeAll, onTable: onTable, roll: roll
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
