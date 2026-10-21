@@ -148,6 +148,17 @@
     el.innerHTML = html;
     return true;
   }
+  /* setHTML skips the write when the string matches what it wrote last time.
+     That is right for a plain re-render, but code that adds classes to the
+     nodes afterwards leaves the DOM no longer matching the cached string, and
+     a later identical render would then be skipped while the DOM still holds
+     the old state. Any render that can be followed by a class change goes
+     through forceHTML instead, which always writes. */
+  function forceHTML(el, html) {
+    if (!el) return false;
+    el.__h = null; el.__t = null;
+    return setHTML(el, html);
+  }
   function setText(el, txt) {
     if (!el || el.__t === txt) return false;
     el.__t = txt; el.__h = null;
@@ -314,7 +325,7 @@
   }
 
   var api = {
-    ac: ac, play: play, say: say, toast: toast, esc: esc, setHTML: setHTML, setText: setText, chipHTML: chipHTML, cardHTML: cardHTML, renderChips: renderChips, nav: nav,
+    ac: ac, play: play, say: say, toast: toast, esc: esc, setHTML: setHTML, forceHTML: forceHTML, setText: setText, chipHTML: chipHTML, cardHTML: cardHTML, renderChips: renderChips, nav: nav,
     shoeHTML: shoeHTML, discardHTML: discardHTML, chipStackHTML: chipStackHTML, dealerHTML: dealerHTML, dealer: dealer, winBanner: winBanner, resultBanner: resultBanner,
     KEY: KEY, START: START, CHIPS: CHIPS, RANKS: RANKS, SUITS: SUITS, SUIT_CH: SUIT_CH,
     money: money, chipText: chipText, chipColor: chipColor,

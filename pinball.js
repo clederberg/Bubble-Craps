@@ -83,7 +83,7 @@ function drawPlayfield() {
   h += targetHTML();
   h += '<div class="shotline" id="shotline"></div>';
   h += '<i class="ball" id="ball" style="left:' + LAUNCH.x + '%;top:' + LAUNCH.y + '%;opacity:.45"></i>';
-  K.setHTML($('playfield'), h);
+  K.forceHTML($('playfield'), h);   // targets get a 'hit' class added below
 }
 function resetTargets() {
   $('playfield').querySelectorAll('.target').forEach(function (el) { el.classList.remove('hit'); });

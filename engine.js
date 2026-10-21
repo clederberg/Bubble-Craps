@@ -144,9 +144,18 @@
     return 'Unknown bet';
   }
   // Table limits (cents). Lay bets are capped by what they win.
-  /* No table limits: your bankroll is the only ceiling. Odds are still capped
-     as a multiple of the flat bet, the way every real table does it. */
-  var LIMITS = { line: Infinity, place: Infinity, layWin: Infinity, field: Infinity, side: Infinity };
+  /* Table limits, in cents. A lay is capped by what it stands to win rather
+     than what it puts up, the way a real table does it, so the $50,000 here
+     means $50,000 won: laying the 4 at 1:2 can put up $100,000 to win it.
+     Odds are capped separately, as a multiple of the flat bet. */
+  var LIMITS = {
+    line: 2500000,    // pass, don't pass, come, don't come
+    place: 5000000,   // each place or buy bet, per number
+    layWin: 5000000,  // most a lay can win
+    field: 1000000,
+    hard: 1000000,
+    prop: 500000      // props and the all small / all tall / make 'em all bets
+  };
   function dollars(c) { return '$' + (c / 100).toLocaleString('en-US', { maximumFractionDigits: 2 }); }
   function maxFor(t, k) {
     var p = parse(k);
@@ -154,7 +163,8 @@
       case 'pass': case 'dp': case 'come': case 'dc': return LIMITS.line;
       case 'place': case 'buy': return LIMITS.place;
       case 'field': return LIMITS.field;
-      case 'hard': case 'prop': case 'ats': return LIMITS.side;
+      case 'hard': return LIMITS.hard;
+      case 'prop': case 'ats': return LIMITS.prop;
       case 'lay': return mul(LIMITS.layWin, TRUE[p.n]);
       case 'passOdds': return amt(t, 'pass') * oddsX(t, t.point);
       case 'dpOdds': return mul(amt(t, 'dp') * LAY_WIN_X, TRUE[t.point]);

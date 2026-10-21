@@ -43,7 +43,7 @@ function drawBoard(stops, reels, boost) {
     h += '<div class="reel" data-col="' + i + '"><div class="col" data-reel="' + i + '">'
       + reelColumn(reel, stops[i], g.rows, boost) + '</div></div>';
   });
-  K.setHTML($('reels'), h);
+  K.forceHTML($('reels'), h);   // markWins/clearMarks add classes to these nodes
 }
 function markWins(cells) {
   var all = $('reels').querySelectorAll('.sym');
@@ -269,7 +269,7 @@ function runHold(hs, done, title) {
   function paintGrid(step, freshIdx) {
     var h = '';
     for (var i = 0; i < 15; i++) h += cellHTML(step.board[i], freshIdx && freshIdx.indexOf(i) >= 0);
-    K.setHTML(grid, h);
+    K.forceHTML(grid, h);
   }
   function label(step) {
     K.setText($('respins'), step.respins === 1 ? 'Last respin' : step.respins + ' respins left');
@@ -350,7 +350,9 @@ function runLatke(res, done) {
         + '<svg viewBox="0 0 48 48">' + G.ART.pan + '</svg>'
         + '<div class="latke">' + LATKE_ART + '</div><div class="tag"></div></div>';
     });
-    K.setHTML(stage, h);
+    /* a second batch builds the same markup as the first, so this has to
+       write even when the string is unchanged: the pans on screen are picked */
+    K.forceHTML(stage, h);
     later(function () {
       stage.querySelectorAll('.panwrap').forEach(function (el) { el.classList.add('float'); });
     }, 560);

@@ -147,46 +147,68 @@ g.buy.forEach(b => {
 /* Measuring this off a plain run of spins is hopeless: the features are rare
    and enormous, so the sample swings by points. Instead price each piece from
    its own large sample and put them together. */
-function triggerRates(spins, lineCount, lineBet) {
-  const stake = lineCount * lineBet;
-  let lines = 0, scat = 0, hold = 0, latke = 0, n = 0;
+/* One pass of spins prices every line count at once. The grid and every
+   trigger are the same whichever line count you are pricing, so running this
+   three times only bought three times the sampling noise. It also tracks the
+   spread of the line return, so the suite can state its own precision instead
+   of asserting a band the sample cannot support. */
+function triggerRates(spins, lineCounts, lineBet) {
+  const sum = {}, sq = {}, scat = {};
+  lineCounts.forEach(lc => { sum[lc] = 0; sq[lc] = 0; scat[lc] = 0; });
+  let hold = 0, latke = 0;
   const freeBy = { 3: 0, 4: 0, 5: 0 };
   for (let i = 0; i < spins; i++) {
-    n++;
-    const stops = S.spinStops(g), grid = S.gridAt(g, stops);
-    lines += S.evalLines(g, grid, lineCount, lineBet).total;
+    const grid = S.gridAt(g, S.spinStops(g));
     const sc = S.countIn(grid, g.scatter);
-    if (g.scatterPays[sc]) scat += g.scatterPays[sc] * stake;
+    const coins = S.positionsOf(grid, g.coin).length;
+    const pans = S.countIn(grid, g.bonus);
+    lineCounts.forEach(lc => {
+      const r = S.evalLines(g, grid, lc, lineBet).total / (lc * lineBet);
+      sum[lc] += r; sq[lc] += r * r;
+      if (g.scatterPays[sc]) scat[lc] += g.scatterPays[sc];
+    });
     if (sc >= g.free.trigger) freeBy[sc]++;
-    if (S.positionsOf(grid, g.coin).length >= g.hold.trigger) hold++;
-    if (S.countIn(grid, g.bonus) >= g.latke.trigger) latke++;
+    if (coins >= g.hold.trigger) hold++;
+    if (pans >= g.latke.trigger) latke++;
   }
-  return { lines: lines / (n * stake), scat: scat / (n * stake),
-    hold: hold / n, latke: latke / n,
-    free: { 3: freeBy[3] / n, 4: freeBy[4] / n, 5: freeBy[5] / n } };
+  const out = {};
+  lineCounts.forEach(lc => {
+    const mean = sum[lc] / spins;
+    const sd = Math.sqrt(Math.max(0, sq[lc] / spins - mean * mean));
+    out[lc] = { lines: mean, linesSE: sd / Math.sqrt(spins), scat: scat[lc] / spins };
+  });
+  const rate = (c) => ({ p: c / spins, se: Math.sqrt(Math.max(0, (c / spins) * (1 - c / spins) / spins)) });
+  out.hold = rate(hold); out.latke = rate(latke); out.spins = spins;
+  out.free = { 3: rate(freeBy[3]), 4: rate(freeBy[4]), 5: rate(freeBy[5]) };
+  return out;
 }
 function avgFree(count, rounds, lineCount, lineBet) {
   const stake = lineCount * lineBet;
-  let sum = 0, holds = 0, floors = 0, spins = 0, zero = 0;
+  let sum = 0, sq = 0, holds = 0, floors = 0, spins = 0, zero = 0;
   for (let i = 0; i < rounds; i++) {
     const f = S.freeGames(g, g.free.spins[count], lineCount, lineBet, null, count);
-    sum += f.total - f.jackpots.reduce((a, j) => a + j.amount, 0);
+    const v = (f.total - f.jackpots.reduce((a, j) => a + j.amount, 0)) / stake;
+    sum += v * stake; sq += v * v;
     if (f.holds) holds++;
     if (f.topUp) floors++;
     if (f.total <= 0) zero++;
     spins += f.played;
   }
-  return { avg: sum / rounds / stake, holds: holds / rounds, floors: floors / rounds,
-    spins: spins / rounds, zero: zero };
+  const avg = sum / rounds / stake;
+  return { avg: avg, se: Math.sqrt(Math.max(0, sq / rounds - avg * avg)) / Math.sqrt(rounds),
+    holds: holds / rounds, floors: floors / rounds, spins: spins / rounds, zero: zero };
 }
 function avgLatke(rounds, stake) {
-  let sum = 0, picks = 0;
+  let sum = 0, sq = 0, picks = 0;
   for (let i = 0; i < rounds; i++) {
     const r = S.latkeRound(g, stake, null);
-    sum += r.total - r.jackpots.reduce((a, j) => a + j.amount, 0);
+    const v = (r.total - r.jackpots.reduce((a, j) => a + j.amount, 0)) / stake;
+    sum += v; sq += v * v;
     picks += r.picks.length;
   }
-  return { avg: sum / rounds / stake, picks: picks / rounds };
+  const avg = sum / rounds;
+  return { avg: avg, se: Math.sqrt(Math.max(0, sq / rounds - avg * avg)) / Math.sqrt(rounds),
+    picks: picks / rounds };
 }
 function avgHold(trials, stake) {
   const d = {};
@@ -196,7 +218,7 @@ function avgHold(trials, stake) {
     if (c >= g.hold.trigger) d[c] = (d[c] || 0) + 1;
   }
   const keys = Object.keys(d).map(Number), tot = keys.reduce((a, k) => a + d[k], 0);
-  let sum = 0;
+  let sum = 0, sq = 0;
   for (let i = 0; i < trials; i++) {
     let r = Math.random() * tot, n = keys[0];
     for (const k of keys) { r -= d[k]; if (r <= 0) { n = k; break; } }
@@ -206,9 +228,11 @@ function avgHold(trials, stake) {
       if (!used[key]) { used[key] = 1; pos.push([x, y]); }
     }
     const h = S.holdAndSpin(g, stake, pos);
-    sum += (h.total - h.jackpots.reduce((a, j) => a + j.amount, 0)) / stake;
+    const v = (h.total - h.jackpots.reduce((a, j) => a + j.amount, 0)) / stake;
+    sum += v; sq += v * v;
   }
-  return sum / trials;
+  const avg = sum / trials;
+  return { avg: avg, se: Math.sqrt(Math.max(0, sq / trials - avg * avg)) / Math.sqrt(trials) };
 }
 
 const jr = jackpotRates(120000);
@@ -220,42 +244,61 @@ rev.filter(r => r.jackpot).forEach(r => { lkJp[r.jackpot] = r.w / (wEmpty + wJp)
 
 const holdAvg = avgHold(60000, 2500);
 const latke = avgLatke(120000, 2500);
+/* One shared pass for all three line counts. The base game drives the whole
+   error budget: its per-spin spread is about 3.6x the stake at 5 lines, and
+   the same spins also fix how often each feature triggers. */
+const T = triggerRates(1500000, [5, 25, 50], 100);
 [5, 25, 50].forEach(lc => {
-  const stake = lc * 100;
-  const t = triggerRates(300000, lc, 100);
-  /* Free games carry nearly all the variance here: a round averages ~22x but can
-     pay hundreds, so a small sample swings the total by a point. Sample it hard. */
+  const t = T[lc];
+  /* Free games carry the rest of the variance: a round averages ~22x but can
+     pay hundreds, so a small sample swings the total by a point. */
   const free = { 3: avgFree(3, 20000, lc, 100), 4: avgFree(4, 4000, lc, 100), 5: avgFree(5, 1500, lc, 100) };
   eq(free[3].zero + free[4].zero + free[5].zero, 0, 'no free games round pays nothing');
-  const fgRtp = [3, 4, 5].reduce((a, c) => a + t.free[c] * free[c].avg, 0);
-  const fgTrig = t.free[3] + t.free[4] + t.free[5];
-  const holdRtp = t.hold * holdAvg;
-  const latkeRtp = t.latke * latke.avg;
+  const fgRtp = [3, 4, 5].reduce((a, c) => a + T.free[c].p * free[c].avg, 0);
+  const fgTrig = T.free[3].p + T.free[4].p + T.free[5].p;
+  const holdRtp = T.hold.p * holdAvg.avg;
+  const latkeRtp = T.latke.p * latke.avg;
   const per = {
-    mini: t.hold * jr.base.mini + fgTrig * free[3].holds * jr.free.mini + t.latke * lkJp.mini,
-    minor: t.hold * jr.base.minor + fgTrig * free[3].holds * jr.free.minor + t.latke * lkJp.minor,
-    major: t.hold * jr.base.major + fgTrig * free[3].holds * jr.free.major + t.latke * lkJp.major,
-    grand: t.hold * jr.base.fill + fgTrig * free[3].holds * jr.free.fill + t.latke * lkJp.grand
+    mini: T.hold.p * jr.base.mini + fgTrig * free[3].holds * jr.free.mini + T.latke.p * lkJp.mini,
+    minor: T.hold.p * jr.base.minor + fgTrig * free[3].holds * jr.free.minor + T.latke.p * lkJp.minor,
+    major: T.hold.p * jr.base.major + fgTrig * free[3].holds * jr.free.major + T.latke.p * lkJp.major,
+    grand: T.hold.p * jr.base.fill + fgTrig * free[3].holds * jr.free.fill + T.latke.p * lkJp.grand
   };
   let jpRtp = 0;
   Object.keys(per).forEach(x => { jpRtp += per[x] * g.jackpots.seed[x] + g.jackpots.rate[x]; });
   const total = t.lines + t.scat + fgRtp + holdRtp + latkeRtp + jpRtp;
-  eq(total > 0.925 && total < 0.96, true, `${lc}-line return stays in band (measured ${(total * 100).toFixed(2)}%)`);
-  console.log(`Festival of Lights ${String(lc).padStart(2)} lines \u00b7 RTP ${(total * 100).toFixed(2)}% ` +
+
+  /* Every term above is a sample, so the total carries a sampling error. Each
+     product contributes both the rate's error and the average's, added in
+     quadrature since they come from independent runs. Asserting a band tighter
+     than this would fail on a quiet afternoon and teach us to ignore it. */
+  const prod = (r, m) => Math.sqrt(Math.pow(r.se * m.avg, 2) + Math.pow(r.p * m.se, 2));
+  const se = Math.sqrt(
+    Math.pow(t.linesSE, 2)
+    + [3, 4, 5].reduce((a, c) => a + Math.pow(prod(T.free[c], free[c]), 2), 0)
+    + Math.pow(prod(T.hold, holdAvg), 2)
+    + Math.pow(prod(T.latke, latke), 2));
+
+  /* Two separate questions: is the sample sharp enough to judge the machine,
+     and does the machine land in band. Rolling them into one assertion would
+     let a noisy run pass by being vague. */
+  eq(se < 0.006, true, `${lc}-line estimate is sharp enough to judge (\u00b1${(se * 100).toFixed(2)} pts)`);
+  eq(total > 0.925 && total < 0.96, true,
+    `${lc}-line return stays in band (measured ${(total * 100).toFixed(2)}% \u00b1 ${(se * 100).toFixed(2)})`);
+  console.log(`Festival of Lights ${String(lc).padStart(2)} lines \u00b7 RTP ${(total * 100).toFixed(2)}% \u00b1${(se * 100).toFixed(2)} ` +
     `(lines ${(t.lines * 100).toFixed(1)} \u00b7 free games ${(fgRtp * 100).toFixed(1)} \u00b7 hold & spin ${(holdRtp * 100).toFixed(1)} ` +
     `\u00b7 latke ${(latkeRtp * 100).toFixed(1)} \u00b7 shofar ${(t.scat * 100).toFixed(1)} \u00b7 jackpots ${(jpRtp * 100).toFixed(1)})`);
   if (lc === 25) {
     console.log(`  free games 1 in ${Math.round(1 / fgTrig)} spins \u00b7 ${free[3].avg.toFixed(1)}x bet on average \u00b7 ` +
       `${free[3].spins.toFixed(1)} spins \u00b7 hold & spin inside ${(free[3].holds * 100).toFixed(0)}% of rounds \u00b7 ` +
       `floor topped up ${(free[3].floors * 100).toFixed(1)}% of rounds`);
-    console.log(`  latke bonus 1 in ${Math.round(1 / t.latke)} spins \u00b7 ${latke.avg.toFixed(1)}x bet on average \u00b7 ${latke.picks.toFixed(1)} pans picked`);
-    console.log(`  hold & spin 1 in ${Math.round(1 / t.hold)} spins in the base game, 1 in ${Math.round(1 / jr.free.rate)} free spins, ${holdAvg.toFixed(1)}x bet on average`);
+    console.log(`  latke bonus 1 in ${Math.round(1 / T.latke.p)} spins \u00b7 ${latke.avg.toFixed(1)}x bet on average \u00b7 ${latke.picks.toFixed(1)} pans picked`);
+    console.log(`  hold & spin 1 in ${Math.round(1 / T.hold.p)} spins in the base game, 1 in ${Math.round(1 / jr.free.rate)} free spins, ${holdAvg.avg.toFixed(1)}x bet on average`);
     ['mini', 'minor', 'major', 'grand'].forEach(x => {
       console.log(`  ${x.padEnd(5)} jackpot 1 in ${Math.round(1 / per[x]).toLocaleString()} spins \u00b7 seeds at ${g.jackpots.seed[x]}x bet \u00b7 grows ${g.jackpots.rate[x]}x a spin`);
     });
   }
 });
-
 /* Pinball is small enough to price exactly: walk every reel stop and add the
    shot bonus, rather than trusting a sample. */
 function pinRTP(credits) {

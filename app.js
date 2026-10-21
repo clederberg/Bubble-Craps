@@ -490,7 +490,7 @@ function render() {
   else {
     $('headline').textContent = t.point !== null ? 'Point is ' + t.point : 'Coming out · place your bets';
     $('subline').textContent = (C.MODES[S.mode].dont ? '' : 'Crapless: every number but 7 is a point. ')
-      + 'Odds ' + C.MODES[S.mode].oddsText + '. No table limits.';
+      + 'Odds ' + C.MODES[S.mode].oddsText + '. Line ' + money(C.LIMITS.line) + ' max, place and buy ' + money(C.LIMITS.place) + '.';
     $('events').innerHTML = '';
   }
   $('hist').innerHTML = t.rolls.slice(0, 20).map(function (r) {
