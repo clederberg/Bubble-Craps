@@ -265,7 +265,12 @@ for (const mode of ['craps','crapless']) { const t=C.newTable(mode); let bank=1e
   const P = s => [0,0,1,2,3,4,5,6,5,4,3,2,1][s] / 36;
   const PTS = [4,5,6,8,9,10];
   // state 0 is the come-out; 1..6 are the points above
-  let v = [1,0,0,0,0,0,0], alive = [1];
+  /* The vector is renormalized every step and the surviving mass accumulated
+     in logs. Carrying the raw product instead loses a digit per step or so,
+     and by 200 rolls (a hand survives with probability ~2e-13) it disagrees
+     with the exact table in the fourth figure, which would force a tolerance
+     so wide it stopped checking anything. */
+  let v = [1,0,0,0,0,0,0], logAlive = [0];
   for (let k = 1; k <= 400; k++) {
     const w = [0,0,0,0,0,0,0];
     w[0] += v[0] * (P(7)+P(11)+P(2)+P(3)+P(12));          // come-out survives
@@ -274,20 +279,28 @@ for (const mode of ['craps','crapless']) { const t=C.newTable(mode); let bank=1e
       w[0] += v[i+1] * P(p);                               // point made, back to come-out
       w[i+1] += v[i+1] * (1 - P(p) - P(7));                // nothing doing
     });                                                    // P(7) leaks out: seven out
-    v = w;
-    alive.push(v.reduce((a,b)=>a+b,0));
+    const mass = w.reduce((a,b)=>a+b,0);
+    logAlive.push(logAlive[k-1] + Math.log(mass));
+    v = w.map(x => x / mass);
   }
+  const alive = logAlive.map(Math.exp);
   const mean = alive.reduce((a,b)=>a+b,0);
   eq(Math.abs(mean - 8.5255) < 0.001, true, 'mean hand is 8.53 rolls');
 
   // alive[n-1] is P(hand reaches n rolls)
   C.MILESTONES.filter(m => m <= 200).forEach(m => {
-    const exact = 1 / alive[m-1];
-    // the table stores rounded integers, so a half either way is fine
-    const slack = Math.max(0.5, exact * 0.005);
-    eq(Math.abs(C.handOdds(m) - exact) <= slack, true,
-      m + ' rolls is 1 in ' + Math.round(exact) + ', table says ' + C.handOdds(m));
+    const exact = Math.exp(-logAlive[m-1]);
+    /* The table stores the short marks to a decimal and the rest as rounded
+       integers. Keying the tolerance off the roll count rather than the stored
+       value matters: a slack wide enough to cover integer rounding at 10 rolls
+       would also let 5 rolls come back as "1 in 1", which it once did. */
+    const want = m < 10 ? Number(exact.toFixed(1)) : Math.round(exact);
+    const ok = m < 10 ? C.handOdds(m) === want
+      : Math.abs(C.handOdds(m) - want) <= Math.max(1, exact * 1e-6);
+    eq(ok, true, m + ' rolls is 1 in ' + want.toLocaleString() + ', table says ' + C.handOdds(m).toLocaleString());
   });
+  eq(C.handOdds(5), 1.5, '5 rolls is 1 in 1.5, which is why it gets no odds on screen');
+  eq(C.handOdds(7), 2, '7 rolls is 1 in 2');
   eq(C.handOdds(10), 3, '10 rolls is 1 in 3, so the reaction there stays small');
   eq(C.handOdds(20), 14, '20 rolls is 1 in 14');
   eq(C.handOdds(50), 1161, '50 rolls is 1 in 1,161');

@@ -63,13 +63,17 @@
   /* P(a hand lasts at least n rolls), from the Markov chain over come-out and
      the six point states. Worked out once and tabulated, so the table can tell
      you how rare the roll you just made is. */
-  var HAND_ODDS = { 10: 3, 15: 7, 20: 14, 25: 29, 30: 60, 40: 265, 50: 1161, 60: 5100,
-    75: 46920, 100: 1895441, 125: 76570775, 150: 3093257037, 175: 124960953047, 200: 5050668757641 };
-  var MILESTONES = [10, 15, 20, 25, 30, 40, 50, 60, 75, 100, 125, 150, 175, 200];
+  var HAND_ODDS = { 5: 1.5, 7: 2, 10: 3, 15: 7, 20: 14, 25: 29, 30: 60, 40: 265,
+    50: 1161, 60: 5100, 75: 46920, 100: 1895441, 125: 76570774, 150: 3093256045,
+    175: 124959334136, 200: 5048025432896 };
+  var MILESTONES = [5, 7, 10, 15, 20, 25, 30, 40, 50, 60, 75, 100, 125, 150, 175, 200];
+  /* Exact for every milestone; past 200 it extrapolates off the tail ratio.
+     The extrapolation is only valid out there, so every mark below 200 has to
+     be in the table above or it comes back nonsense. */
   function handOdds(n) {
     if (HAND_ODDS[n]) return HAND_ODDS[n];
-    // past the table, each further roll survives with probability 0.86241
-    return Math.round(HAND_ODDS[200] / Math.pow(0.86241, n - 200));
+    // past the table, each further roll survives with probability 0.862474
+    return Math.round(HAND_ODDS[200] / Math.pow(0.862474, n - 200));
   }
 
   function newTable(mode) { return { mode: mode, point: null, bets: {}, atsHits: [], rolls: [], working: false, off: {}, on: {}, hand: 0 }; }

@@ -657,25 +657,30 @@ function repeatLayout() {
 /* A long hand deserves a scene. The page lights up harder the rarer it is. */
 function hype(n) {
   var odds = C.handOdds(n);
-  var tier = n >= 40 ? 3 : n >= 20 ? 2 : 1;
+  var tier = n >= 40 ? 3 : n >= 20 ? 2 : n >= 10 ? 1 : 0;
+  /* Under 10 rolls the odds are nothing to brag about, so say something
+     instead of quoting them. */
+  var EARLY = { 5: 'Heating up', 7: 'Nice hand' };
   var el = $('hype');
   if (!el) return;
   el.className = 'hype t' + tier;
   el.innerHTML = '<div class="hypecard"><b>' + n + ' ROLLS</b>'
-    + '<span>1 in ' + odds.toLocaleString() + ' hands get this far</span></div>'
+    + '<span>' + (tier ? '1 in ' + odds.toLocaleString() + ' hands get this far' : EARLY[n] || '') + '</span></div>'
     + (tier > 1 ? sparkles(tier === 3 ? 48 : 24) : '');
   el.hidden = false;
   document.body.classList.add('hyped');
   if (tier > 1) { var tb = $('tw'); if (tb) { tb.classList.remove('shake'); void tb.offsetWidth; tb.classList.add('shake'); } }
-  play('stack', 0, tier === 3 ? 1 : 0.8);
+  play('stack', 0, tier === 3 ? 1 : tier ? 0.8 : 0.45);
   if (tier > 1) setTimeout(function () { play('stack', 0, 0.9); }, 260);
-  say(n + ' rolls', tier === 3 ? 'Nobody is leaving this table' : 'Keep it going');
+  /* the short hands stay quiet: a stickman calling every fifth roll would wear
+     out long before the hand did */
+  if (tier) say(n + ' rolls', tier === 3 ? 'Nobody is leaving this table' : 'Keep it going');
   clearTimeout(hype.timer);
   hype.timer = setTimeout(function () {
     el.hidden = true;
     document.body.classList.remove('hyped');
     var tb = $('tw'); if (tb) tb.classList.remove('shake');
-  }, tier === 3 ? 4200 : tier === 2 ? 3200 : 2200);
+  }, tier === 3 ? 4200 : tier === 2 ? 3200 : tier ? 2200 : 1300);
 }
 function sparkles(n) {
   var h = '';
@@ -946,6 +951,18 @@ document.addEventListener('keydown', function (e) {
 var rz;
 window.addEventListener('resize', function () { clearTimeout(rz); rz = setTimeout(function () { if (!rolling) renderTable(); }, 120); });
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { if (!rolling) renderTable(); });
+
+/* The dock is fixed to the bottom, so the page has to reserve exactly as much
+   room as the dock actually takes. Measuring it beats guessing in a media
+   query: the dock wraps to two rows on a narrow window, and adding a button
+   changes the height on a wide one. */
+function fitDock() {
+  var d = document.querySelector('.dock');
+  if (d) document.body.style.paddingBottom = (d.offsetHeight + 14) + 'px';
+}
+if (window.ResizeObserver) new ResizeObserver(fitDock).observe(document.querySelector('.dock'));
+window.addEventListener('resize', fitDock);
+fitDock();
 
 document.addEventListener('pointerdown', function () { ac(); }, { once: true });
 buildDice();

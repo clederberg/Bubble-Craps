@@ -150,10 +150,14 @@ The first time a come bet hits in a session you get asked once, and the **Come b
 
 ## Long hands
 
-A hand runs from a come-out to a seven-out, counting every roll. The average hand is **8.53 rolls**, so getting deep is genuinely rare, and passing 10, 15, 20, 25, 30, 40, 50, 60, 75, 100, 125, 150, 175 or 200 rolls lights the whole page up with the odds against it.
+A hand runs from a come-out to a seven-out, counting every roll. The average hand is **8.53 rolls**, and the page reacts at 5, 7, 10, 15, 20, 25, 30, 40, 50, 60, 75, 100, 125, 150, 175 and 200.
+
+The reaction scales with how rare the hand is. Five rolls happens in two hands out of three and seven in about half, so those get a small pill that says *Heating up* or *Nice hand* and nothing else: quoting the odds there would deflate rather than cheer. Ten and fifteen get a slim banner with the real odds, and twenty and up take over the page.
 
 | Rolls | Odds |
 |---|---|
+| 5 | 1 in 1.5 |
+| 7 | 1 in 2 |
 | 10 | 1 in 3 |
 | 20 | 1 in 14 |
 | 30 | 1 in 60 |
@@ -161,8 +165,9 @@ A hand runs from a come-out to a seven-out, counting every roll. The average han
 | 75 | 1 in 46,920 |
 | 100 | 1 in 1,895,441 |
 | 150 | 1 in 3.09 billion |
+| 200 | 1 in 5.05 trillion |
 
-Those are exact, computed by walking the Markov chain over the come-out and the six point states, not simulated. `test.js` recomputes the whole table independently and fails if a number drifts. Ten rolls happens about every third hand, so that one gets a slim banner; 20 and up get the full scene.
+Those are exact, computed by walking the Markov chain over the come-out and the six point states, not simulated. `test.js` recomputes the whole table independently and fails if a number drifts. The walk renormalizes each step and accumulates the surviving mass in logs, because at 200 rolls a hand survives with probability about 2 in 10 trillion and carrying the raw product loses too many digits to check anything.
 
 ## Fair dice
 
