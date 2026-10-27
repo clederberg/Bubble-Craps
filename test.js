@@ -41,35 +41,35 @@ for (const [mode,n,x] of [['craps',4,5],['craps',10,5],['craps',5,5],['craps',9,
   eq(C.add(t,'passOdds',100).ok,false);
 }
 for (const [n,lay] of [[4,12000],[10,12000],[5,9000],[9,9000],[6,7200],[8,7200]]) { const t=T('craps',{dp:1000},n); eq(C.add(t,'dpOdds',100000).added,lay,'dp lay on '+n); }
-// table limits: $25,000 on the line, $50,000 per place or buy. Everything
+// table limits: $50,000 on the line, $100,000 per place or buy. Everything
 // else is capped only by the bankroll, and odds stay a multiple of the flat.
 { const t=T('craps',{}); let a=C.add(t,'pass',600000); eq([a.added, !!a.capped],[600000,false],'a bet under the line max is not capped');
-  eq(C.add(T('craps',{}),'pass',9e8).added,2500000,'pass line caps at $25,000');
-  eq(C.add(T('craps',{}),'dp',9e8).added,2500000,"don't pass caps at $25,000");
+  eq(C.add(T('craps',{}),'pass',9e8).added,5000000,'pass line caps at $50,000');
+  eq(C.add(T('craps',{}),'dp',9e8).added,5000000,"don't pass caps at $50,000");
   eq(!!C.add(T('craps',{}),'pass',9e8).capped,true,'and it says so');
   const u=T('craps',{},6);
-  eq(C.add(u,'come',9e8).added,2500000,'come caps at $25,000');
-  eq(C.add(u,'dc',9e8).added,2500000,"don't come caps at $25,000");
-  eq(C.add(u,'place:6',9e8).added,5000000,'place caps at $50,000');
-  eq(C.add(T('craps',{},6),'buy:4',9e8).added,5000000,'buy caps at $50,000');
-  eq(C.maxFor(u,'place:8'),5000000,'each number carries its own $50,000');
+  eq(C.add(u,'come',9e8).added,5000000,'come caps at $50,000');
+  eq(C.add(u,'dc',9e8).added,5000000,"don't come caps at $50,000");
+  eq(C.add(u,'place:6',9e8).added,10000000,'place caps at $100,000');
+  eq(C.add(T('craps',{},6),'buy:4',9e8).added,10000000,'buy caps at $100,000');
+  eq(C.maxFor(u,'place:8'),10000000,'each number carries its own $100,000');
   eq(C.add(T('craps',{},6),'field',9e8).added,1000000,'field caps at $10,000');
   eq(C.add(T('craps',{},6),'hard:8',9e8).added,1000000,'hardways cap at $10,000');
   eq(C.add(T('craps',{},6),'prop:horn',9e8).added,500000,'props cap at $5,000');
   // a lay is capped by what it wins, so the stake it allows follows the number
-  for (const [n,stake] of [[4,10000000],[10,10000000],[5,7500000],[9,7500000],[6,6000000],[8,6000000]])
-    eq(C.add(T('craps',{},6),'lay:'+n,9e8).added,stake,'lay '+n+' may risk '+stake/100+' to win $50,000');
+  for (const [n,stake] of [[4,20000000],[10,20000000],[5,15000000],[9,15000000],[6,12000000],[8,12000000]])
+    eq(C.add(T('craps',{},6),'lay:'+n,9e8).added,stake,'lay '+n+' may risk '+stake/100+' to win $100,000');
   // odds are a multiple of the flat bet, which is a rule rather than a limit,
   // so a maxed line bet can still back up 5x behind it
-  const v=T('craps',{pass:2500000},6);
-  eq(C.add(v,'passOdds',9e9).added,2500000*5,'a $25,000 pass line backs up $125,000 on the 6'); }
+  const v=T('craps',{pass:5000000},6);
+  eq(C.add(v,'passOdds',9e9).added,5000000*5,'a $50,000 pass line backs up $250,000 on the 6'); }
 { const t=T('craps',{}); eq(C.add(t,'ats:all',9e8).added,500000,"make 'em all carries the $5,000 prop limit"); }
 { const t=T('crapless',{},4);
   // the extra crapless numbers are long odds against, so the stake that wins
   // $50,000 is correspondingly large
-  eq(C.add(t,'lay:2',9e8).added,30000000,'crapless lay 2 may risk $300,000 to win $50,000');
-  eq(C.add(t,'lay:11',9e8).added,15000000,'crapless lay 11 may risk $150,000 to win $50,000');
-  eq(C.add(t,'place:12',9e8).added,5000000,'crapless place 12 carries the same $50,000 cap'); }
+  eq(C.add(t,'lay:2',9e8).added,60000000,'crapless lay 2 may risk $600,000 to win $100,000');
+  eq(C.add(t,'lay:11',9e8).added,30000000,'crapless lay 11 may risk $300,000 to win $100,000');
+  eq(C.add(t,'place:12',9e8).added,10000000,'crapless place 12 carries the same $100,000 cap'); }
 // field & props
 t=T('craps',{field:1000,'prop:twelve':100,'prop:horn':400,'prop:ce':200,'prop:anyCraps':100}); r=C.roll(t,6,6);
 eq(r.back,3000+3000+2700+600+700,'field 3x, twelve 30, horn 27u, ce 3x, craps 7x');

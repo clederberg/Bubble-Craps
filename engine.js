@@ -153,9 +153,9 @@
      means $50,000 won: laying the 4 at 1:2 can put up $100,000 to win it.
      Odds are capped separately, as a multiple of the flat bet. */
   var LIMITS = {
-    line: 2500000,    // pass, don't pass, come, don't come
-    place: 5000000,   // each place or buy bet, per number
-    layWin: 5000000,  // most a lay can win
+    line: 5000000,     // pass, don't pass, come, don't come
+    place: 10000000,   // each place or buy bet, per number
+    layWin: 10000000,  // most a lay can win
     field: 1000000,
     hard: 1000000,
     prop: 500000      // props and the all small / all tall / make 'em all bets

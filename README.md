@@ -119,18 +119,18 @@ When a number you have a Place or Buy bet on becomes the point, a prompt offers 
 
 | Bet | Max |
 |---|---|
-| Pass, Don't Pass, Come, Don't Come | $25,000 |
-| Place and Buy, per number | $50,000 |
-| Lay | $50,000 to win |
+| Pass, Don't Pass, Come, Don't Come | $50,000 |
+| Place and Buy, per number | $100,000 |
+| Lay | $100,000 to win |
 | Field | $10,000 |
 | Hardways | $10,000 |
 | Props, and All Small / All Tall / Make 'Em All | $5,000 |
 
-Place and Buy limits count per number, so a full set of place bets carries a lot more than $50,000 between them.
+Place and Buy limits count per number, so a full set of place bets carries a lot more than $100,000 between them.
 
-A Lay is capped by what it stands to win rather than what it puts up, the way a real table does it. Laying the 4 at 1:2 can therefore risk $100,000 to win $50,000, and in crapless the 2 and 12 can risk $300,000 to win the same.
+A Lay is capped by what it stands to win rather than what it puts up, the way a real table does it. Laying the 4 at 1:2 can therefore risk $200,000 to win $100,000, and in crapless the 2 and 12 can risk $600,000 to win the same.
 
-Odds sit outside all of that, capped as a multiple of the flat bet because that is a rule of the game rather than a house limit: 5x on every point in regular craps, the 3-4-5x ladder in crapless, and enough to win 6x the flat on Don't odds. A maxed $25,000 pass line can still back up $125,000 in odds behind a point.
+Odds sit outside all of that, capped as a multiple of the flat bet because that is a rule of the game rather than a house limit: 5x on every point in regular craps, the 3-4-5x ladder in crapless, and enough to win 6x the flat on Don't odds. A maxed $50,000 pass line can still back up $250,000 in odds behind a point.
 
 Reset bankroll goes up to $100,000.
 
