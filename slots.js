@@ -197,18 +197,69 @@
   /* ---------- one complete spin ---------- */
   /* Buy a feature outright: no reels, just the feature, priced in the game
      config. The meters still take their cut of the purchase. */
+  /* A bought feature still has to look like it was won. These find real reel
+     stops that genuinely show the trigger, so the spin before the bonus is an
+     honest board rather than symbols painted on, and the trigger spin pays its
+     line wins and scatter pay exactly as the same board would if it had come
+     up on its own. */
+  function triggerStops(game, test) {
+    for (var i = 0; i < 60000; i++) {
+      var st = spinStops(game);
+      if (test(gridAt(game, st))) return st;
+    }
+    return null;
+  }
+
   function buyFeature(game, which, lineCount, lineBet, jp) {
     var totalBet = lineCount * lineBet;
     var out = { stops: spinStops(game), grid: null, wins: [], lineTotal: 0, total: 0,
       totalBet: totalBet, features: [], jackpots: [], bought: which };
+    var seeds = null, i;
+
     if (which === 'hold') {
-      var cells = game.reels.length * game.rows, pool = [], i;
-      for (i = 0; i < cells; i++) pool.push(i);
-      var seeds = [], want = game.hold.trigger + (Math.random() < 0.35 ? 1 : 0);
-      while (seeds.length < want && pool.length) {
-        var at = pool.splice(Math.floor(Math.random() * pool.length), 1)[0];
-        seeds.push([Math.floor(at / game.rows), at % game.rows]);
+      var hst = triggerStops(game, function (gr) {
+        return positionsOf(gr, game.coin).length >= game.hold.trigger;
+      });
+      if (hst) { out.stops = hst; seeds = positionsOf(gridAt(game, hst), game.coin); }
+      else {
+        /* no honest board turned up, so fall back to seeding cells directly */
+        var cells = game.reels.length * game.rows, pool = [];
+        for (i = 0; i < cells; i++) pool.push(i);
+        seeds = [];
+        var want = game.hold.trigger + (Math.random() < 0.35 ? 1 : 0);
+        while (seeds.length < want && pool.length) {
+          var at = pool.splice(Math.floor(Math.random() * pool.length), 1)[0];
+          seeds.push([Math.floor(at / game.rows), at % game.rows]);
+        }
       }
+    } else if (which === 'latke') {
+      var lst = triggerStops(game, function (gr) {
+        return countIn(gr, game.bonus) >= game.latke.trigger;
+      });
+      if (lst) out.stops = lst;
+    } else {
+      var fst = triggerStops(game, function (gr) {
+        return countIn(gr, game.scatter) === game.free.trigger;
+      });
+      if (fst) out.stops = fst;
+    }
+
+    /* the trigger spin is a real board, so it pays like one */
+    out.grid = gridAt(game, out.stops);
+    var lines = evalLines(game, out.grid, lineCount, lineBet);
+    out.wins = lines.wins;
+    out.lineTotal = lines.total;
+    out.total += lines.total;
+    if (game.scatterPays) {
+      var sc = countIn(out.grid, game.scatter);
+      if (game.scatterPays[sc]) {
+        out.scatterPay = game.scatterPays[sc] * totalBet;
+        out.scatterCount = sc;
+        out.total += out.scatterPay;
+      }
+    }
+
+    if (which === 'hold') {
       var hs = holdAndSpin(game, totalBet, seeds, jp);
       out.hold = hs;
       out.total += hs.total;
@@ -216,14 +267,15 @@
       out.features.push('hold');
     } else if (which === 'latke') {
       var lr = latkeRound(game, totalBet, jp);
-      lr.pans = game.latke.trigger;
+      lr.pans = Math.max(game.latke.trigger, countIn(out.grid, game.bonus));
       out.latke = lr;
       out.total += lr.total;
       lr.jackpots.forEach(function (j) { out.jackpots.push(j); });
       out.features.push('latke');
     } else {
-      var spins = game.free.spins[game.free.trigger];
-      var fg = freeGames(game, spins, lineCount, lineBet, jp, game.free.trigger);
+      var trig = countIn(out.grid, game.scatter) || game.free.trigger;
+      var fg = freeGames(game, game.free.spins[trig] || game.free.spins[game.free.trigger],
+        lineCount, lineBet, jp, trig);
       out.free = fg;
       out.total += fg.total;
       fg.jackpots.forEach(function (j) { out.jackpots.push(j); });

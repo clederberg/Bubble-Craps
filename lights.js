@@ -664,8 +664,9 @@ function runBought(which) {
   res.bought = entry.label;
   res.cost = cost;
   K.save(); render(); paintPanel(null);
-  fx('reveal');
-  later(function () { settle(res); }, 400);
+  /* spin to the trigger board first: buying a feature should still look like
+     landing it, and the spin that starts it pays its own lines and scatters */
+  spinReels(res.stops, { tease: true }, function () { settle(res); });
 }
 
 /* ---------- the key sequence ---------- */

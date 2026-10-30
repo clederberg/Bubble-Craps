@@ -126,11 +126,15 @@ function jackpotRates(trials) {
 g.buy.forEach(b => {
   eq(['free','latke','hold'].indexOf(b.key) >= 0, true, 'every buy option maps to a real feature');
   let sum = 0;
-  const runs = b.key === 'free' ? 4000 : 20000;
+  const runs = b.key === 'free' ? 6000 : 20000;
   for (let i = 0; i < runs; i++) sum += S.buyFeature(g, b.key, 25, 100, null).total;
   const value = sum / runs / 2500;
   const ret = value / b.price;
-  eq(ret > 0.85 && ret < 1.02, true,
+  /* The band is deliberately lopsided. A buy that returns a little under the
+     game's own return is merely a slightly expensive shortcut, but one that
+     returns over 100% is a bug the player can farm, so the ceiling is tight
+     and the floor is loose enough to absorb this sample's noise. */
+  eq(ret > 0.86 && ret < 0.99, true,
     `buying ${b.key} returns ${(ret * 100).toFixed(1)}% of its price, near the game's own return`);
 });
 {
