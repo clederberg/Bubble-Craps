@@ -142,7 +142,13 @@ function settle(res) {
   }
   /* the panel starts at the base-game wins and fills in as each bonus plays */
   var live = { hold: 0, latke: 0, free: 0 };
-  function bump(key) { return function (v) { live[key] = v; paintPanel(res, live); }; }
+  function bump(key) {
+    return function (v, shown) {
+      live[key] = v;
+      if (shown !== undefined) live.freeShown = shown;
+      paintPanel(res, live);
+    };
+  }
   paintPanel(res, live);
   var queue = [];
   if (res.hold) queue.push(function (next) { runHold(res.hold, next, 'Light the Menorah', bump('hold')); });
@@ -204,11 +210,23 @@ function paintPanel(res, live) {
   var shown = function (key, final) { return live ? (live[key] || 0) : final; };
   if (res.hold) rows.push({ icon: rowIcon(g.coin), label: 'Hold &amp; spin', amount: shown('hold', res.hold.total), feat: true, live: !!live });
   if (res.latke) rows.push({ icon: rowIcon(g.bonus), label: 'Latke bonus', amount: shown('latke', res.latke.total), feat: true, live: !!live });
-  if (res.free) rows.push({ icon: rowIcon(g.scatter), label: 'Free games', amount: shown('free', res.free.total), feat: true, live: !!live });
+  if (res.free) {
+    rows.push({ icon: rowIcon(g.scatter), label: 'Free games', amount: shown('free', res.free.total), feat: true, live: !!live });
+    /* and the spins that made it up, added as each one resolves */
+    var upto = live ? (live.freeShown || 0) : res.free.rounds.length;
+    res.free.rounds.slice(0, upto).forEach(function (r) {
+      if (!r.amount) return;
+      rows.push({ icon: '', label: 'Free game ' + r.index, amount: r.amount, sub: true,
+        note: r.hold ? 'with hold &amp; spin' : '' });
+    });
+    if (!live && res.free.topUp) {
+      rows.push({ icon: '', label: 'Minimum top-up', amount: res.free.topUp, sub: true });
+    }
+  }
   var h = '<h4>This spin</h4><div class="wp-rows">';
   if (!rows.length) h += '<div class="wp-empty">No win this spin.</div>';
   rows.forEach(function (r, i) {
-    h += '<div class="wp-row' + (r.feat ? ' feat' : '') + '" data-row="' + i + '">' + r.icon
+    h += '<div class="wp-row' + (r.feat ? ' feat' : '') + (r.sub ? ' sub' : '') + '" data-row="' + i + '">' + r.icon
       + '<span class="ln">' + r.label + (r.note ? ' <small>' + K.esc(r.note) + '</small>' : '') + '</span>'
       + '<span class="amt">' + (r.live && !r.amount ? '&middot;&middot;&middot;' : money(r.amount)) + '</span></div>';
   });
@@ -217,6 +235,8 @@ function paintPanel(res, live) {
     : res.total;
   h += '</div><div class="wp-total"><span>Total</span><b>' + money(total) + '</b></div>';
   K.setHTML(host, h);
+  /* keep the newest free spin in view while the round plays */
+  if (live) { var box = host.querySelector('.wp-rows'); if (box) box.scrollTop = box.scrollHeight; }
   lastRows = rows;
 }
 $('winpanel').addEventListener('mouseover', function (e) {
@@ -484,7 +504,8 @@ function runFree(res, done, onProgress) {
       + (amount ? ' · ' + money(amount) : '')
       + (won ? ' <b class="fgtot">' + money(won) + '</b>' : '');
   }
-  function report() { if (onProgress) onProgress(won); }
+  var doneCount = 0;
+  function report() { if (onProgress) onProgress(won, doneCount); }
   function popTotal(amount) {
     var tot = $('winline').querySelector('.fgtot');
     if (tot && amount) { tot.classList.remove('pop'); void tot.offsetWidth; tot.classList.add('pop'); }
@@ -512,6 +533,7 @@ function runFree(res, done, onProgress) {
       var holdPart = round.hold ? round.hold.total : 0;
       var linePart = round.amount - holdPart;
       won += linePart;
+      if (!round.hold) doneCount = round.index;   // a spin with a hold is not done until it plays
       report();
       K.setHTML($('winline'), line(round, linePart));
       popTotal(linePart);
@@ -520,6 +542,7 @@ function runFree(res, done, onProgress) {
         later(function () {
           runHold(round.hold, function () {
             won += holdPart;
+            doneCount = round.index;
             report();
             K.setHTML($('winline'), line(round, holdPart));
             popTotal(holdPart);
@@ -533,6 +556,7 @@ function runFree(res, done, onProgress) {
   }
   function endFree() {
     won = fg.total;            // picks up the guaranteed minimum top-up
+    doneCount = fg.rounds.length;
     report();
     ov.hidden = false;
     K.setHTML(ov, '<h3>Free games pay ' + money(fg.total) + '</h3><div class="meter">' + money(fg.total) + '</div>'

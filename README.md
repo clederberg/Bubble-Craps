@@ -25,7 +25,7 @@ Line bets and come bets are contract bets and cannot be turned off. Come odds ar
 
 Buying a feature plays a real trigger spin first. The reels land on genuine stops that actually show the trigger (three shofars, three pans, six candles), and that spin pays its own line wins and scatter pay exactly as the same board would if it had come up on its own. Buying free games used to skip straight into the ark from an unrelated board, which also quietly cost you the 2x scatter pay a natural trigger gives. Prices were re-measured afterwards so a purchase is still worth about what spinning for it is worth.
 
-All three bonuses keep a running total on screen while they play, and the **This spin** panel fills in as they go rather than announcing the result up front. Two things used to make a paying bonus look like it was not counting the wins, both display-only, with the money always credited correctly:
+All three bonuses keep a running total on screen while they play, and the **This spin** panel fills in as they go rather than announcing the result up front. A free games round is broken out spin by spin under its own total, with each paying spin added as it lands and the guaranteed minimum shown as its own line when it is used. Two things used to make a paying bonus look like it was not counting the wins, both display-only, with the money always credited correctly:
 
 - The panel was painted from the finished result the moment the reels landed, so it showed the whole free games total before the first free spin had turned.
 - Each line pay inside free games flashed for one spin and then vanished, with nothing accumulating and the bankroll frozen until the end.
