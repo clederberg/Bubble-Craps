@@ -23,6 +23,8 @@ Line bets and come bets are contract bets and cannot be turned off. Come odds ar
 
 ## Festival of Lights (`lights.html`)
 
+All three bonuses keep a running total on screen while they play. Free games used to flash each line pay for a single spin and then drop it, with the bankroll frozen until the end, so a paying round looked like it was not counting the wins. The money was always credited correctly; only the display was hiding it.
+
 Five reels, three rows, with **5, 25 or 50 lines** selectable and the chip rack setting the bet per line. A Hanukkah-themed machine: menorahs, dreidels, pomegranates and challah, with Hebrew letters on the low pays and a Star of David wild. All the artwork is hand-drawn SVG.
 
 **Four progressive jackpots.** Grand, Major, Minor and Mini are live meters that grow with every spin and reset to their seed when won. They are held as **multiples of your total bet** (seeds 1000x, 200x, 25x and 10x), not as fixed dollar amounts, so the odds are identical whatever you bet and the figures on the ladder rise with your bet. They grow by 0.012x, 0.007x, 0.004x and 0.003x of your bet per spin.

@@ -271,8 +271,18 @@ function runHold(hs, done, title) {
     for (var i = 0; i < 15; i++) h += cellHTML(step.board[i], freshIdx && freshIdx.indexOf(i) >= 0);
     K.forceHTML(grid, h);
   }
+  /* The round lives or dies on the respin counter, so the counter is where the
+     tension belongs: the last one turns the frame red and the text urgent, and
+     a near-full grid starts calling out how many candles are left for the
+     Grand, which is the thing actually worth sweating. */
+  function lit(step) { return step.board.filter(Boolean).length; }
   function label(step) {
-    K.setText($('respins'), step.respins === 1 ? 'Last respin' : step.respins + ' respins left');
+    var left = 15 - lit(step), danger = step.respins === 1;
+    ov.classList.toggle('sweat', danger);
+    grid.classList.toggle('last', danger);
+    var txt = danger ? 'LAST RESPIN' : step.respins + ' respins left';
+    if (left <= 4 && left > 0) txt += ' · ' + left + ' from the Grand';
+    K.setText($('respins'), txt);
     paintPips(step.respins);
   }
   paintGrid(hs.steps[0]); paintMeter(hs.steps[0]); label(hs.steps[0]);
@@ -288,7 +298,7 @@ function runHold(hs, done, title) {
       paintGrid({ board: mix }, [at]);
       paintMeter({ board: mix }, true);
       if (step.board[at].jackpot) { fx('jackpot', step.board[at].jackpot); flash(); shake(); }
-      else fx('candle', n);
+      else fx('candle', lit({ board: mix }));
       later(next, step.board[at].jackpot ? 900 : 260);
     }
     if (!fresh.length) return after(0);
@@ -305,12 +315,27 @@ function runHold(hs, done, title) {
     later(function () {
       grid.classList.remove('frame-lit');
       reveal(step, prev, function (landed) {
-        label(step);
-        if (landed) { K.setText($('respins'), 'Respins reset to 3'); later(function () { label(step); }, 700); }
-        busy = false;
-        if (idx >= hs.steps.length - 1) return endHold();
-        btn.disabled = false;
-        if (st.auto) later(press, 500);
+        var finish = function () {
+          busy = false;
+          if (idx >= hs.steps.length - 1) return endHold();
+          btn.disabled = false;
+          if (st.auto) later(press, 500);
+        };
+        if (landed) {
+          label(step);
+          K.setText($('respins'), 'RESPINS RESET TO 3');
+          fx('reveal');
+          return later(function () { label(step); finish(); }, 900);
+        }
+        /* nothing landed: let it hurt for a moment before the counter drops */
+        K.setText($('respins'), 'No light');
+        $('pips').classList.add('drop');
+        fx('thud');
+        later(function () {
+          $('pips').classList.remove('drop');
+          label(step);
+          finish();
+        }, 820);
       });
     }, 520);
   }
@@ -437,10 +462,23 @@ function runFree(res, done) {
     play();
   }, 3000);
 
+  /* Running total. Without it a win flashed for one spin and vanished, the
+     bankroll stayed frozen until the end, and the round looked like it was not
+     counting the line pays at all. The other two bonuses both have a meter. */
+  var won = 0;
+  function line(round, amount) {
+    return freeBadge + 'Free game ' + round.index + ' of ' + round.of
+      + (amount ? ' · ' + money(amount) : '')
+      + (won ? ' <b class="fgtot">' + money(won) + '</b>' : '');
+  }
+  function popTotal(amount) {
+    var tot = $('winline').querySelector('.fgtot');
+    if (tot && amount) { tot.classList.remove('pop'); void tot.offsetWidth; tot.classList.add('pop'); }
+  }
   function play() {
     if (i >= fg.rounds.length) return endFree();
     var round = fg.rounds[i++];
-    K.setHTML($('winline'), freeBadge + 'Free game ' + i + ' of ' + round.of);
+    K.setHTML($('winline'), line(round, 0));
     spinReels(round.stops, { reels: g.freeReels, boost: fg.boost }, function () {
       round.wildReels.forEach(function (x) {
         var reel = $('reels').querySelector('[data-col="' + x + '"]');
@@ -454,11 +492,24 @@ function runFree(res, done) {
       });
       var cells = cellsOf(round.wins);
       if (cells.length) { markWins(cells); fx('coinRun', round.amount / totalBet()); }
-      K.setHTML($('winline'), freeBadge + 'Free game ' + i + ' of ' + fg.spins
-        + (round.amount ? ' · ' + money(round.amount) : ''));
+      /* round.amount already carries any hold & spin won on this spin, so the
+         running total takes the line pay now and the hold's share only once
+         that bonus has actually played out, or the meter spoils it */
+      var holdPart = round.hold ? round.hold.total : 0;
+      var linePart = round.amount - holdPart;
+      won += linePart;
+      K.setHTML($('winline'), line(round, linePart));
+      popTotal(linePart);
       if (round.retrigger) K.toast('Three shofars: ' + g.free.retrigger + ' more free games, ' + round.of + ' in total');
       if (round.hold) {
-        later(function () { runHold(round.hold, function () { later(play, 400); }, 'Hold &amp; Spin'); }, 500);
+        later(function () {
+          runHold(round.hold, function () {
+            won += holdPart;
+            K.setHTML($('winline'), line(round, holdPart));
+            popTotal(holdPart);
+            later(play, 400);
+          }, 'Hold &amp; Spin');
+        }, 500);
       } else later(play, round.amount ? 900 : 520);
     });
   }
