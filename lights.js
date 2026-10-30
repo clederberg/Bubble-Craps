@@ -140,11 +140,14 @@ function settle(res) {
     fx('coinRun', res.lineTotal / res.totalBet);
     K.setHTML($('winline'), 'Line wins ' + money(res.lineTotal) + (res.wins.length > 1 ? ' on ' + res.wins.length + ' lines' : ''));
   }
-  paintPanel(res);
+  /* the panel starts at the base-game wins and fills in as each bonus plays */
+  var live = { hold: 0, latke: 0, free: 0 };
+  function bump(key) { return function (v) { live[key] = v; paintPanel(res, live); }; }
+  paintPanel(res, live);
   var queue = [];
-  if (res.hold) queue.push(function (next) { runHold(res.hold, next, 'Light the Menorah'); });
-  if (res.latke) queue.push(function (next) { runLatke(res, next); });
-  if (res.free) queue.push(function (next) { runFree(res, next); });
+  if (res.hold) queue.push(function (next) { runHold(res.hold, next, 'Light the Menorah', bump('hold')); });
+  if (res.latke) queue.push(function (next) { runLatke(res, next, bump('latke')); });
+  if (res.free) queue.push(function (next) { runFree(res, next, bump('free')); });
   (function step() {
     if (!queue.length) return finish(res);
     queue.shift()(step);
@@ -180,7 +183,11 @@ function rowIcon(sym) {
   if (!def) return '';
   return def.svg ? '<svg viewBox="0 0 48 48">' + def.svg + '</svg>' : '<span class="glyph">' + def.ch + '</span>';
 }
-function paintPanel(res) {
+/* `live` is the running state of a bonus that is still playing: the panel then
+   shows only what has actually been revealed. Without it the panel was painted
+   from the finished result the moment the spin landed, so it announced the full
+   free games total before the first free spin had turned. */
+function paintPanel(res, live) {
   var host = $('winpanel');
   if (!res) {
     lastRows = null;
@@ -194,17 +201,21 @@ function paintPanel(res) {
   });
   rows.sort(function (a, b) { return b.amount - a.amount; });
   if (res.scatterPay) rows.push({ icon: rowIcon(g.scatter), label: res.scatterCount + ' shofars pay', amount: res.scatterPay, feat: true });
-  if (res.hold) rows.push({ icon: rowIcon(g.coin), label: 'Hold &amp; spin', amount: res.hold.total, feat: true });
-  if (res.latke) rows.push({ icon: rowIcon(g.bonus), label: 'Latke bonus', amount: res.latke.total, feat: true });
-  if (res.free) rows.push({ icon: rowIcon(g.scatter), label: 'Free games', amount: res.free.total, feat: true });
+  var shown = function (key, final) { return live ? (live[key] || 0) : final; };
+  if (res.hold) rows.push({ icon: rowIcon(g.coin), label: 'Hold &amp; spin', amount: shown('hold', res.hold.total), feat: true, live: !!live });
+  if (res.latke) rows.push({ icon: rowIcon(g.bonus), label: 'Latke bonus', amount: shown('latke', res.latke.total), feat: true, live: !!live });
+  if (res.free) rows.push({ icon: rowIcon(g.scatter), label: 'Free games', amount: shown('free', res.free.total), feat: true, live: !!live });
   var h = '<h4>This spin</h4><div class="wp-rows">';
   if (!rows.length) h += '<div class="wp-empty">No win this spin.</div>';
   rows.forEach(function (r, i) {
     h += '<div class="wp-row' + (r.feat ? ' feat' : '') + '" data-row="' + i + '">' + r.icon
       + '<span class="ln">' + r.label + (r.note ? ' <small>' + K.esc(r.note) + '</small>' : '') + '</span>'
-      + '<span class="amt">' + money(r.amount) + '</span></div>';
+      + '<span class="amt">' + (r.live && !r.amount ? '&middot;&middot;&middot;' : money(r.amount)) + '</span></div>';
   });
-  h += '</div><div class="wp-total"><span>Total</span><b>' + money(res.total) + '</b></div>';
+  var total = live
+    ? res.lineTotal + (res.scatterPay || 0) + (live.hold || 0) + (live.latke || 0) + (live.free || 0)
+    : res.total;
+  h += '</div><div class="wp-total"><span>Total</span><b>' + money(total) + '</b></div>';
   K.setHTML(host, h);
   lastRows = rows;
 }
@@ -241,7 +252,7 @@ var FLAME = '<svg viewBox="0 0 48 48" aria-hidden="true">'
   + '<path d="M24 8.6c2.8 3.6 3.8 5.6 3.8 7.2a3.8 3.8 0 0 1-7.6 0c0-1.6 1-3.6 3.8-7.2z" fill="#fff0ae"/>'
   + '<rect x="19" y="19" width="10" height="24" rx="2.6" fill="#fdf4e0"/>'
   + '<rect x="19" y="19" width="3.4" height="24" rx="1.6" fill="#e6d7bb"/></svg>';
-function runHold(hs, done, title) {
+function runHold(hs, done, title, onProgress) {
   var ov = $('overlay'), idx = 0, busy = false;
   ov.hidden = false;
   fx('arkOpen');
@@ -263,6 +274,7 @@ function runHold(hs, done, title) {
   }
   function paintMeter(step, pop) {
     var sum = step.board.reduce(function (a, v) { return a + (v ? v.amount : 0); }, 0);
+    if (onProgress) onProgress(sum);
     meter.textContent = money(sum);
     if (pop) { meter.classList.remove('pop'); void meter.offsetWidth; meter.classList.add('pop'); }
   }
@@ -355,7 +367,7 @@ function runHold(hs, done, title) {
 
 /* ---------- the latke round ---------- */
 var LATKE_ART = '<svg class="latke-art" viewBox="0 0 48 48">' + G.ART.latke + '</svg>';
-function runLatke(res, done) {
+function runLatke(res, done, onProgress) {
   var ov = $('overlay'), lr = res.latke, idx = 0, running = 0, busy = false;
   ov.hidden = false;
   fx('whoosh');
@@ -393,6 +405,7 @@ function runLatke(res, done) {
     timers.push(idleTimer);
   }
   function bump() {
+    if (onProgress) onProgress(running);
     meter.textContent = money(running);
     meter.classList.remove('pop'); void meter.offsetWidth; meter.classList.add('pop');
   }
@@ -439,7 +452,7 @@ function runLatke(res, done) {
 }
 
 /* ---------- free games ---------- */
-function runFree(res, done) {
+function runFree(res, done, onProgress) {
   var ov = $('overlay'), fg = res.free, i = 0;
   ov.hidden = false;
   var def = g.symbols[fg.boost];
@@ -471,6 +484,7 @@ function runFree(res, done) {
       + (amount ? ' · ' + money(amount) : '')
       + (won ? ' <b class="fgtot">' + money(won) + '</b>' : '');
   }
+  function report() { if (onProgress) onProgress(won); }
   function popTotal(amount) {
     var tot = $('winline').querySelector('.fgtot');
     if (tot && amount) { tot.classList.remove('pop'); void tot.offsetWidth; tot.classList.add('pop'); }
@@ -498,6 +512,7 @@ function runFree(res, done) {
       var holdPart = round.hold ? round.hold.total : 0;
       var linePart = round.amount - holdPart;
       won += linePart;
+      report();
       K.setHTML($('winline'), line(round, linePart));
       popTotal(linePart);
       if (round.retrigger) K.toast('Three shofars: ' + g.free.retrigger + ' more free games, ' + round.of + ' in total');
@@ -505,15 +520,20 @@ function runFree(res, done) {
         later(function () {
           runHold(round.hold, function () {
             won += holdPart;
+            report();
             K.setHTML($('winline'), line(round, holdPart));
             popTotal(holdPart);
             later(play, 400);
-          }, 'Hold &amp; Spin');
+          }, 'Hold &amp; Spin',
+          /* the nested hold counts toward the free games row, not its own */
+          function (sum) { if (onProgress) onProgress(won + sum); });
         }, 500);
       } else later(play, round.amount ? 900 : 520);
     });
   }
   function endFree() {
+    won = fg.total;            // picks up the guaranteed minimum top-up
+    report();
     ov.hidden = false;
     K.setHTML(ov, '<h3>Free games pay ' + money(fg.total) + '</h3><div class="meter">' + money(fg.total) + '</div>'
       + (fg.topUp ? '<p>Topped up to the minimum ' + money(fg.floor) + '</p>' : ''));

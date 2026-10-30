@@ -23,7 +23,10 @@ Line bets and come bets are contract bets and cannot be turned off. Come odds ar
 
 ## Festival of Lights (`lights.html`)
 
-All three bonuses keep a running total on screen while they play. Free games used to flash each line pay for a single spin and then drop it, with the bankroll frozen until the end, so a paying round looked like it was not counting the wins. The money was always credited correctly; only the display was hiding it.
+All three bonuses keep a running total on screen while they play, and the **This spin** panel fills in as they go rather than announcing the result up front. Two things used to make a paying bonus look like it was not counting the wins, both display-only, with the money always credited correctly:
+
+- The panel was painted from the finished result the moment the reels landed, so it showed the whole free games total before the first free spin had turned.
+- Each line pay inside free games flashed for one spin and then vanished, with nothing accumulating and the bankroll frozen until the end.
 
 Five reels, three rows, with **5, 25 or 50 lines** selectable and the chip rack setting the bet per line. A Hanukkah-themed machine: menorahs, dreidels, pomegranates and challah, with Hebrew letters on the low pays and a Star of David wild. All the artwork is hand-drawn SVG.
 
