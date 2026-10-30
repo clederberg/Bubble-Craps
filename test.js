@@ -320,4 +320,28 @@ for (const mode of ['craps','crapless']) { const t=C.newTable(mode); let bank=1e
   rr = C.roll(h, 3, 4); eq([rr.hand, rr.handOver], [6, true], 'now the seven ends it, on roll six');
   rr = C.roll(h, 2, 2); eq(rr.hand, 1, 'and the next roll starts a fresh hand');
 }
+
+
+/* ---- place or buy ---------------------------------------------------------
+   The move prompt recommends one or the other on each number. The engine works
+   that out from the paytable; this checks it against the house edge computed
+   independently here, so a paytable change moves the advice with it. */
+{
+  const WAYS = { 2:1, 3:2, 4:3, 5:4, 6:5, 8:5, 9:4, 10:3, 11:2, 12:1 };
+  const edge = (n, as) => {
+    const p = WAYS[n] / (WAYS[n] + 6), pay = as === 'place' ? C.PLACE[n] : C.TRUE[n];
+    const win = pay[0] / pay[1] - (as === 'buy' ? 0.05 : 0);   // vig only on a win
+    return -(p * win - (1 - p));
+  };
+  [2,3,4,5,6,8,9,10,11,12].forEach(n => {
+    const cheaper = edge(n, 'buy') < edge(n, 'place') ? 'buy' : 'place';
+    eq(C.bestType(n), cheaper,
+      n + ': ' + cheaper + ' is cheaper (place ' + (edge(n,'place')*100).toFixed(2)
+      + '% vs buy ' + (edge(n,'buy')*100).toFixed(2) + '%)');
+  });
+  // the rule that falls out of it, stated plainly so a regression is obvious
+  eq([4,5,9,10].every(n => C.bestType(n) === 'buy'), true, 'buy the 4, 5, 9 and 10');
+  eq([6,8].every(n => C.bestType(n) === 'place'), true, 'place the 6 and 8');
+  eq(C.bestType(7), 'place', 'a number with no place bet falls back safely');
+}
 console.log('all passed', n, 'asserts + 400k sim rolls');

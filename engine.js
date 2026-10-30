@@ -5,6 +5,20 @@
   var TRUE = { 2: [6, 1], 12: [6, 1], 3: [3, 1], 11: [3, 1], 4: [2, 1], 10: [2, 1], 5: [3, 2], 9: [3, 2], 6: [6, 5], 8: [6, 5] };
   var PLACE = { 2: [11, 2], 12: [11, 2], 3: [11, 4], 11: [11, 4], 4: [9, 5], 10: [9, 5], 5: [7, 5], 9: [7, 5], 6: [7, 6], 8: [7, 6] };
   var HARD = { 4: [7, 1], 10: [7, 1], 6: [9, 1], 8: [9, 1] };
+  var VIG = 0.05;   // on a Buy or Lay, charged on the stake and only on a win
+  var WAYS = { 2: 1, 3: 2, 4: 3, 5: 4, 6: 5, 8: 5, 9: 4, 10: 3, 11: 2, 12: 1 };
+  /* Which of Place or Buy carries the smaller house edge on a number, worked
+     out from the paytables rather than listed by hand, so the advice can never
+     drift away from what the table actually pays. Because the vig here is
+     charged only on a win, Buy beats Place everywhere except the 6 and 8. */
+  function bestType(n) {
+    var w = WAYS[n];
+    if (!w || !PLACE[n] || !TRUE[n]) return 'place';
+    var p = w / (w + 6), lose = 1 - p;
+    var placeEV = p * (PLACE[n][0] / PLACE[n][1]) - lose;
+    var buyEV = p * (TRUE[n][0] / TRUE[n][1] - VIG) - lose;
+    return buyEV > placeEV ? 'buy' : 'place';
+  }
   var PROPS = {
     any7: { name: 'Any Seven', pay: '4:1' },
     anyCraps: { name: 'Any Craps', pay: '7:1' },
@@ -410,7 +424,7 @@
   }
 
   var api = {
-    TRUE: TRUE, PLACE: PLACE, HARD: HARD, PROPS: PROPS, ATS: ATS, MODES: MODES, ODDS_X: ODDS_X, LIMITS: LIMITS, LAY_WIN_X: LAY_WIN_X, maxFor: maxFor,
+    TRUE: TRUE, PLACE: PLACE, bestType: bestType, HARD: HARD, PROPS: PROPS, ATS: ATS, MODES: MODES, ODDS_X: ODDS_X, LIMITS: LIMITS, LAY_WIN_X: LAY_WIN_X, maxFor: maxFor,
     parse: parse, label: label, newTable: newTable, amt: amt, canAdd: canAdd, add: add,
     isWorking: isWorking, canToggle: canToggle, toggleOff: toggleOff,
     betState: betState, setState: setState, cycleState: cycleState,

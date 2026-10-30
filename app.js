@@ -524,6 +524,18 @@ function render() {
 function pointBets(t, p) {
   return ['place:' + p, 'buy:' + p].filter(function (k) { return C.amt(t, k) > 0; });
 }
+/* Which numbers are better placed and which are better bought, read off the
+   paytable rather than written down, so the hint cannot go stale. */
+function bestHint() {
+  var pts = C.MODES[S.mode].points, pl = [], by = [];
+  pts.forEach(function (n) { (C.bestType(n) === 'place' ? pl : by).push(n); });
+  var list = function (a) { return a.length < 2 ? a.join('') : a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1]; };
+  var bits = [];
+  if (pl.length) bits.push('Place on ' + list(pl));
+  if (by.length) bits.push('Buy on ' + list(by));
+  return 'Underlined numbers are the cheaper bet on that number: ' + bits.join(' \u00b7 ')
+    + '. The 5% on a Buy is only charged when it wins, which is what makes buying the better side of everything but the 6 and 8.';
+}
 function renderMove(point) {
   var t = T(), keys = pointBets(t, point), h = '';
   keys.forEach(function (k) {
@@ -533,8 +545,11 @@ function renderMove(point) {
       h += '<div class="mrow"><span class="lbl">' + (as === 'place' ? 'Place on' : 'Buy on') + '</span>';
       C.MODES[S.mode].points.forEach(function (n) {
         if (n === point) return;
-        var best = as === 'place' ? (n === 6 || n === 8 || n === 5 || n === 9) : (n === 4 || n === 10 || n === 2 || n === 3 || n === 11 || n === 12);
-        var cls = (n === S.prevPoint && as === kind ? 'suggest' : '') + (best ? ' best' : '');
+        /* the engine works out which of Place or Buy is the better bet on each
+           number from the paytable, so the suggestion here follows the money
+           rather than the type the bet happened to start as */
+        var best = C.bestType(n) === as;
+        var cls = (n === S.prevPoint && best ? 'suggest' : '') + (best ? ' best' : '');
         h += '<button type="button" data-move="' + k + '|' + as + ':' + n + '"' + (cls.trim() ? ' class="' + cls.trim() + '"' : '') + '>' + n + '</button>';
       });
       h += '</div>';
@@ -545,8 +560,7 @@ function renderMove(point) {
   $('moveList').innerHTML = h;
   $('moveSub').innerHTML = point + ' is the new point, and you have money on it. Move it to another number as a Place or Buy bet'
     + (S.prevPoint && S.prevPoint !== point ? ' (' + S.prevPoint + ' just hit)' : '') + ', take it down, or leave it up.'
-    + '<br><span class="tiny">Underlined numbers pay better for that kind of bet: Place on 5, 6, 8 and 9 \u00b7 Buy on 4 and 10'
-    + (C.MODES[S.mode].dont ? '' : ', 2, 3, 11 and 12') + '.</span>';
+    + '<br><span class="tiny">' + bestHint() + '</span>';
   return keys.length;
 }
 function openMove(point) {

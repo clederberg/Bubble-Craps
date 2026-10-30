@@ -120,7 +120,17 @@ Taking twenty bets down at once used to print twenty red chips. Now it reads as 
 
 ## Bets on the new point
 
-When a number you have a Place or Buy bet on becomes the point, a prompt offers to move that bet to another number as either a Place or a Buy bet (the number that just hit is highlighted, and the numbers each bet type pays best on are underlined), take it down, or leave it up. Uncheck the box in that prompt to stop being asked.
+When a number you have a Place or Buy bet on becomes the point, a prompt offers to move that bet to another number as either a Place or a Buy bet, take it down, or leave it up. The number that just hit is highlighted. Uncheck the box in that prompt to stop being asked.
+
+The prompt underlines whichever of Place or Buy is the cheaper bet on each number: **place the 6 and 8, buy everything else.** That falls out of the vig rule here, where the 5% on a Buy is charged only when it wins:
+
+| Number | Place edge | Buy edge | Better |
+|---|---|---|---|
+| 4 and 10 | 6.67% | 1.67% | Buy |
+| 5 and 9 | 4.00% | 2.00% | Buy |
+| 6 and 8 | 1.52% | 2.27% | Place |
+
+The engine derives this from the paytable rather than from a hardcoded list, and `test.js` checks it against the house edge computed independently, so changing a payout moves the advice with it.
 
 ## Table limits
 
