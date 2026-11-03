@@ -5,7 +5,7 @@ Five free-play games that share one bankroll: **Craps**, **Blackjack**, **Baccar
 
 Free-play craps and crapless craps on a real table layout, with 3D dice. Play money only, no accounts, no purchases. Your bankroll is saved in your browser, and **Reset bankroll** starts you over with any amount up to $100,000.
 
-**Play:** open `index.html`, or turn on GitHub Pages (below).
+**Play:** open `index.html`, or turn on GitHub Pages and install it on your phone (see [On a phone](#on-a-phone)).
 
 ### Working and off
 
@@ -204,6 +204,37 @@ Each die is drawn from the browser's cryptographic random number generator (`cry
 
 Dice and chip sounds are real recordings from Kenney's [Casino Audio](https://kenney.nl/assets/casino-audio) pack (public domain, CC0). The stickman calls use your device's built-in text-to-speech voice. The **Audio** button cycles between All, FX (no voice) and Off.
 
+## On a phone
+
+### Install it as an app
+
+The site is a progressive web app. Added to the home screen it opens full screen with no browser bars, which gives back about 60px of height, and it keeps working with no signal.
+
+- **iPhone (Safari):** Share, then **Add to Home Screen**.
+- **Android (Chrome):** menu, then **Install app** (or **Add to Home screen**).
+
+Open it once more after installing while you still have a connection, so the fonts get saved for offline play too.
+
+### GitHub Pages
+
+Settings, Pages, deploy from the `main` branch, root folder. The site is then at `username.github.io/bubble-craps/`.
+
+- **Every path is relative** (`./sw.js`, `./icon-192.png`, a `start_url` of `./index.html`). A project site is served from a subfolder, so a path starting with `/` would point at the wrong place. Keep them relative.
+- **Bump `VERSION` in `sw.js` on every deploy.** The service worker serves files from its cache first, so an installed phone keeps running the old build until that string changes. A new version replaces the old cache on the next launch. If you add a file, add it to the `FILES` list there as well.
+
+### Layout
+
+**Landscape** (any landscape screen 500px tall or less): the bottom bar becomes a rail down the right edge, and the craps table is sized to fit the height that is left, so all 40 bet spots are on screen at once with no scrolling (checked at 844x390, 667x375, 740x360 and 932x430). Blackjack, baccarat and both slots get a lighter version: one-line header and status, and a single-row bar whose chips scroll sideways. Their playfields still scroll vertically. Blackjack's betting spots have a minimum height of their own, so making that table fit would mean changing its layout, not just its CSS.
+
+**Portrait:** the craps tool buttons sit in one row that scrolls sideways instead of wrapping onto three, and the header is tighter. A full craps table still scrolls on a tall narrow screen.
+
+If you change the landscape layout:
+
+- `sideRail()` in `app.js` and the last `@media` block in `index.html` use the same query, `(orientation:landscape) and (max-height:500px)`. Change both together.
+- In that mode the table always uses the flat (desktop) layout. `isWide()` used to choose from the measured width, but `fitTable()` now sets the width from the height, so measuring would be circular.
+- The landscape block must stay **last** in the `<style>` of `index.html`, and last in `casino.css`. It has the same specificity as the `max-width` blocks, so whichever comes later wins.
+- The dock has a `backdrop-filter`, which makes it the containing block for anything inside it with `position:fixed`. The take-down and out-of-chips banners are therefore placed from the rail's edge rather than the screen's.
+
 ## Files
 
 - `index.html` craps page and styles
@@ -221,3 +252,4 @@ Dice and chip sounds are real recordings from Kenney's [Casino Audio](https://ke
 - `sounds.js` recorded dice and chip sounds
 - `engine.js` rules and payouts
 - `test.js` rules tests (`node test.js`)
+- `manifest.webmanifest`, `sw.js` and the `icon-*.png` / `apple-touch-icon.png` files make it installable and work offline
