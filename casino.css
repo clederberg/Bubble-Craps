@@ -27,6 +27,8 @@ h1 span{color:var(--gold)}
 
 .statusbar{display:flex;gap:14px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;min-height:58px;margin-bottom:8px}
 .status .big{font:600 20px/1.2 Oswald,sans-serif;letter-spacing:.02em}
+/* baccarat's big road is also .big: keep its grid off the headline */
+.status .big{display:block;grid-template-rows:none;overflow:visible;padding-bottom:0}
 .status .sub{color:var(--ink-2);font-size:14px}
 .events{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px}
 .ev{font-size:12px;padding:2px 8px;border-radius:999px;background:rgba(0,0,0,.3);border:1px solid var(--line)}
@@ -238,4 +240,49 @@ details.rules li{margin:4px 0}
   .dealer-stage{max-width:215px}
   .dl-bubble{font-size:11px;padding:4px 10px}
   .winbanner{padding:18px 34px}
+}
+
+/* ---------- phone held sideways ----------
+   A lighter version of the craps page's side rail: header and status each
+   take one line, and the dock is a single row whose chips scroll sideways
+   when there is not room for all nine. Keep this block last in the file. */
+@media (orientation:landscape) and (max-height:500px){
+  body{padding-bottom:62px}
+  .wrap{padding:0 10px}
+  header{flex-wrap:nowrap;gap:8px;padding:5px 0 4px}
+  h1{font-size:15px;white-space:nowrap;width:auto}
+  .games{flex-wrap:nowrap;padding:2px}
+  .games a{padding:3px 8px;font-size:12px}
+  .modes{padding:2px}
+  .mode{padding:3px 9px;font-size:12px}
+  header .ghost{display:none} /* Bankroll on the dock opens the same reset */
+  .statusbar{flex-wrap:nowrap;align-items:center;gap:8px;min-height:0;margin-bottom:4px}
+  .status{flex:1;min-width:0;display:flex;align-items:baseline;gap:8px;white-space:nowrap;overflow:hidden}
+  .status .big{font-size:15px;flex:none}
+  .status .sub{font-size:12px;overflow:hidden;text-overflow:ellipsis;min-width:0}
+  .events{flex-wrap:nowrap;margin-top:0;flex:none}
+  .shoe{min-width:0;flex:none;display:flex;align-items:center;gap:6px;text-align:left}
+  .shoe small{display:inline;font-size:10px}
+  .shoe b{font-size:12px;white-space:nowrap}
+  .shoebar{width:60px;margin-top:0}
+  .rail{border-radius:20px;padding:6px;margin:0}
+  .felt{border-radius:15px}
+
+  .dock .wrap{flex-wrap:nowrap;gap:8px;padding-top:5px;padding-bottom:calc(5px + env(safe-area-inset-bottom))}
+  .chips{order:1;flex:1 1 auto;width:auto;min-width:0;gap:5px;justify-content:flex-start;
+    overflow-x:auto;padding:3px;scrollbar-width:none}
+  .chips::-webkit-scrollbar{display:none}
+  .chip{width:34px;height:34px;font-size:10px;border-width:2px}
+  .chip[aria-pressed=true]{transform:none;outline-width:2px;outline-offset:1px}
+  .dockstats{order:2;min-width:0;gap:10px}
+  .dockstats .stat b,.stat b{font-size:15px}
+  .stat small{font-size:9px;white-space:nowrap}
+  .tools{order:3;width:auto;margin:0;flex:none}
+  .tools .tool{flex:none;height:32px;padding:0 8px;font-size:11px}
+  .go-btn{order:4;flex:none;margin-left:0;height:40px;padding:0 18px;font-size:16px}
+  .go-btn.alt{flex:none;padding:0 10px;font-size:13px}
+  .go-btn.alt + .go-btn{margin-left:0}
+  .actions{bottom:6px}
+  .act{height:36px;padding:0 12px;font-size:13px}
+  .toast{bottom:70px}
 }

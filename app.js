@@ -147,7 +147,23 @@ function say(main, small) {
 }
 
 /* ---------------- table rendering ---------------- */
-function isWide() { return $('tw').clientWidth >= 720; }
+/* A short landscape screen always takes the flat layout. Deciding from the
+   measured width would be circular there: fitTable() sets the width from the
+   height the layout needs, and the layout would come from that width. */
+var RAIL_MQ = window.matchMedia ? window.matchMedia('(orientation:landscape) and (max-height:500px)') : null;
+function sideRail() { return !!(RAIL_MQ && RAIL_MQ.matches); }
+function isWide() { return sideRail() || $('tw').clientWidth >= 720; }
+/* In side-rail mode, shrink the table so all of it fits the height left under
+   the header. Everywhere else the table just fills the width. */
+function fitTable() {
+  var rail = document.querySelector('.rail');
+  if (!sideRail()) { rail.style.maxWidth = ''; return; }
+  var cs = getComputedStyle(rail), pad = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+  var top = rail.getBoundingClientRect().top + window.scrollY;
+  var h = Math.max(120, window.innerHeight - top - pad - 4);
+  var w = Math.floor(h * L.W / L.H);
+  rail.style.maxWidth = (w + parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight)) + 'px';
+}
 function scale() { return $('tw').clientWidth / L.W; }
 function isOff(t, k) { return !C.isWorking(t, k); }
 /* OFF when the bet is not live, ON when you have set it working yourself and
@@ -178,8 +194,10 @@ function chipSVG(k, x, y, amount, R, mark) {
 }
 
 function renderTable() {
+  if (!sideRail()) document.querySelector('.rail').style.maxWidth = '';
   var t = S.tables[S.mode], wide = isWide();
   if (!L || L.mode !== S.mode || L.wide !== wide) L = LY.build(S.mode, wide);
+  fitTable();
   var h = '<svg xmlns="' + SVGNS + '" viewBox="0 0 ' + L.W + ' ' + L.H + '">' + L.decor;
   L.tracker.forEach(function (d) {
     var hit = t.atsHits.indexOf(d.n) >= 0;
@@ -270,7 +288,7 @@ function placeDice() {
 }
 function visibleRange() {
   var r = $('tw').getBoundingClientRect(), s = scale();
-  var dockH = document.querySelector('.dock').getBoundingClientRect().height;
+  var dockH = sideRail() ? 0 : document.querySelector('.dock').getBoundingClientRect().height;
   var top = Math.max(0, -r.top) / s, bot = Math.min(r.height, window.innerHeight - dockH - r.top) / s;
   return { top: top, bot: bot };
 }
@@ -972,8 +990,14 @@ if (document.fonts && document.fonts.ready) document.fonts.ready.then(function (
    query: the dock wraps to two rows on a narrow window, and adding a button
    changes the height on a wide one. */
 function fitDock() {
-  var d = document.querySelector('.dock');
-  if (d) document.body.style.paddingBottom = (d.offsetHeight + 14) + 'px';
+  var d = document.querySelector('.dock'), b = document.body;
+  if (!d) return;
+  if (sideRail()) { b.style.paddingBottom = '12px'; b.style.paddingRight = d.offsetWidth + 'px'; }
+  else { b.style.paddingBottom = (d.offsetHeight + 14) + 'px'; b.style.paddingRight = ''; }
+}
+if (RAIL_MQ) {
+  var onRail = function () { fitDock(); if (!rolling) renderTable(); };
+  if (RAIL_MQ.addEventListener) RAIL_MQ.addEventListener('change', onRail); else if (RAIL_MQ.addListener) RAIL_MQ.addListener(onRail);
 }
 if (window.ResizeObserver) new ResizeObserver(fitDock).observe(document.querySelector('.dock'));
 window.addEventListener('resize', fitDock);
