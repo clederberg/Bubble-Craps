@@ -5,7 +5,7 @@ Five free-play games that share one bankroll: **Craps**, **Blackjack**, **Baccar
 
 Free-play craps and crapless craps on a real table layout, with 3D dice. Play money only, no accounts, no purchases. Your bankroll is saved in your browser, and **Reset bankroll** starts you over with any amount up to $100,000.
 
-**Play:** open `index.html`, or turn on GitHub Pages and install it on your phone (see [On a phone](#on-a-phone)).
+**Play:** open `index.html`, or turn on GitHub Pages (below).
 
 ### Working and off
 
@@ -91,6 +91,24 @@ Shots have to scale with credits for the two bet levels to return the same. An e
 - **Side bets:** Player Pair and Banker Pair 11:1, Either Pair 5:1, Perfect Pair 25:1 (200:1 if both sides), and in EZ, Dragon 7 40:1 and Panda 8 25:1.
 - Limits: $25,000 on Player, Banker and Tie, $1,000 each side bet.
 
+## Install it as an app
+
+There is a web app manifest, icons and a service worker, so **Add to Home Screen** on a phone gives it its own icon and launches it full screen with no browser toolbars, which is worth about 60px of vertical space. It also runs with no signal.
+
+`sw.js` fetches HTML network-first so a deploy shows up on the next load rather than leaving an installed copy stuck on an old build; everything else is served from cache and refreshed in the background. **Bump `CACHE` in `sw.js` on every deploy.** Google Fonts are deliberately not cached: the site falls back to system fonts offline, and caching opaque cross-origin responses hides failures.
+
+Every path is relative, because a GitHub Pages project site is served from a subdirectory.
+
+## On a phone
+
+Portrait scrolls, which a full craps table has to on a tall narrow screen, but the chrome around it was taking far more room than it needed: the dock is down from 245px to 161px and the header from 147px to 134px, so about 100px more felt is on screen at once. The tool buttons sit in one row that scrolls sideways instead of wrapping onto three.
+
+**Landscape** was the real problem. The table is sized from its width, so on a 844x390 screen it came out 456px tall and the entire table sat below the fold: not one bet spot was reachable without scrolling. There is spare width either side on a short screen, so the dock now becomes a rail down the right edge and the table is fitted to the height that is left. All forty bet spots are visible with no scrolling at all, on both a 844x390 and a 667x375 screen.
+
+A short landscape screen also always takes the wide, flat table layout. Choosing it by measured width was circular, since the width depends on the fit and the fit depends on the layout.
+
+The card and slot pages share a lighter version of the same treatment: header, status line and dock together are down from about 240px to 100px. Their playfields still need a vertical scroll in landscape.
+
 ## Craps tables
 
 - **Craps:** Pass / Don't Pass, Come / Don't Come, 5x odds on every point, Place, Buy, Lay, Field, Hardways, one-roll props, Horn, C & E, All Small / All Tall / Make 'Em All.
@@ -157,6 +175,12 @@ When a come bet hits you can take the flat back or leave it riding in the Come b
 
 The first time a come bet hits in a session you get asked once, and the **Come bets** button flips it any time after that. A bet left up waits in the Come box and travels on the *next* roll, not the one it just won on.
 
+**The odds ride with it.** When a come bet that is set to stay up wins, both profits are paid and both stakes stay in play. Odds cannot sit in the Come box on their own, so the odds stake is held until the bet travels, then goes straight back up on the new number. Anything over that number's odds limit comes back, which matters in crapless where the ladder is shorter on the 2, 3, 11 and 12 than on the 6 and 8.
+
+Held odds still count in **On table** and are listed in the bet list as *Come odds riding*, so the total never dips and the money is never invisible. They cannot be taken down on their own: they follow the bet. If the come bet is gone by the next roll, they come back on their own.
+
+**A win in the box stays up too.** With come bets set to ride, a come bet that wins outright on a 7 or an 11 pays the profit and leaves the stake in the Come box, rather than returning it.
+
 ## Repeat bets
 
 **Repeat bets** puts your last layout back down. Come and Don't Come bets sitting on a number are skipped, since those arrive on their own, and anything your bankroll cannot cover is left out. The toast says how much went back down and how many bets were skipped.
@@ -204,37 +228,6 @@ Each die is drawn from the browser's cryptographic random number generator (`cry
 
 Dice and chip sounds are real recordings from Kenney's [Casino Audio](https://kenney.nl/assets/casino-audio) pack (public domain, CC0). The stickman calls use your device's built-in text-to-speech voice. The **Audio** button cycles between All, FX (no voice) and Off.
 
-## On a phone
-
-### Install it as an app
-
-The site is a progressive web app. Added to the home screen it opens full screen with no browser bars, which gives back about 60px of height, and it keeps working with no signal.
-
-- **iPhone (Safari):** Share, then **Add to Home Screen**.
-- **Android (Chrome):** menu, then **Install app** (or **Add to Home screen**).
-
-Open it once more after installing while you still have a connection, so the fonts get saved for offline play too.
-
-### GitHub Pages
-
-Settings, Pages, deploy from the `main` branch, root folder. The site is then at `username.github.io/bubble-craps/`.
-
-- **Every path is relative** (`./sw.js`, `./icon-192.png`, a `start_url` of `./index.html`). A project site is served from a subfolder, so a path starting with `/` would point at the wrong place. Keep them relative.
-- **Bump `VERSION` in `sw.js` on every deploy.** The service worker serves files from its cache first, so an installed phone keeps running the old build until that string changes. A new version replaces the old cache on the next launch. If you add a file, add it to the `FILES` list there as well.
-
-### Layout
-
-**Landscape** (any landscape screen 500px tall or less): the bottom bar becomes a rail down the right edge, and the craps table is sized to fit the height that is left, so all 40 bet spots are on screen at once with no scrolling (checked at 844x390, 667x375, 740x360 and 932x430). Blackjack, baccarat and both slots get a lighter version: one-line header and status, and a single-row bar whose chips scroll sideways. Their playfields still scroll vertically. Blackjack's betting spots have a minimum height of their own, so making that table fit would mean changing its layout, not just its CSS.
-
-**Portrait:** the craps tool buttons sit in one row that scrolls sideways instead of wrapping onto three, and the header is tighter. A full craps table still scrolls on a tall narrow screen.
-
-If you change the landscape layout:
-
-- `sideRail()` in `app.js` and the last `@media` block in `index.html` use the same query, `(orientation:landscape) and (max-height:500px)`. Change both together.
-- In that mode the table always uses the flat (desktop) layout. `isWide()` used to choose from the measured width, but `fitTable()` now sets the width from the height, so measuring would be circular.
-- The landscape block must stay **last** in the `<style>` of `index.html`, and last in `casino.css`. It has the same specificity as the `max-width` blocks, so whichever comes later wins.
-- The dock has a `backdrop-filter`, which makes it the containing block for anything inside it with `position:fixed`. The take-down and out-of-chips banners are therefore placed from the rail's edge rather than the screen's.
-
 ## Files
 
 - `index.html` craps page and styles
@@ -252,4 +245,3 @@ If you change the landscape layout:
 - `sounds.js` recorded dice and chip sounds
 - `engine.js` rules and payouts
 - `test.js` rules tests (`node test.js`)
-- `manifest.webmanifest`, `sw.js` and the `icon-*.png` / `apple-touch-icon.png` files make it installable and work offline

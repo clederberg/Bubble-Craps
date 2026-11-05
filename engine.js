@@ -90,7 +90,7 @@
     return Math.round(HAND_ODDS[200] / Math.pow(0.862474, n - 200));
   }
 
-  function newTable(mode) { return { mode: mode, point: null, bets: {}, atsHits: [], rolls: [], working: false, off: {}, on: {}, hand: 0 }; }
+  function newTable(mode) { return { mode: mode, point: null, bets: {}, atsHits: [], rolls: [], working: false, off: {}, on: {}, hand: 0, comeOddsHeld: 0 }; }
 
   /* Is this bet live on the next roll?
      Every place, buy, lay, hardway and come-odds bet carries its own setting:
@@ -256,11 +256,18 @@
     });
     return back;
   }
-  function onTable(t) { var s = 0; for (var k in t.bets) s += t.bets[k]; return s; }
+  /* Odds held between a kept come bet winning and travelling again are still
+     the player's money on the table, so they count here. Leaving them out made
+     the total drop for a roll and read as if the stake had vanished. */
+  function onTable(t) {
+    var s = t.comeOddsHeld || 0;
+    for (var k in t.bets) s += t.bets[k];
+    return s;
+  }
 
   function roll(t, d1, d2) {
     var s = d1 + d2, hard = d1 === d2, on = t.point !== null, m = MODES[t.mode], B = t.bets;
-    var ev = [], back = 0, pointBefore = t.point, kept = 0;
+    var ev = [], back = 0, pointBefore = t.point, kept = 0, heldOdds = 0, oddsBack = null;
     /* A hand is every roll one shooter makes, and it ends only on a seven out.
        The mean is 8.53 rolls, so a long one is worth noticing. */
     t.hand = (t.hand || 0) + 1;
@@ -338,7 +345,19 @@
                the next roll rather than travelling again on this one. */
             kept += flat;
           } else win(ck, B[ck], false);
-          if (has(co)) { if (live(co)) win(co, mul(B[co], TRUE[n]), false); else giveBack(co, 'odds were off'); }
+          if (has(co)) {
+            if (!live(co)) giveBack(co, 'odds were off');
+            else if (t.keepCome) {
+              /* The odds ride with the flat. Their profit is paid and the
+                 stake is held until the bet travels to its next number,
+                 since odds cannot sit in the Come box on their own. */
+              var oprofit = mul(B[co], TRUE[n]);
+              back += oprofit;
+              ev.push({ k: co, r: 'win', net: oprofit, keep: true, kept: true });
+              heldOdds += B[co];
+              delete B[co];
+            } else win(co, mul(B[co], TRUE[n]), false);
+          }
         } else if (s === 7) {
           lose(ck);
           if (has(co)) { if (live(co)) lose(co); else giveBack(co, 'odds were off'); }
@@ -354,16 +373,40 @@
         }
       }
     });
+    /* Odds that rode back with a kept come bet go up again on whatever number
+       the bet travels to, as much of them as that number's odds limit allows.
+       Anything over it comes back, which matters in crapless where the ladder
+       is shorter on some numbers than others. */
+    function placeHeldOdds(n) {
+      var held = t.comeOddsHeld || 0;
+      if (!held) return;
+      t.comeOddsHeld = 0;
+      var cap = (B['comeOn:' + n] || 0) * oddsX(t, n);
+      var put = Math.min(held, cap);
+      if (put > 0) B['comeOdds:' + n] = (B['comeOdds:' + n] || 0) + put;
+      if (held - put > 0) {
+        back += held - put;
+        ev.push({ k: 'comeOdds:' + n, r: 'push', net: 0, why: 'over the odds limit on ' + n });
+      }
+      oddsBack = { n: n, amount: put, refund: held - put };
+    }
     // Come / Don't Come bets waiting in the box
     if (has('come')) {
       if (m.dont) {
-        if (s === 7 || s === 11) win('come', B.come, false);
+        /* a win in the box stays up too when come bets are set to ride */
+        if (s === 7 || s === 11) win('come', B.come, !!t.keepCome);
         else if (s === 2 || s === 3 || s === 12) lose('come');
-        else move('come', 'comeOn:' + s);
+        else { move('come', 'comeOn:' + s); placeHeldOdds(s); }
       } else {
-        if (s === 7) win('come', B.come, false);
-        else move('come', 'comeOn:' + s);
+        if (s === 7) win('come', B.come, !!t.keepCome);
+        else { move('come', 'comeOn:' + s); placeHeldOdds(s); }
       }
+    }
+    /* nothing left in the box for them to attach to, so they come back */
+    if (!has('come') && (t.comeOddsHeld || 0) > 0) {
+      back += t.comeOddsHeld;
+      ev.push({ k: 'come', r: 'push', net: 0, why: 'odds came down with the bet' });
+      t.comeOddsHeld = 0;
     }
     if (has('dc')) {
       if (s === 2 || s === 3) win('dc', B.dc, false);
@@ -415,10 +458,11 @@
     if (t.rolls.length > 40) t.rolls.length = 40;
     var net = ev.reduce(function (a, e) { return a + e.net; }, 0);
     if (kept) B.come = (B.come || 0) + kept;
+    if (heldOdds) t.comeOddsHeld = (t.comeOddsHeld || 0) + heldOdds;
     var handOver = pointBefore !== null && s === 7, handLength = t.hand;
     if (handOver) t.hand = 0;
     var pointMade = pointBefore !== null && s === pointBefore;
-    return { s: s, hard: hard, d1: d1, d2: d2, ev: ev, back: back, net: net, kept: kept,
+    return { s: s, hard: hard, d1: d1, d2: d2, ev: ev, back: back, net: net, kept: kept, oddsBack: oddsBack,
       hand: handLength, handOver: handOver, pointMade: pointMade,
       pointBefore: pointBefore, pointAfter: t.point };
   }

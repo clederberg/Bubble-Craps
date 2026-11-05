@@ -232,10 +232,11 @@ for (const mode of ['craps','crapless']) { const t=C.newTable(mode); let bank=1e
   eq(r.back, 1000 + 1000 + 6000 + 5000, 'come win returns flat, odds and both profits');
   eq(t.bets, {}, 'and nothing is left on the number');
 
-  // on: the flat rides again, so only the profit comes back
+  // on: the flat rides again and so do the odds, so only the profits come back
   t = setup(true); r = C.roll(t, 4, 4);
-  eq(r.back, 1000 + 6000 + 5000, 'keeping it up returns the profits and the odds, not the flat');
+  eq(r.back, 1000 + 6000, 'keeping it up returns both profits and neither stake');
   eq(r.kept, 1000, 'the flat is the part kept up');
+  eq(t.comeOddsHeld, 5000, 'the odds stake is held for the next number');
   eq(t.bets, { come: 1000 }, 'the flat waits in the come box');
 
   // it must not travel again on the roll it won on
@@ -343,5 +344,63 @@ for (const mode of ['craps','crapless']) { const t=C.newTable(mode); let bank=1e
   eq([4,5,9,10].every(n => C.bestType(n) === 'buy'), true, 'buy the 4, 5, 9 and 10');
   eq([6,8].every(n => C.bestType(n) === 'place'), true, 'place the 6 and 8');
   eq(C.bestType(7), 'place', 'a number with no place bet falls back safely');
+}
+
+
+/* ---- come bets that ride, and their odds -------------------------------- */
+{
+  const setup = (bets, mode) => { const t = C.newTable(mode || 'craps'); t.keepCome = true;
+    t.point = 5; Object.assign(t.bets, bets); return t; };
+
+  // the odds ride with the flat instead of coming down
+  let t = setup({ 'comeOn:6': 1000, 'comeOdds:6': 5000 });
+  let r = C.roll(t, 3, 3);                       // the 6 repeats
+  eq(C.amt(t, 'comeOn:6'), 0, 'the flat leaves the number');
+  eq(C.amt(t, 'comeOdds:6'), 0, 'and so do the odds');
+  eq(t.comeOddsHeld, 5000, 'the odds stake is held for the next number');
+  eq(r.back, 1000 + 6000, 'both profits are paid: flat 1:1 and odds 6:5');
+  eq(t.bets.come, 1000, 'the flat waits in the come box');
+
+  r = C.roll(t, 4, 5);                           // travels to the 9
+  eq(C.amt(t, 'comeOn:9'), 1000, 'the flat travels');
+  eq(C.amt(t, 'comeOdds:9'), 5000, 'and the odds go straight back up with it');
+  eq(t.comeOddsHeld, 0, 'nothing is left held');
+  eq([r.oddsBack.n, r.oddsBack.amount], [9, 5000], 'the roll says where the odds landed');
+
+  // they ride again on the new number, and are lost with it to a seven
+  r = C.roll(t, 3, 4);
+  eq([C.amt(t, 'comeOn:9'), C.amt(t, 'comeOdds:9')], [0, 0], 'both go to a seven out');
+
+  // a win in the come box stays up rather than coming back
+  t = setup({ come: 1000 });
+  r = C.roll(t, 5, 6);                           // eleven
+  eq(C.amt(t, 'come'), 1000, 'an eleven leaves the come bet up');
+  eq(r.back, 1000, 'and pays the profit only');
+  t = setup({ come: 1000 });
+  r = C.roll(t, 3, 4);                           // seven
+  eq(C.amt(t, 'come'), 1000, 'a seven in the box leaves it up too');
+  eq(r.back, 1000, 'profit only again');
+  // with the setting off it behaves as it always did
+  t = setup({ come: 1000 }); t.keepCome = false;
+  r = C.roll(t, 5, 6);
+  eq(C.amt(t, 'come'), 0, 'off: an eleven returns the come bet');
+  eq(r.back, 2000, 'stake and profit both come back');
+
+  // crapless: the odds ladder is shorter on some numbers, so part comes back
+  t = setup({ 'comeOn:6': 1000, 'comeOdds:6': 5000 }, 'crapless');
+  C.roll(t, 3, 3);
+  eq(t.comeOddsHeld, 5000, 'crapless holds them the same way');
+  r = C.roll(t, 1, 1);                           // travels to the 2, where only 3x is allowed
+  eq(C.amt(t, 'comeOdds:2'), 3000, 'only what the 2 allows goes up');
+  eq(r.back, 2000, 'the rest comes back');
+  eq(r.oddsBack.refund, 2000, 'and the roll says so');
+
+  // held odds with nothing left to attach to come back
+  t = setup({ 'comeOn:6': 1000, 'comeOdds:6': 5000 });
+  C.roll(t, 3, 3);
+  t.keepCome = false; delete t.bets.come;        // the player takes the come bet down
+  r = C.roll(t, 2, 2);
+  eq(t.comeOddsHeld, 0, 'orphaned odds are not left held');
+  eq(r.back, 5000, 'they come back instead');
 }
 console.log('all passed', n, 'asserts + 400k sim rolls');

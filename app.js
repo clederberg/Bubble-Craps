@@ -147,23 +147,10 @@ function say(main, small) {
 }
 
 /* ---------------- table rendering ---------------- */
-/* A short landscape screen always takes the flat layout. Deciding from the
-   measured width would be circular there: fitTable() sets the width from the
-   height the layout needs, and the layout would come from that width. */
-var RAIL_MQ = window.matchMedia ? window.matchMedia('(orientation:landscape) and (max-height:500px)') : null;
-function sideRail() { return !!(RAIL_MQ && RAIL_MQ.matches); }
+/* A short landscape screen always takes the wide, flat layout. The tall one
+   would be hopeless there, and picking by measured width was circular: the
+   width depends on the fit, which depends on the layout. */
 function isWide() { return sideRail() || $('tw').clientWidth >= 720; }
-/* In side-rail mode, shrink the table so all of it fits the height left under
-   the header. Everywhere else the table just fills the width. */
-function fitTable() {
-  var rail = document.querySelector('.rail');
-  if (!sideRail()) { rail.style.maxWidth = ''; return; }
-  var cs = getComputedStyle(rail), pad = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
-  var top = rail.getBoundingClientRect().top + window.scrollY;
-  var h = Math.max(120, window.innerHeight - top - pad - 4);
-  var w = Math.floor(h * L.W / L.H);
-  rail.style.maxWidth = (w + parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight)) + 'px';
-}
 function scale() { return $('tw').clientWidth / L.W; }
 function isOff(t, k) { return !C.isWorking(t, k); }
 /* OFF when the bet is not live, ON when you have set it working yourself and
@@ -194,10 +181,8 @@ function chipSVG(k, x, y, amount, R, mark) {
 }
 
 function renderTable() {
-  if (!sideRail()) document.querySelector('.rail').style.maxWidth = '';
   var t = S.tables[S.mode], wide = isWide();
-  if (!L || L.mode !== S.mode || L.wide !== wide) L = LY.build(S.mode, wide);
-  fitTable();
+  if (!L || L.mode !== S.mode || L.wide !== wide) { L = LY.build(S.mode, wide); if (window.fitTable) fitTable(); }
   var h = '<svg xmlns="' + SVGNS + '" viewBox="0 0 ' + L.W + ' ' + L.H + '">' + L.decor;
   L.tracker.forEach(function (d) {
     var hit = t.atsHits.indexOf(d.n) >= 0;
@@ -288,7 +273,7 @@ function placeDice() {
 }
 function visibleRange() {
   var r = $('tw').getBoundingClientRect(), s = scale();
-  var dockH = sideRail() ? 0 : document.querySelector('.dock').getBoundingClientRect().height;
+  var dockH = document.querySelector('.dock').getBoundingClientRect().height;
   var top = Math.max(0, -r.top) / s, bot = Math.min(r.height, window.innerHeight - dockH - r.top) / s;
   return { top: top, bot: bot };
 }
@@ -615,6 +600,13 @@ function renderBets() {
           + '<button type="button" data-take="' + k + '" data-amt="all">All</button>')
       + '</div>';
   });
+  /* Odds riding with a kept come bet are not in t.bets yet, but they are the
+     player's money and they are listed so the total here reconciles. They
+     cannot be taken down on their own: they follow the bet. */
+  if (t.comeOddsHeld) {
+    h += '<div class="betrow"><span class="nm">Come odds riding</span><span class="amt2">'
+      + money(t.comeOddsHeld) + '</span><span class="lock">goes back up on the next number</span></div>';
+  }
   $('betList').innerHTML = h || '<p class="betempty">No bets on this table yet.</p>';
   $('betsNote').textContent = keys.length ? 'Taking a bet down returns it to your bankroll. Contract bets stay until they resolve.' : '';
   $('betsClear').disabled = !keys.length;
@@ -798,6 +790,10 @@ function doRoll() {
     say(c[0], c[1]);
     $('roll').disabled = false;
     if (res.pointBefore !== null && res.pointAfter === null) S.prevPoint = res.pointBefore;
+    if (res.oddsBack && res.oddsBack.amount) {
+      toast('Odds back up on ' + res.oddsBack.n + ' · ' + money(res.oddsBack.amount)
+        + (res.oddsBack.refund ? ' · ' + money(res.oddsBack.refund) + ' over the limit returned' : ''));
+    }
     if (!res.handOver && C.MILESTONES.indexOf(res.hand) >= 0) hype(res.hand);
     if (res.pointBefore === null && res.pointAfter !== null && pointBets(t, res.pointAfter).length) {
       setTimeout(function () { openMove(res.pointAfter); }, 700);
@@ -989,19 +985,34 @@ if (document.fonts && document.fonts.ready) document.fonts.ready.then(function (
    room as the dock actually takes. Measuring it beats guessing in a media
    query: the dock wraps to two rows on a narrow window, and adding a button
    changes the height on a wide one. */
+function sideRail() {
+  return window.matchMedia('(orientation:landscape) and (max-height:540px)').matches;
+}
 function fitDock() {
-  var d = document.querySelector('.dock'), b = document.body;
+  var d = document.querySelector('.dock');
   if (!d) return;
-  if (sideRail()) { b.style.paddingBottom = '12px'; b.style.paddingRight = d.offsetWidth + 'px'; }
-  else { b.style.paddingBottom = (d.offsetHeight + 14) + 'px'; b.style.paddingRight = ''; }
+  if (sideRail()) { document.body.style.paddingBottom = '0px'; return; }  // the rail takes the right edge instead
+  document.body.style.paddingBottom = (d.offsetHeight + 14) + 'px';
 }
-if (RAIL_MQ) {
-  var onRail = function () { fitDock(); if (!rolling) renderTable(); };
-  if (RAIL_MQ.addEventListener) RAIL_MQ.addEventListener('change', onRail); else if (RAIL_MQ.addListener) RAIL_MQ.addListener(onRail);
+/* On a short landscape screen the table is fitted to the height that is left
+   rather than the full width, which would make it taller than the screen. The
+   SVG still fills its wrapper, so scale() and every chip position stay right;
+   only the wrapper gets narrower. */
+function fitTable() {
+  var rail = document.querySelector('.rail');
+  if (!rail) return;
+  if (!sideRail() || !L || !L.H) { rail.style.maxWidth = ''; return; }
+  var head = document.querySelector('header'), bar = document.querySelector('.statusbar');
+  var used = (head ? head.offsetHeight : 0) + (bar ? bar.offsetHeight : 0);
+  var avail = window.innerHeight - used - 18;
+  var room = rail.parentElement ? rail.parentElement.clientWidth : window.innerWidth;
+  rail.style.maxWidth = Math.max(300, Math.min(room, Math.round(avail * (L.W / L.H)))) + 'px';
 }
-if (window.ResizeObserver) new ResizeObserver(fitDock).observe(document.querySelector('.dock'));
-window.addEventListener('resize', fitDock);
-fitDock();
+function fitAll() { fitDock(); fitTable(); }
+if (window.ResizeObserver) new ResizeObserver(fitAll).observe(document.querySelector('.dock'));
+window.addEventListener('resize', fitAll);
+window.addEventListener('orientationchange', function () { setTimeout(fitAll, 120); });
+fitAll();
 
 document.addEventListener('pointerdown', function () { ac(); }, { once: true });
 buildDice();
