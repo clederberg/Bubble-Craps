@@ -2,7 +2,7 @@
    BUMP VERSION ON EVERY DEPLOY. Files are served from the cache first, so a
    phone keeps running the old build until this string changes. Every path is
    relative so it works from username.github.io/bubble-craps/. */
-var VERSION = 'bc-2026-11-03a';
+var VERSION = 'bc-2026-11-04a';
 var FILES = [
   './', './index.html', './blackjack.html', './baccarat.html', './lights.html', './pinball.html',
   './casino.css', './app.js', './engine.js', './layout.js', './sounds.js', './common.js',
