@@ -6,6 +6,8 @@ var g = G.pinball();
 var st = K.game('slots-pinball', { bet: 100, credits: 1, auto: false });
 if (!st.credits) st.credits = 1;
 var spinning = false, timers = [];
+/* Set while the reels are turning, so a second press can land them early. */
+var slamStop = null;
 var MAX_TOTAL = 2500000;
 
 function $(id) { return document.getElementById(id); }
@@ -41,8 +43,17 @@ function drawBoard(stops) {
 function spinReels(stops, done) {
   var cell = parseFloat(getComputedStyle($('window')).getPropertyValue('--cell')) || 112;
   var lead = 16;
+  var landed = false;
+  function colFor(i) { return $('reels').querySelector('[data-reel="' + i + '"]'); }
+  /* Guarded so the spin finishes once, whether it ran out or was cut short. */
+  function finish() {
+    if (landed) return;
+    landed = true;
+    slamStop = null;
+    done();
+  }
   g.reels.forEach(function (reel, i) {
-    var col = $('reels').querySelector('[data-reel="' + i + '"]');
+    var col = colFor(i);
     var start = (stops[i] - lead + reel.length * 4) % reel.length;
     col.innerHTML = column(reel, start, lead + 1);
     col.style.transition = 'none'; col.style.transform = 'translateY(0)';
@@ -55,9 +66,24 @@ function spinReels(stops, done) {
       col.style.transition = 'none'; col.style.transform = 'translateY(0)';
       col.innerHTML = column(reel, stops[i], 1);
       fx('reelStop', i);
-      if (i === g.reels.length - 1) done();
+      if (i === g.reels.length - 1) finish();
     }, dur + 20);
   });
+  /* Quick spin: drop every reel onto the stops it was already going to make.
+     The result is decided before the animation starts, so this only skips the
+     wait. */
+  slamStop = function () {
+    if (landed) return;
+    clearTimers();
+    g.reels.forEach(function (reel, i) {
+      var col = colFor(i);
+      if (!col) return;
+      col.style.transition = 'none'; col.style.transform = 'translateY(0)';
+      col.innerHTML = column(reel, stops[i], 1);
+    });
+    fx('reelStop', 0);
+    finish();
+  };
 }
 
 /* ---------- the playfield up top ---------- */
@@ -398,8 +424,17 @@ document.addEventListener('keydown', function (e) {
   if (k === 'b') { e.preventDefault(); return openReset(); }
   if (k === '1') { e.preventDefault(); return setCredits(1, false); }
   if (k === '2' || k === 'm') { e.preventDefault(); return setCredits(g.maxCredits, false); }
-  if (e.code === 'Space' || k === 'enter') { e.preventDefault(); spin(); }
+  if (e.code === 'Space' || k === 'enter') {
+    e.preventDefault();
+    if (slamStop) return slamStop();       // second press lands the reels early
+    spin();
+  }
 });
+/* No space bar on a phone, so a tap on the reels lands them too. */
+(function () {
+  var r = document.getElementById('reels');
+  if (r) r.addEventListener('pointerdown', function () { if (slamStop) slamStop(); });
+})();
 document.addEventListener('pointerdown', function () { K.ac(); }, { once: true });
 st.bet = K.load().chip || st.bet;
 if (totalBet() > MAX_TOTAL) st.bet = Math.floor(MAX_TOTAL / st.credits);

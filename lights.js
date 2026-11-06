@@ -9,6 +9,8 @@ if (!st.lineBet) st.lineBet = 100;
 if (!st.jp) st.jp = { grand: g.jackpots.seed.grand, major: g.jackpots.seed.major,
   minor: g.jackpots.seed.minor, mini: g.jackpots.seed.mini };
 var spinning = false, timers = [], lastRows = null, freeBadge = '';
+/* Set while the reels are turning, so a second press can land them early. */
+var slamStop = null;
 
 function $(id) { return document.getElementById(id); }
 function money(c, s) { return K.money(c, s); }
@@ -70,12 +72,22 @@ function spinReels(stops, opts, done) {
   var reels = opts.reels || g.reels, boost = opts.boost;
   var cell = parseFloat(getComputedStyle($('machine')).getPropertyValue('--cell')) || 76;
   var lead = 14, last = reels.length - 1;
+  var landed = false;
+  function colFor(i) { return $('reels').querySelector('[data-reel="' + i + '"]'); }
+  /* Guarded so the spin can only finish once, whether it ran out naturally
+     or was cut short. */
+  function finish() {
+    if (landed) return;
+    landed = true;
+    slamStop = null;
+    done();
+  }
   $('reels').querySelectorAll('.reel').forEach(function (el) {
     el.classList.remove('wildreel');
     var s = el.querySelector('.scrolldrop'); if (s) s.remove();
   });
   reels.forEach(function (reel, i) {
-    var col = $('reels').querySelector('[data-reel="' + i + '"]');
+    var col = colFor(i);
     if (!col) return;
     var start = (stops[i] - lead + reel.length * 4) % reel.length;
     col.innerHTML = reelColumn(reel, start, lead + g.rows, boost);
@@ -93,9 +105,26 @@ function spinReels(stops, opts, done) {
       col.innerHTML = reelColumn(reel, stops[i], g.rows, boost);
       if (i === last && opts.tease) fx('stopAnticipate');
       fx('reelStop', i);
-      if (i === last) done();
+      if (i === last) finish();
     }, dur + 20);
   });
+  /* Quick spin: drop every reel onto the stops it was already going to make.
+     The result is decided before the animation starts, so this only skips the
+     wait. */
+  slamStop = function () {
+    if (landed) return;
+    clearTimers();
+    reels.forEach(function (reel, i) {
+      var col = colFor(i);
+      if (!col) return;
+      col.style.transition = 'none';
+      col.style.transform = 'translateY(0)';
+      col.innerHTML = reelColumn(reel, stops[i], g.rows, boost);
+    });
+    if (opts.tease) fx('stopAnticipate');
+    fx('reelStop', 0);
+    finish();
+  };
 }
 /* is the last reel worth a drum roll? two feature symbols already showing */
 function teaseWorthy(stops) {
@@ -796,11 +825,17 @@ document.addEventListener('keydown', function (e) {
   if (k === 'b') { e.preventDefault(); return openReset(); }
   if (e.code === 'Space' || k === 'enter') {
     e.preventDefault();
+    if (slamStop) return slamStop();        // second press lands the reels early
     var btn = document.getElementById('holdspin');
     if (btn && !$('overlay').hidden && !btn.disabled) return btn.click();
     spin();
   }
 });
+/* No space bar on a phone, so a tap on the reels lands them too. */
+(function () {
+  var r = document.getElementById('reels');
+  if (r) r.addEventListener('pointerdown', function () { if (slamStop) slamStop(); });
+})();
 document.addEventListener('pointerdown', function () { K.ac(); }, { once: true });
 st.lineBet = K.load().chip || st.lineBet;
 render();
