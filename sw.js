@@ -1,8 +1,19 @@
 /* Offline support for the installed app.
-   BUMP VERSION ON EVERY DEPLOY. Files are served from the cache first, so a
-   phone keeps running the old build until this string changes. Every path is
-   relative so it works from username.github.io/bubble-craps/. */
-var VERSION = 'bc-2026-11-04a';
+
+   Same-origin files are fetched from the network first and only fall back to
+   the cache when the network does not answer, so a deploy is picked up on the
+   next launch with no version to remember. The previous design served the
+   cache first, which meant uploading a new file changed nothing on a phone
+   until this string was edited by hand, and forgetting once left every
+   installed copy running an old build.
+
+   The network is raced against a short timer rather than waited on, so a weak
+   signal falls back to the cache quickly instead of hanging.
+
+   Every path is relative so it works from a project page in a subdirectory. */
+var VERSION = 'bc-app';          // no longer needs bumping to ship an update
+var FONTS = 'bc-fonts';
+var NET_TIMEOUT = 2500;
 var FILES = [
   './', './index.html', './blackjack.html', './baccarat.html', './lights.html', './pinball.html',
   './casino.css', './app.js', './engine.js', './layout.js', './sounds.js', './common.js',
@@ -10,15 +21,19 @@ var FILES = [
   './slots.js', './games.js', './slotfx.js', './lights.js', './pinball.js',
   './manifest.webmanifest', './icon-192.png', './icon-512.png', './icon-maskable-512.png', './apple-touch-icon.png'
 ];
-var FONTS = 'bc-fonts';
 
 self.addEventListener('install', function (e) {
-  e.waitUntil(caches.open(VERSION).then(function (c) { return c.addAll(FILES); }).then(function () { return self.skipWaiting(); }));
+  /* one missing file must not fail the whole install */
+  e.waitUntil(caches.open(VERSION).then(function (c) {
+    return Promise.all(FILES.map(function (u) { return c.add(u).catch(function () {}); }));
+  }).then(function () { return self.skipWaiting(); }));
 });
 
 self.addEventListener('activate', function (e) {
   e.waitUntil(caches.keys().then(function (keys) {
-    return Promise.all(keys.filter(function (k) { return k !== VERSION && k !== FONTS; }).map(function (k) { return caches.delete(k); }));
+    return Promise.all(keys.filter(function (k) {
+      return k !== VERSION && k !== FONTS;
+    }).map(function (k) { return caches.delete(k); }));
   }).then(function () { return self.clients.claim(); }));
 });
 
@@ -27,11 +42,15 @@ self.addEventListener('fetch', function (e) {
   if (req.method !== 'GET') return;
   var url = new URL(req.url);
 
-  // Google Fonts: keep a copy so the type survives going offline.
+  /* Google Fonts: versioned URLs that never change in place, so cache first
+     and let the type survive going offline. */
   if (url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com') {
     e.respondWith(caches.open(FONTS).then(function (c) {
       return c.match(req).then(function (hit) {
-        var net = fetch(req).then(function (res) { if (res.ok || res.type === 'opaque') c.put(req, res.clone()); return res; });
+        var net = fetch(req).then(function (res) {
+          if (res.ok || res.type === 'opaque') c.put(req, res.clone());
+          return res;
+        });
         if (hit) { net.catch(function () {}); return hit; }
         return net;
       });
@@ -40,13 +59,34 @@ self.addEventListener('fetch', function (e) {
   }
   if (url.origin !== self.location.origin) return;
 
-  e.respondWith(caches.match(req, { ignoreSearch: true }).then(function (hit) {
-    if (hit) return hit;
-    return fetch(req).then(function (res) {
-      if (res.ok) { var copy = res.clone(); caches.open(VERSION).then(function (c) { c.put(req, copy); }); }
+  e.respondWith(
+    fromNetwork(req).then(function (res) {
+      if (res && res.ok) {
+        var copy = res.clone();
+        caches.open(VERSION).then(function (c) { c.put(req, copy); });
+      }
       return res;
     }).catch(function () {
-      if (req.mode === 'navigate') return caches.match('./index.html');
-    });
-  }));
+      return caches.match(req, { ignoreSearch: true }).then(function (hit) {
+        if (hit) return hit;
+        if (req.mode === 'navigate') return caches.match('./index.html');
+        return Response.error();
+      });
+    })
+  );
 });
+
+/* Reject rather than hang when the network is there but not answering. */
+function fromNetwork(req) {
+  return new Promise(function (resolve, reject) {
+    var done = false;
+    var timer = setTimeout(function () { if (!done) { done = true; reject(new Error('timeout')); } }, NET_TIMEOUT);
+    fetch(req).then(function (res) {
+      if (done) return;
+      done = true; clearTimeout(timer); resolve(res);
+    }, function (err) {
+      if (done) return;
+      done = true; clearTimeout(timer); reject(err);
+    });
+  });
+}
