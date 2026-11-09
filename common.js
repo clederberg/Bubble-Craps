@@ -320,7 +320,7 @@
   function winBanner(host, amount) { resultBanner(host, 'win', amount); }
 
   function nav(active) {
-    var pages = [['index.html', 'Craps'], ['blackjack.html', 'Blackjack'], ['baccarat.html', 'Baccarat'], ['lights.html', 'Lights'], ['pinball.html', 'Pinball']];
+    var pages = [['index.html', 'Craps'], ['blackjack.html', 'Blackjack'], ['baccarat.html', 'Baccarat'], ['holdem.html', 'Hold\u2019em'], ['lights.html', 'Lights'], ['pinball.html', 'Pinball']];
     return '<nav class="games">' + pages.map(function (p) {
       return '<a href="' + p[0] + '"' + (p[1].toLowerCase() === active ? ' class="on" aria-current="page"' : '') + '>' + p[1] + '</a>';
     }).join('') + '</nav>';

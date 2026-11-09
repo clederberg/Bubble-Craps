@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bubble Craps · Ultimate Texas Hold'em</title>
+<meta name="description" content="Free-play Ultimate Texas Hold’em: ante, blind and trips, one raise a hand, dealer opens with a pair. Play money, no purchases.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2064%2064%27%3E%3Cdefs%3E%3ClinearGradient%20id%3D%27g%27%20x1%3D%270%27%20y1%3D%270%27%20x2%3D%270%27%20y2%3D%271%27%3E%3Cstop%20offset%3D%270%27%20stop-color%3D%27%23fbe9a6%27%2F%3E%3Cstop%20offset%3D%271%27%20stop-color%3D%27%23c9962b%27%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Ccircle%20cx%3D%2732%27%20cy%3D%2732%27%20r%3D%2730%27%20fill%3D%27%230b1f17%27%20stroke%3D%27url%28%23g%29%27%20stroke-width%3D%274%27%2F%3E%3Ccircle%20cx%3D%2732%27%20cy%3D%2732%27%20r%3D%2723%27%20fill%3D%27none%27%20stroke%3D%27url%28%23g%29%27%20stroke-width%3D%275%27%20stroke-dasharray%3D%277%207%27%2F%3E%3Ccircle%20cx%3D%2732%27%20cy%3D%2732%27%20r%3D%2718%27%20fill%3D%27%2308140e%27%2F%3E%3Ctext%20x%3D%2732%27%20y%3D%2741%27%20text-anchor%3D%27middle%27%20font-family%3D%22Georgia%2C%27Times%20New%20Roman%27%2Cserif%22%20font-weight%3D%27700%27%20font-size%3D%2726%27%20fill%3D%27%23f7e3a8%27%3EA%3C%2Ftext%3E%3C%2Fsvg%3E">
+<link rel="manifest" href="./manifest.webmanifest">
+<meta name="theme-color" content="#071a12">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Hold’em">
+<link rel="apple-touch-icon" href="./apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Inter:wght@400;500;600;700&family=Oswald:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="casino.css">
+<style>
+.felt{--cw:68px;min-height:0;padding:16px 16px 14px;
+  background:radial-gradient(120% 90% at 50% 12%, #16583c 0%, #0f4a30 45%, #0a3a25 100%)}
+.uth-top{display:flex;flex-direction:column;align-items:center;gap:10px;position:relative;z-index:1}
+.seatlab{font:600 10px Oswald,sans-serif;letter-spacing:.24em;text-transform:uppercase;color:rgba(255,248,230,.55)}
+.seat{display:flex;flex-direction:column;align-items:center;gap:5px}
+.seat .hand{display:flex;gap:7px;min-height:calc(var(--cw)*1.4)}
+.board{display:flex;gap:8px;padding:10px 14px;border-radius:16px;min-height:calc(var(--cw)*1.4 + 20px);
+  background:rgba(0,0,0,.22);box-shadow:inset 0 0 0 1px rgba(255,248,230,.14)}
+.board .slot{width:var(--cw);height:calc(var(--cw)*1.4);border-radius:9%;
+  border:1px dashed rgba(255,248,230,.18)}
+.handname{font:600 12px Oswald,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#ffe7a6;min-height:16px}
+.handname.lose{color:#ff9b8a}
+.circles{display:flex;gap:14px;justify-content:center;align-items:flex-end;margin-top:12px;flex-wrap:wrap}
+.spotbox{display:flex;flex-direction:column;align-items:center;gap:4px}
+.circle{border-radius:50%;display:grid;place-items:center;cursor:pointer;position:relative;
+  font:600 9px Oswald,sans-serif;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,248,230,.75);
+  background:rgba(0,0,0,.25);box-shadow:inset 0 0 0 2px rgba(242,199,92,.55)}
+.circle.main{width:62px;height:62px}
+.circle.side{width:52px;height:52px;font-size:8px}
+.circle.locked{cursor:default;box-shadow:inset 0 0 0 2px rgba(255,248,230,.2)}
+.circle.live{box-shadow:inset 0 0 0 2px #ffd970, 0 0 18px rgba(255,217,112,.45)}
+.circle .amt{position:absolute;bottom:-7px;font:700 11px Inter,sans-serif;color:#0d1b12;
+  background:var(--gold);border-radius:999px;padding:1px 7px;white-space:nowrap}
+.circle.empty .amt{display:none}
+.acts{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:14px;min-height:42px}
+.act{border:0;border-radius:12px;height:42px;padding:0 20px;cursor:pointer;
+  font:600 14px Oswald,sans-serif;letter-spacing:.12em;text-transform:uppercase;
+  background:linear-gradient(180deg,#ffe9a8,#e0a32b);color:#2a1a05;box-shadow:0 5px 0 #8f6f1f}
+.act:active{transform:translateY(2px);box-shadow:0 3px 0 #8f6f1f}
+.act.quiet{background:rgba(0,0,0,.3);color:var(--ink);box-shadow:inset 0 0 0 1px #3d6a54}
+.act.fold{background:rgba(0,0,0,.3);color:#ff9b8a;box-shadow:inset 0 0 0 1px rgba(201,36,31,.7)}
+.act:disabled{opacity:.45;cursor:default;box-shadow:none;transform:none}
+.uth-pays{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin:12px 0 0}
+.paytable{flex:0 1 230px;border:1px solid rgba(242,199,92,.35);border-radius:12px;padding:9px 12px;
+  background:linear-gradient(180deg,rgba(0,0,0,.3),rgba(0,0,0,.14))}
+.paytable h5{margin:0 0 6px;font:600 11px Oswald,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:var(--gold);text-align:center}
+.paytable ul{list-style:none;margin:0;padding:0}
+.paytable li{display:flex;justify-content:space-between;gap:8px;font-size:11.5px;color:rgba(255,248,230,.78);padding:2px 0;border-bottom:1px dotted rgba(255,248,230,.12)}
+.paytable li:last-child{border-bottom:0}
+.paytable li b{color:#f7e3a8;font-weight:700;white-space:nowrap}
+.paytable p{margin:6px 0 0;font-size:10px;line-height:1.35;color:rgba(255,248,230,.5)}
+@media (max-width:760px){
+  .felt{--cw:48px;padding:10px 8px}
+  .circle.main{width:52px;height:52px}
+  .circle.side{width:44px;height:44px}
+  .act{height:38px;padding:0 13px;font-size:12px}
+}
+/* Phone landscape. Stacking dealer, board and player costs about 300px of a
+   390px screen and pushes the action buttons off the bottom, so the three of
+   them sit side by side instead and the screen's width does the work. */
+@media (orientation:landscape) and (max-height:540px){
+  .felt{--cw:40px;padding:6px 8px}
+  .rail{padding:5px;border-radius:14px}
+  .statusbar{min-height:0;margin-bottom:3px}
+  .status .sub{display:none}
+  .uth-top{flex-direction:row;align-items:center;justify-content:center;gap:14px}
+  .seat{gap:2px}
+  .seatlab{font-size:8px;letter-spacing:.16em}
+  .handname{font-size:10px;min-height:12px}
+  .board{padding:6px 8px;gap:5px;min-height:0;border-radius:12px}
+  .seat .hand{gap:5px;min-height:0}
+  .uth-pays{display:none}
+  .hint{display:none}
+  .circles{margin-top:7px;gap:9px}
+  /* the circles are small enough here that a centred label sits under the
+     amount badge, so the label moves up to the top of the ring */
+  .circle{place-items:start center;padding-top:9px}
+  .circle.main{width:44px;height:44px;font-size:8px}
+  .circle.side{width:38px;height:38px;font-size:7px;padding-top:7px}
+  .circle .amt{font-size:9px;padding:0 5px;bottom:-6px}
+  .acts{margin-top:9px;min-height:0}
+  .act{height:33px;font-size:11px;padding:0 12px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Bubble <span>Hold&rsquo;em</span></h1>
+    <div id="nav"></div>
+    <button class="ghost" id="reset">Reset bankroll</button>
+  </header>
+
+  <div class="statusbar">
+    <div class="status">
+      <div class="big" id="headline">Place your Ante</div>
+      <div class="sub" id="subline">Ante and Blind match. One raise a hand, and the sooner you make it the more you may bet.</div>
+      <div class="events" id="events"></div>
+    </div>
+    <div class="shoe">
+      <small>Shoe</small>
+      <b id="shoeCount">52 cards</b>
+      <div class="shoebar"><i id="shoeBar" style="width:100%"></i></div>
+    </div>
+  </div>
+
+  <div class="rail">
+    <div class="felt" id="felt">
+      <div class="uth-top">
+        <div class="seat">
+          <span class="seatlab">Dealer</span>
+          <div class="hand" id="dealerHand"></div>
+          <div class="handname" id="dealerName"></div>
+        </div>
+        <div class="board" id="board"></div>
+        <div class="seat">
+          <div class="handname" id="playerName"></div>
+          <div class="hand" id="playerHand"></div>
+          <span class="seatlab">You</span>
+        </div>
+      </div>
+
+      <div class="circles">
+        <div class="spotbox"><div class="circle side empty" id="spotTrips" data-spot="trips">Trips<span class="amt"></span></div></div>
+        <div class="spotbox"><div class="circle main empty" id="spotAnte" data-spot="ante">Ante<span class="amt"></span></div></div>
+        <div class="spotbox"><div class="circle main empty locked" id="spotBlind">Blind<span class="amt"></span></div></div>
+        <div class="spotbox"><div class="circle main empty locked" id="spotPlay">Play<span class="amt"></span></div></div>
+      </div>
+
+      <div class="acts" id="acts"></div>
+
+
+    </div>
+  </div>
+
+  <div class="uth-pays">
+        <div class="paytable">
+          <h5>Blind</h5>
+          <ul>
+            <li><span>Royal flush</span><b>500 : 1</b></li>
+            <li><span>Straight flush</span><b>50 : 1</b></li>
+            <li><span>Four of a kind</span><b>10 : 1</b></li>
+            <li><span>Full house</span><b>3 : 1</b></li>
+            <li><span>Flush</span><b>3 : 2</b></li>
+            <li><span>Straight</span><b>1 : 1</b></li>
+          </ul>
+          <p>Pays only on a winning hand. Anything under a straight pushes.</p>
+        </div>
+        <div class="paytable">
+          <h5>Trips</h5>
+          <ul>
+            <li><span>Royal flush</span><b>50 : 1</b></li>
+            <li><span>Straight flush</span><b>40 : 1</b></li>
+            <li><span>Four of a kind</span><b>30 : 1</b></li>
+            <li><span>Full house</span><b>8 : 1</b></li>
+            <li><span>Flush</span><b>6 : 1</b></li>
+            <li><span>Straight</span><b>5 : 1</b></li>
+            <li><span>Three of a kind</span><b>3 : 1</b></li>
+          </ul>
+          <p>Your own five best cards. Paid even if you fold.</p>
+        </div>
+      </div>
+
+  <p class="hint">Ante and Blind are posted together and must match. Raise 4x or 3x before the flop, 2x after it, or 1x on the river. Check costs nothing but lowers what you may raise. The dealer needs a pair to open: if they miss it, your Ante pushes.</p>
+</div>
+
+<div class="dock">
+  <div class="wrap">
+    <div class="dockstats">
+      <button class="stat bankbtn" id="bankBtn" type="button" title="Reset bankroll (B)"><small>Bankroll <i class="rs">&#8635;</i></small><b id="bank">$0</b></button>
+      <div class="stat"><small>At stake</small><b id="atstake">$0</b></div>
+    </div>
+    <div class="chips" id="chips"></div>
+    <div class="tools">
+      <button class="tool" id="clearBets">Clear</button>
+      <button class="tool" id="rebet">Rebet</button>
+      <button class="tool" id="audio">Audio: All</button>
+    </div>
+    <button class="roll" id="deal">Deal</button>
+  </div>
+</div>
+
+<dialog class="dlg" id="resetDlg">
+  <h2>Reset bankroll</h2>
+  <label for="resetAmt">Amount</label>
+  <div class="amt"><span>$</span><input id="resetAmt" inputmode="numeric" value="1,000"></div>
+  <div class="quick" id="resetQuick">
+    <button type="button" data-amt="1000">$1,000</button>
+    <button type="button" data-amt="10000">$10,000</button>
+    <button type="button" data-amt="100000">$100,000</button>
+  </div>
+  <p class="err" id="resetErr"></p>
+  <div class="dlg-actions"><button class="ghost" id="resetCancel">Cancel</button><button class="go" id="resetGo">Reset</button></div>
+</dialog>
+
+<div class="toast" id="toast"></div>
+
+<script src="sounds.js"></script>
+<script src="common.js"></script>
+<script src="uth.js"></script>
+<script src="holdem.js"></script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('./sw.js').catch(function () {});
+  });
+}
+</script>
+</body>
+</html>
