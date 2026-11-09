@@ -17,6 +17,31 @@
   var stage = 'bet';        // bet | preflop | flop | river | done
   var playMult = 0;
   var busy = false;
+  /* How much is actually face up, kept apart from the stage so cards can be
+     turned over one at a time instead of appearing all at once. */
+  var shownHole = 0, shownBoard = 0, dealerUp = false, fresh = -1, revealing = false;
+  var timers = [];
+  function later(fn, ms) { timers.push(setTimeout(fn, ms)); }
+  function clearTimers() { timers.forEach(clearTimeout); timers = []; }
+
+  var BEAT = 430;            // one board card
+  function turnBoard(upTo, after) {
+    revealing = true; busy = true;
+    var t = 0;
+    for (var n = shownBoard + 1; n <= upTo; n++) {
+      (function (k) {
+        /* the river gets an extra beat, because that is the one worth waiting on */
+        t += BEAT + (k === 5 ? 260 : 0);
+        later(function () {
+          shownBoard = k; fresh = k - 1;
+          K.play('deal', 0, 0.75);
+          render();
+        }, t);
+      })(n);
+    }
+    t += BEAT;
+    later(function () { fresh = -1; revealing = false; busy = false; if (after) after(); else render(); }, t);
+  }
 
   /* ---------- betting ---------- */
   function atStake() {
@@ -65,10 +90,14 @@
     hand = U.deal(function () { return K.draw(shoe); });
     stage = 'preflop';
     playMult = 0;
-    busy = true;
-    K.play('deal', 0, 0.75);
+    busy = true; revealing = true;
+    shownHole = 0; shownBoard = 0; dealerUp = false; fresh = -1;
+    clearTimers();
     K.save(); render();
-    setTimeout(function () { busy = false; render(); }, 450);
+    K.play('deal', 0, 0.7);
+    later(function () { shownHole = 1; K.play('deal', 0, 0.72); render(); }, 260);
+    later(function () { shownHole = 2; K.play('deal', 0, 0.74); render(); }, 560);
+    later(function () { revealing = false; busy = false; render(); }, 880);
   }
 
   function raise(mult) {
@@ -83,9 +112,13 @@
   function check() {
     if (busy || stage === 'done') return;
     K.play('handle', 0, 0.5);
-    if (stage === 'preflop') stage = 'flop';
-    else if (stage === 'flop') stage = 'river';
+    /* Hide the actions before drawing, or the next street's buttons sit there
+       looking live for the length of the deal while every click is ignored. */
+    revealing = true; busy = true;
+    var upTo = stage === 'preflop' ? 3 : 5;
+    stage = stage === 'preflop' ? 'flop' : 'river';
     render();
+    turnBoard(upTo);
   }
   function fold() {
     if (busy || stage !== 'river') return;
@@ -94,7 +127,20 @@
   }
 
   function showdown(folded) {
-    busy = true;
+    busy = true; revealing = true;
+    render();
+    turnBoard(5, function () {
+      revealing = true; busy = true;
+      later(function () {
+        dealerUp = true;
+        K.play('deal', 0, 0.85);
+        render();
+        later(function () { revealing = false; finish(folded); }, 620);
+      }, 380);
+    });
+  }
+
+  function finish(folded) {
     stage = 'done';
     var res = U.settle({ ante: S.uthAnte, blind: S.uthAnte, trips: S.uthTrips }, playMult, folded, hand);
     /* The stakes already left the bankroll, so pay back the stake on anything
@@ -117,8 +163,10 @@
   var last = null;
 
   function nextHand() {
+    clearTimers();
     stage = 'bet';
     hand = null; playMult = 0; last = null;
+    shownHole = 0; shownBoard = 0; dealerUp = false; fresh = -1; revealing = false;
     S.uthAnte = S.uthLast.ante; S.uthTrips = S.uthLast.trips;
     var cost = S.uthAnte * 2 + S.uthTrips;
     if (cost > K.bank()) { S.uthAnte = 0; S.uthTrips = 0; }
@@ -127,34 +175,29 @@
   }
 
   /* ---------- drawing ---------- */
-  function cards(el, list, faceDown, from) {
-    var h = '';
-    for (var i = 0; i < list.length; i++) {
-      var hide = faceDown || (from !== undefined && i >= from);
-      h += K.cardHTML(hide ? null : list[i], '', i);
-    }
-    K.setHTML(el, h);
-  }
-  function boardShown() {
-    if (stage === 'bet' || !hand) return 0;
-    if (stage === 'preflop') return 0;
-    if (stage === 'flop') return 3;
-    return 5;
-  }
   function render() {
-    var b = $('board'), shown = boardShown();
-    var h = '';
+    var b = $('board'), shown = shownBoard, h = '';
     for (var i = 0; i < 5; i++) {
-      if (hand && i < shown) h += K.cardHTML(hand.board[i], '', i);
-      else if (hand) h += K.cardHTML(null, '', i);
-      else h += '<div class="slot"></div>';
+      if (!hand) h += '<div class="slot"></div>';
+      else if (i < shown) h += K.cardHTML(hand.board[i], i === fresh ? 'flip' : '', i);
+      else h += K.cardHTML(null, '', i);
     }
-    K.setHTML(b, h);
+    K.forceHTML(b, h);
 
-    cards($('playerHand'), hand ? hand.hole : [], false);
-    cards($('dealerHand'), hand ? hand.dealer : [], stage !== 'done');
+    var hole = '';
+    for (var j = 0; j < 2; j++) {
+      if (!hand || j >= shownHole) hole += '';
+      else hole += K.cardHTML(hand.hole[j], 'deal', j);
+    }
+    K.forceHTML($('playerHand'), hole);
+    var dl = '';
+    for (var k = 0; k < 2; k++) {
+      if (!hand) dl += '';
+      else dl += K.cardHTML(dealerUp ? hand.dealer[k] : null, dealerUp ? 'flip' : 'deal', k);
+    }
+    K.forceHTML($('dealerHand'), dl);
 
-    K.setText($('playerName'), hand && stage !== 'bet'
+    K.setText($('playerName'), hand && shownHole === 2
       ? U.handName(U.score(hand.hole.concat(hand.board.slice(0, Math.max(shown, 0))))) : '');
     $('dealerName').className = 'handname' + (last && last.cmp > 0 ? ' lose' : '');
     K.setText($('dealerName'), last ? U.handName(last.dealer) + (last.dealerQualifies ? '' : ' · does not open') : '');
@@ -168,7 +211,7 @@
     K.setText($('atstake'), money(atStake()));
     K.setText($('shoeCount'), K.remaining(shoe) + ' cards');
     var bar = $('shoeBar'); if (bar) bar.style.width = Math.round(K.remaining(shoe) / 52 * 100) + '%';
-    $('deal').textContent = stage === 'done' ? 'Next hand' : 'Deal';
+    $('deal').textContent = stage === 'done' ? 'NEXT HAND' : 'DEAL';
     $('deal').disabled = busy || (stage !== 'bet' && stage !== 'done');
     paintActs();
     paintHead();
@@ -181,6 +224,7 @@
   }
   function paintActs() {
     var h = '';
+    if (revealing) return K.setHTML($('acts'), '');
     if (stage === 'preflop') {
       h = btn('raise4', 'Bet 4x') + btn('raise3', 'Bet 3x') + btn('check', 'Check', 'quiet');
     } else if (stage === 'flop') {
