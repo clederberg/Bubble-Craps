@@ -19,10 +19,31 @@
   var busy = false;
   /* How much is actually face up, kept apart from the stage so cards can be
      turned over one at a time instead of appearing all at once. */
-  var shownHole = 0, shownBoard = 0, dealerUp = false, fresh = -1, revealing = false;
+  var shownHole = 0, shownBoard = 0, dealerUp = false, revealing = false;
   var timers = [];
   function later(fn, ms) { timers.push(setTimeout(fn, ms)); }
   function clearTimers() { timers.forEach(clearTimeout); timers = []; }
+
+  /* Cards are painted one slot at a time, and a slot is only rebuilt when the
+     card in it actually changes. Rewriting the whole row on every render tore
+     out the cards already on the table and restarted their deal and flip
+     animations, which is what made the deal stutter. The animation class rides
+     on the new node only, so it plays once and is never retriggered. */
+  function paintCards(el, slots) {
+    if (!el) return;
+    var keys = el.__k || [], i;
+    for (i = 0; i < slots.length; i++) {
+      var node = el.children[i];
+      if (node && keys[i] === slots[i].key) continue;
+      var box = document.createElement('div');
+      box.innerHTML = slots[i].html;
+      var made = box.firstChild;
+      if (node) el.replaceChild(made, node); else el.appendChild(made);
+    }
+    while (el.children.length > slots.length) el.removeChild(el.lastChild);
+    el.__k = slots.map(function (s) { return s.key; });
+    el.__h = null; el.__t = null;   // K.setHTML caches by string; keep it honest
+  }
 
   var BEAT = 430;            // one board card
   function turnBoard(upTo, after) {
@@ -33,14 +54,14 @@
         /* the river gets an extra beat, because that is the one worth waiting on */
         t += BEAT + (k === 5 ? 260 : 0);
         later(function () {
-          shownBoard = k; fresh = k - 1;
+          shownBoard = k;
           K.play('deal', 0, 0.75);
           render();
         }, t);
       })(n);
     }
     t += BEAT;
-    later(function () { fresh = -1; revealing = false; busy = false; if (after) after(); else render(); }, t);
+    later(function () { revealing = false; busy = false; if (after) after(); else render(); }, t);
   }
 
   /* ---------- betting ---------- */
@@ -91,7 +112,7 @@
     stage = 'preflop';
     playMult = 0;
     busy = true; revealing = true;
-    shownHole = 0; shownBoard = 0; dealerUp = false; fresh = -1;
+    shownHole = 0; shownBoard = 0; dealerUp = false;
     clearTimers();
     K.save(); render();
     K.play('deal', 0, 0.7);
@@ -166,7 +187,7 @@
     clearTimers();
     stage = 'bet';
     hand = null; playMult = 0; last = null;
-    shownHole = 0; shownBoard = 0; dealerUp = false; fresh = -1; revealing = false;
+    shownHole = 0; shownBoard = 0; dealerUp = false; revealing = false;
     S.uthAnte = S.uthLast.ante; S.uthTrips = S.uthLast.trips;
     var cost = S.uthAnte * 2 + S.uthTrips;
     if (cost > K.bank()) { S.uthAnte = 0; S.uthTrips = 0; }
@@ -175,27 +196,30 @@
   }
 
   /* ---------- drawing ---------- */
-  function render() {
-    var b = $('board'), shown = shownBoard, h = '';
-    for (var i = 0; i < 5; i++) {
-      if (!hand) h += '<div class="slot"></div>';
-      else if (i < shown) h += K.cardHTML(hand.board[i], i === fresh ? 'flip' : '', i);
-      else h += K.cardHTML(null, '', i);
-    }
-    K.forceHTML(b, h);
+  function key(c) { return c ? c.r + c.s : 'back'; }
 
-    var hole = '';
-    for (var j = 0; j < 2; j++) {
-      if (!hand || j >= shownHole) hole += '';
-      else hole += K.cardHTML(hand.hole[j], 'deal', j);
+  function render() {
+    var shown = shownBoard, slots = [], i;
+    for (i = 0; i < 5; i++) {
+      if (!hand) slots.push({ key: 'slot', html: '<div class="slot"></div>' });
+      else if (i < shown) slots.push({ key: key(hand.board[i]), html: K.cardHTML(hand.board[i], 'flip', i) });
+      else slots.push({ key: 'back', html: K.cardHTML(null, '', i) });
     }
-    K.forceHTML($('playerHand'), hole);
-    var dl = '';
-    for (var k = 0; k < 2; k++) {
-      if (!hand) dl += '';
-      else dl += K.cardHTML(dealerUp ? hand.dealer[k] : null, dealerUp ? 'flip' : 'deal', k);
+    paintCards($('board'), slots);
+
+    slots = [];
+    for (i = 0; i < 2; i++) {
+      if (hand && i < shownHole) slots.push({ key: key(hand.hole[i]), html: K.cardHTML(hand.hole[i], 'deal', i) });
     }
-    K.forceHTML($('dealerHand'), dl);
+    paintCards($('playerHand'), slots);
+
+    slots = [];
+    for (i = 0; i < 2; i++) {
+      if (!hand) continue;
+      if (dealerUp) slots.push({ key: key(hand.dealer[i]), html: K.cardHTML(hand.dealer[i], 'flip', i) });
+      else slots.push({ key: 'back', html: K.cardHTML(null, 'deal', i) });
+    }
+    paintCards($('dealerHand'), slots);
 
     K.setText($('playerName'), hand && shownHole === 2
       ? U.handName(U.score(hand.hole.concat(hand.board.slice(0, Math.max(shown, 0))))) : '');
