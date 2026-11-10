@@ -172,6 +172,7 @@
     back += res.playNet > 0 ? res.play + res.playNet : res.playNet === 0 ? res.play : 0;
     back += res.trips > 0 ? S.uthTrips + res.trips : 0;
     if (back) K.addBank(back);
+    res.stake = { ante: S.uthAnte, blind: S.uthAnte, trips: S.uthTrips, play: res.play };
     last = res;
     K.save();
     render();
@@ -249,6 +250,7 @@
   function paintActs() {
     var h = '';
     if (revealing) return K.setHTML($('acts'), '');
+    if (stage === 'done' && last) return K.setHTML($('acts'), ledger(last));
     if (stage === 'preflop') {
       h = btn('raise4', 'Bet 4x') + btn('raise3', 'Bet 3x') + btn('check', 'Check', 'quiet');
     } else if (stage === 'flop') {
@@ -262,6 +264,39 @@
     return '<button type="button" class="act ' + (cls || '') + '" data-act="' + act + '"'
       + (busy ? ' disabled' : '') + '>' + label + '</button>';
   }
+  /* What every bet did, line by line. The chips up in the header are the
+     glance; this is the receipt. */
+  function ledger(r) {
+    var st = r.stake || { ante: 0, blind: 0, trips: 0, play: 0 }, rows = '';
+    function odds(p) { return p ? 'pays ' + p[0] + ' : ' + p[1] : ''; }
+    function row(label, stake, note, net) {
+      if (!stake) return '';
+      var cls = net > 0 ? 'win' : net < 0 ? 'lose' : 'push';
+      return '<div class="lrow"><span class="lb">' + label + '</span>'
+        + '<span class="ls">' + money(stake) + '</span>'
+        + '<span class="ln">' + note + '</span>'
+        + '<span class="lv ' + cls + '">' + (net ? money(net, true) : 'push') + '</span></div>';
+    }
+    rows += row('Ante', st.ante,
+      r.folded ? 'forfeited' : !r.dealerQualifies ? 'dealer did not open' : r.ante > 0 ? odds([1, 1]) : r.ante < 0 ? 'lost' : 'tie',
+      r.ante);
+    rows += row('Blind', st.blind,
+      r.folded ? 'forfeited' : r.blindPay ? odds(r.blindPay) : r.blind < 0 ? 'lost' : r.cmp > 0 ? 'under a straight' : 'tie',
+      r.blind);
+    rows += row('Play', st.play,
+      r.playNet > 0 ? odds([1, 1]) : r.playNet < 0 ? 'lost' : 'tie',
+      r.playNet);
+    rows += row('Trips', st.trips,
+      r.tripsPay ? odds(r.tripsPay) : 'lost',
+      r.trips);
+    if (!rows) return '';
+    var cls = r.total > 0 ? 'win' : r.total < 0 ? 'lose' : 'push';
+    rows += '<div class="lrow net"><span class="lb">Net</span><span class="ls"></span>'
+      + '<span class="ln">' + money(r.staked) + ' at stake</span>'
+      + '<span class="lv ' + cls + '">' + (r.total ? money(r.total, true) : 'even') + '</span></div>';
+    return '<div class="ledger">' + rows + '</div>';
+  }
+
   function paintHead() {
     var head, sub = '';
     if (stage === 'bet') {

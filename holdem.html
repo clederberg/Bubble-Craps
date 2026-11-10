@@ -53,6 +53,20 @@
 .act.quiet{background:rgba(0,0,0,.3);color:var(--ink);box-shadow:inset 0 0 0 1px #3d6a54}
 .act.fold{background:rgba(0,0,0,.3);color:#ff9b8a;box-shadow:inset 0 0 0 1px rgba(201,36,31,.7)}
 .act:disabled{opacity:.45;cursor:default;box-shadow:none;transform:none}
+/* The settlement receipt, shown on the felt where the buttons were */
+.ledger{width:min(430px,100%);border:1px solid rgba(242,199,92,.3);border-radius:12px;
+  background:linear-gradient(180deg,rgba(0,0,0,.34),rgba(0,0,0,.16));padding:7px 11px}
+.lrow{display:grid;grid-template-columns:52px 72px 1fr auto;align-items:baseline;gap:8px;
+  font-size:12px;padding:3px 0;color:var(--ink-2)}
+.lrow + .lrow{border-top:1px solid rgba(255,255,255,.06)}
+.lrow .lb{font:600 11px Oswald,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:var(--ink)}
+.lrow .ls{font-variant-numeric:tabular-nums;color:var(--ink-3)}
+.lrow .ln{color:var(--ink-3);font-size:11px}
+.lrow .lv{font-weight:700;font-variant-numeric:tabular-nums;justify-self:end}
+.lrow .lv.win{color:var(--win)}.lrow .lv.lose{color:var(--lose)}.lrow .lv.push{color:var(--ink-3)}
+.lrow.net{border-top:1px solid rgba(242,199,92,.4);margin-top:2px;padding-top:5px}
+.lrow.net .lb{color:var(--gold)}
+.lrow.net .lv{font-size:14px}
 .uth-pays{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin:12px 0 0}
 .paytable{flex:0 1 230px;border:1px solid rgba(242,199,92,.35);border-radius:12px;padding:9px 12px;
   background:linear-gradient(180deg,rgba(0,0,0,.3),rgba(0,0,0,.14))}
@@ -92,6 +106,9 @@
   .circle.side{width:38px;height:38px;font-size:7px;padding-top:7px}
   .circle .amt{font-size:9px;padding:0 5px;bottom:-6px}
   .acts{margin-top:9px;min-height:0}
+  .ledger{padding:4px 9px;width:min(390px,100%)}
+  .lrow{font-size:10px;gap:6px;padding:1px 0;grid-template-columns:44px 62px 1fr auto}
+  .lrow .lb{font-size:9px}.lrow .ln{font-size:9px}.lrow.net .lv{font-size:12px}
   .act{height:33px;font-size:11px;padding:0 12px}
 }
 </style>
