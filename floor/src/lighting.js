@@ -20,7 +20,7 @@ function pendant(M, x, z, colour) {
   shade.position.y = SHADE_Y;
   shade.castShadow = true;
   g.add(shade);
-  const glow = new THREE.Mesh(new THREE.CircleGeometry(0.54, 28), M.emissive(colour, 3.4));
+  const glow = new THREE.Mesh(new THREE.CircleGeometry(0.54, 28), M.emissive(colour, 2.2));
   glow.rotation.x = Math.PI / 2;
   glow.position.y = SHADE_Y - 0.2;
   g.add(glow);
@@ -47,7 +47,9 @@ export function buildLighting(scene, renderer, M) {
    [0, 3.6, 0xffd7a0, false], [6.4, 3.3, 0xffd7a0, false]].forEach(([x, z, c, cast], i) => {
     L.add(pendant(M, x, z, c));
     /* bright and tight: the pool of light on the felt is the whole look of a pit */
-    const s = new THREE.SpotLight(c, 95, 12, 0.52, 0.45, 1.5);
+    /* bright enough to pool on the cloth, not so bright it washes the
+       layout off it */
+    const s = new THREE.SpotLight(c, 42, 11, 0.6, 0.55, 1.6);
     s.position.set(x, SHADE_Y - 0.26, z);
     s.target.position.set(x, 0, z);
     if (cast) {
@@ -79,8 +81,8 @@ export function buildLighting(scene, renderer, M) {
   const cageL = new THREE.PointLight(0xffc98a, 9, 12, 2);
   cageL.position.set(0, 3.0, -ROOM.d / 2 + 2.6);
   L.add(cageL);
-  const barL = new THREE.PointLight(0x7fe8ff, 8, 12, 2);
-  barL.position.set(0, 2.6, ROOM.d / 2 - 2.8);
+  const barL = new THREE.PointLight(0xbfe4ff, 12, 14, 2);
+  barL.position.set(0, 2.9, ROOM.d / 2 - 2.6);
   L.add(barL);
 
   const fill = new THREE.PointLight(0xffb98a, 20, 40, 1.6);

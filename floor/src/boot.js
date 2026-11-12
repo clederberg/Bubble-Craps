@@ -11,6 +11,7 @@ import { buildMaterials } from './materials.js';
 import { buildRoom, ROOM } from './room.js';
 import { buildFixtures } from './fixtures.js';
 import { createScreens } from './attract.js';
+import { createSportsbook } from './sportsbook.js';
 import { animateDealers } from './props.js';
 import { buildLighting } from './lighting.js';
 import { createPlayer } from './player.js';
@@ -37,7 +38,7 @@ async function start() {
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.05;
+  renderer.toneMappingExposure = 0.95;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   app.renderer = renderer;
 
@@ -64,7 +65,8 @@ async function start() {
   setStatus('Setting the tables', 0.6);
   await frame();
   const screens = createScreens();
-  const fixtures = buildFixtures(scene, M, solids, screens);
+  const book = createSportsbook(6);
+  const fixtures = buildFixtures(scene, M, solids, screens, book);
   app.screens = screens;
 
   setStatus('Turning on the lights', 0.8);
@@ -112,6 +114,7 @@ async function start() {
     player.update(dt);
     seating.update(dt);
     screens.update(dt);
+    book.update(dt);
     animateDealers(fixtures.userData.dealers, now);
     composer.render();
     fpsT += dt; fpsN++;

@@ -39,7 +39,7 @@ let chipGeo = null;
 /* A stack of chips. `n` high, in one denomination, with a little wobble so it
    does not look machined. */
 export function chipStack(denom, n, x, y, z) {
-  if (!chipGeo) chipGeo = new THREE.CylinderGeometry(0.0195, 0.0195, 0.0032, 20);
+  if (!chipGeo) chipGeo = new THREE.CylinderGeometry(0.0185, 0.0185, 0.0031, 18);
   const g = new THREE.Group();
   for (let i = 0; i < n; i++) {
     const m = new THREE.Mesh(chipGeo, chipMaterial(denom));
@@ -52,17 +52,16 @@ export function chipStack(denom, n, x, y, z) {
   return g;
 }
 /* A tray of them, the way a dealer's rack looks: rows by denomination. */
-export function chipRack(x, y, z, rot = 0) {
+/* The dealer's rack: one row deep, sunk into a tray, so it sits at the edge of
+   the layout the way a real one does instead of covering it. */
+export function chipRack(x, y, z, rot = 0, rows = [1000, 500, 100, 25, 5]) {
   const g = new THREE.Group();
-  const rows = [1000, 500, 100, 25, 5];
   rows.forEach((d, i) => {
-    for (let k = 0; k < 3; k++) {
-      g.add(chipStack(d, 9 + Math.floor(Math.random() * 7), (i - 2) * 0.055, 0, (k - 1) * 0.05));
-    }
+    g.add(chipStack(d, 8 + Math.floor(Math.random() * 6), (i - (rows.length - 1) / 2) * 0.045, 0.004, 0));
   });
-  const tray = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.03, 0.2),
+  const tray = new THREE.Mesh(new THREE.BoxGeometry(rows.length * 0.05 + 0.03, 0.028, 0.07),
     new THREE.MeshStandardMaterial({ color: 0x14131a, roughness: 0.5, metalness: 0.4 }));
-  tray.position.y = -0.012;
+  tray.position.y = -0.01;
   tray.receiveShadow = true;
   g.add(tray);
   g.position.set(x, y, z);
@@ -132,62 +131,103 @@ export function cards(x, y, z, n, rot = 0) {
   return g;
 }
 
-/* ---------------- the dealer ----------------
-   A figure, not a portrait: dark trousers, white shirt, a house waistcoat and
-   a bow tie, hands resting on the table. It breathes and shifts its weight,
-   which is most of what makes a standing figure look alive. */
-export function dealer(x, z, facing) {
-  const g = new THREE.Group();
-  const skin = new THREE.MeshStandardMaterial({ color: 0x7a543e, roughness: 0.8 });
-  /* not white: a pit light blows a white shirt out to a blob */
-  const shirt = new THREE.MeshStandardMaterial({ color: 0xa9a294, roughness: 0.9 });
-  const vest = new THREE.MeshStandardMaterial({ color: 0x3d0f1f, roughness: 0.7 });
-  const trouser = new THREE.MeshStandardMaterial({ color: 0x14121a, roughness: 0.85 });
-  const hair = new THREE.MeshStandardMaterial({ color: 0x14100e, roughness: 0.9 });
+/* ---------------- people ----------------
+   One figure, dressed two ways. Dealers wear the house waistcoat; everyone
+   else gets a shirt or a jacket out of a small wardrobe. No faces: at pit
+   light a bad face reads far worse than none, and these are meant to be the
+   crowd, not characters.  */
+const SKINS = [0x7a543e, 0x5c3b28, 0x9a7254, 0x3e2a1e, 0xb08a68];
+const HAIRS = [0x14100e, 0x2e1c10, 0x5a4530, 0x8a8a8a, 0x1a1a1a];
+const OUTFITS = [
+  { top: 0x2a3a5a, trouser: 0x1b1b24 }, { top: 0x6b2030, trouser: 0x24202a },
+  { top: 0x1f4a3a, trouser: 0x15151c }, { top: 0xb0a890, trouser: 0x33302c },
+  { top: 0x3a2a4a, trouser: 0x1a1620 }, { top: 0x8a5a2a, trouser: 0x201c18 },
+  { top: 0x202028, trouser: 0x202028 }, { top: 0xa83f4a, trouser: 0x2a2630 }
+];
 
+function figure(opt) {
+  const g = new THREE.Group();
+  const skin = new THREE.MeshStandardMaterial({ color: opt.skin, roughness: 0.8 });
+  const top = new THREE.MeshStandardMaterial({ color: opt.top, roughness: 0.85 });
+  const trouser = new THREE.MeshStandardMaterial({ color: opt.trouser, roughness: 0.88 });
+  const hair = new THREE.MeshStandardMaterial({ color: opt.hair, roughness: 0.9 });
   const body = new THREE.Group();
-  const legs = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.19, 0.86, 14), trouser);
-  legs.position.y = 0.43;
+  const sit = !!opt.sitting;
+  const hip = sit ? 0.52 : 0.86;          // a seated figure folds at the hip
+
+  const legs = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.19, hip, 14), trouser);
+  legs.position.y = hip / 2;
   body.add(legs);
-  const torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.19, 0.34, 6, 16), shirt);
-  torso.position.y = 1.12;
+  if (sit) {
+    /* thighs forward, so it reads as sat on the stool rather than sunk in it */
+    const thigh = new THREE.Mesh(new THREE.CapsuleGeometry(0.11, 0.3, 5, 10), trouser);
+    thigh.position.set(0, hip, 0.2);
+    thigh.rotation.x = Math.PI / 2;
+    body.add(thigh);
+  }
+  const torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.19, 0.34, 6, 16), top);
+  torso.position.y = hip + 0.26;
   body.add(torso);
-  const waist = new THREE.Mesh(new THREE.CylinderGeometry(0.202, 0.207, 0.56, 16), vest);
-  waist.position.y = 1.1;
-  body.add(waist);
-  const tie = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.035, 0.05), vest);
-  tie.position.set(0, 1.35, 0.17);
-  body.add(tie);
+  if (opt.vest) {
+    const waist = new THREE.Mesh(new THREE.CylinderGeometry(0.202, 0.207, 0.56, 16),
+      new THREE.MeshStandardMaterial({ color: opt.vest, roughness: 0.7 }));
+    waist.position.y = hip + 0.24;
+    body.add(waist);
+  }
   const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.065, 0.1, 10), skin);
-  neck.position.y = 1.41;
+  neck.position.y = hip + 0.55;
   body.add(neck);
   const head = new THREE.Mesh(new THREE.SphereGeometry(0.108, 20, 16), skin);
-  head.position.y = 1.53;
+  head.position.y = hip + 0.67;
   head.scale.set(0.92, 1.1, 1);
   body.add(head);
   const cap = new THREE.Mesh(new THREE.SphereGeometry(0.113, 18, 14, 0, Math.PI * 2, 0, Math.PI * 0.58), hair);
-  cap.position.y = 1.545;
+  cap.position.y = hip + 0.685;
   cap.scale.set(0.95, 1.05, 1.02);
   body.add(cap);
-  /* arms angled in towards the layout */
   [-1, 1].forEach(side => {
-    const arm = new THREE.Mesh(new THREE.CapsuleGeometry(0.052, 0.3, 5, 10), shirt);
-    arm.position.set(side * 0.22, 1.12, 0.03);
+    const arm = new THREE.Mesh(new THREE.CapsuleGeometry(0.052, 0.3, 5, 10), top);
+    arm.position.set(side * 0.22, hip + 0.26, 0.03);
     arm.rotation.set(-0.5, 0, side * 0.2);
     body.add(arm);
-    const fore = new THREE.Mesh(new THREE.CapsuleGeometry(0.046, 0.26, 5, 10), shirt);
-    fore.position.set(side * 0.27, 0.95, 0.26);
+    const fore = new THREE.Mesh(new THREE.CapsuleGeometry(0.046, 0.26, 5, 10), top);
+    fore.position.set(side * 0.27, hip + 0.09, 0.26);
     fore.rotation.set(-1.15, 0, side * 0.1);
     body.add(fore);
     const hand = new THREE.Mesh(new THREE.SphereGeometry(0.052, 12, 10), skin);
-    hand.position.set(side * 0.29, 0.9, 0.41);
+    hand.position.set(side * 0.29, hip + 0.04, 0.41);
     body.add(hand);
   });
   body.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
   g.add(body);
+  g.userData.anim = { body, seed: Math.random() * 10 };
+  return g;
+}
+
+export function dealer(x, z, facing) {
+  const g = figure({
+    skin: SKINS[Math.floor(Math.random() * SKINS.length)],
+    hair: HAIRS[Math.floor(Math.random() * HAIRS.length)],
+    top: 0xa9a294, trouser: 0x14121a, vest: 0x3d0f1f
+  });
   g.position.set(x, 0, z);
   g.rotation.y = facing;
-  g.userData.anim = { body, seed: Math.random() * 10 };
+  return g;
+}
+
+/* someone playing: standing at a rail, or sat on a stool */
+export function patron(x, z, facing, sitting) {
+  const o = OUTFITS[Math.floor(Math.random() * OUTFITS.length)];
+  const g = figure({
+    skin: SKINS[Math.floor(Math.random() * SKINS.length)],
+    hair: HAIRS[Math.floor(Math.random() * HAIRS.length)],
+    top: o.top, trouser: o.trouser, sitting: sitting
+  });
+  g.position.set(x, 0, z);
+  g.rotation.y = facing + (Math.random() - 0.5) * 0.18;
+  g.scale.setScalar(0.94 + Math.random() * 0.12);
+  /* a punter must never get between you and the game you are trying to click */
+  g.traverse(o => { o.raycast = () => {}; });
   return g;
 }
 
@@ -200,4 +240,64 @@ export function animateDealers(list, t) {
     a.body.rotation.y = Math.sin(t * 0.42 + a.seed * 2) * 0.05;
     a.body.rotation.z = Math.sin(t * 0.33 + a.seed) * 0.012;
   });
+}
+
+/* ---------------- back bar ----------------
+   A row of bottles in assorted shapes and colours, and a rack of glasses.
+   Thin glass is expensive to render properly, so these are coloured solids
+   with a low roughness, lit from under the shelf, which is how a back bar
+   reads anyway. */
+const BOTTLE_COLOURS = [0x6b3410, 0x9a6a1a, 0x2a5a2a, 0x7a1830, 0xd8d2c0, 0x1a2a4a, 0x8a4a10, 0x3a1a4a];
+let bottleGeos = null;
+export function bottles(width, y, z, n) {
+  if (!bottleGeos) {
+    bottleGeos = [
+      new THREE.CylinderGeometry(0.035, 0.038, 0.2, 10),
+      new THREE.CylinderGeometry(0.03, 0.042, 0.24, 10),
+      new THREE.CylinderGeometry(0.04, 0.04, 0.16, 8)
+    ];
+  }
+  const g = new THREE.Group();
+  for (let i = 0; i < n; i++) {
+    const k = Math.floor(Math.random() * bottleGeos.length);
+    const col = BOTTLE_COLOURS[Math.floor(Math.random() * BOTTLE_COLOURS.length)];
+    const mat = new THREE.MeshStandardMaterial({
+      color: col, roughness: 0.12, metalness: 0.05, transparent: true, opacity: 0.93
+    });
+    const b = new THREE.Mesh(bottleGeos[k], mat);
+    const h = bottleGeos[k].parameters.height;
+    b.position.set(-width / 2 + (width / (n - 1)) * i + (Math.random() - 0.5) * 0.02, h / 2, (Math.random() - 0.5) * 0.07);
+    b.castShadow = true;
+    g.add(b);
+    /* neck and cap */
+    const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.016, 0.09, 8), mat);
+    neck.position.set(b.position.x, h + 0.045, b.position.z);
+    g.add(neck);
+    const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.016, 0.02, 8),
+      new THREE.MeshStandardMaterial({ color: 0x1a1a20, roughness: 0.5, metalness: 0.6 }));
+    cap.position.set(b.position.x, h + 0.1, b.position.z);
+    g.add(cap);
+    /* the label catches the shelf light */
+    const lab = new THREE.Mesh(new THREE.CylinderGeometry(0.0385, 0.0385, 0.07, 10, 1, true),
+      new THREE.MeshStandardMaterial({ color: 0xe8dcc0, roughness: 0.8, side: THREE.DoubleSide }));
+    lab.position.set(b.position.x, h * 0.45, b.position.z);
+    g.add(lab);
+  }
+  g.position.set(0, y, z);
+  return g;
+}
+export function glassware(x, y, z) {
+  const g = new THREE.Group();
+  const mat = new THREE.MeshPhysicalMaterial({
+    color: 0xdfeef0, roughness: 0.05, metalness: 0, transparent: true, opacity: 0.35, clearcoat: 1
+  });
+  for (let r = 0; r < 2; r++) {
+    for (let i = 0; i < 5; i++) {
+      const tum = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.03, 0.1, 12), mat);
+      tum.position.set(i * 0.08, 0.05, r * 0.08);
+      g.add(tum);
+    }
+  }
+  g.position.set(x, y, z);
+  return g;
 }

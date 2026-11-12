@@ -94,17 +94,53 @@ export function createSeating(camera, scene, player, dom) {
 
   /* the page only loads when you actually sit down, and unloads when you get
      up, so six games are not running behind your back */
+  /* The frame is always handed a 1440 x 980 window and then scaled, so every
+     game gets the desktop layout it was built for whatever size the panel
+     ends up. */
+  const LOGICAL = { w: 1440, h: 980 };
+  function fitPanel() {
+    if (!panel || !panel.classList.contains('on')) return;
+    const view = panel.querySelector('.panel-view');
+    if (!view) return;
+    const r = view.getBoundingClientRect();
+    const k = Math.min(r.width / LOGICAL.w, r.height / LOGICAL.h);
+    panelFrame.style.transform = 'translate(' + ((r.width - LOGICAL.w * k) / 2).toFixed(1) + 'px,'
+      + ((r.height - LOGICAL.h * k) / 2).toFixed(1) + 'px) scale(' + k.toFixed(4) + ')';
+  }
+  /* put the panel over the thing you sat at, not in the middle of the screen */
+  function anchorPanel(obj) {
+    if (!panel || !obj) return;
+    const g = obj.userData.game;
+    const p = new THREE.Vector3(g.seat.look[0], g.seat.look[1], g.seat.look[2]).applyMatrix4(obj.matrixWorld);
+    p.project(camera);
+    const w = panel.offsetWidth, h = panel.offsetHeight;
+    const px = (p.x * 0.5 + 0.5) * innerWidth;
+    const py = (-p.y * 0.5 + 0.5) * innerHeight;
+    const x = Math.max(w / 2 + 10, Math.min(innerWidth - w / 2 - 10, px));
+    const y = Math.max(h / 2 + 10, Math.min(innerHeight - h / 2 - 10, py));
+    panel.style.setProperty('--ax', x + 'px');
+    panel.style.setProperty('--ay', y + 'px');
+    panel.classList.add('anchored');
+  }
   function openPanel(obj) {
     if (!panel || !obj) return;
     const url = PAGES[obj.userData.game.id];
     if (!url) return;
     panelFrame.src = url;
     panel.classList.add('on');
+    /* the panel carries its own title and leave button, so the HUD one would
+       only sit underneath it saying the same thing twice */
+    if (seatedBar) seatedBar.classList.remove('on');
     document.body.classList.add('dimmed');
+    anchorPanel(obj);
+    fitPanel();
+    requestAnimationFrame(fitPanel);
   }
+  addEventListener('resize', () => { fitPanel(); if (current) anchorPanel(current); });
   function closePanel() {
     if (!panel) return;
     panel.classList.remove('on');
+    panel.classList.remove('anchored');
     document.body.classList.remove('dimmed');
     setTimeout(() => { if (state !== 'seated') panelFrame.src = 'about:blank'; }, 480);
   }
@@ -123,6 +159,7 @@ export function createSeating(camera, scene, player, dom) {
   return {
     get state() { return state; },
     get table() { return current; },
+    sit, stand,
     update(dt) {
       if (state === 'walking') {
         if (!player.locked) { setHover(null); return; }
