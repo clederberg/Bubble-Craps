@@ -82,6 +82,21 @@ html,body{margin:0;height:100%;background:#08040a;color:#f3ece2;font-family:Inte
    was left over is what threw the spacing out. */
 .panel iframe{position:absolute;left:0;top:0;width:1440px;height:980px;border:0;background:#0a1510;
   transform-origin:0 0;will-change:transform}
+/* ---- played on the cabinet ----
+   No window, no chrome: the frame is handed its 1440x980 and a perspective
+   transform drops it onto the machine's glass. Transitions are off because
+   the transform is rewritten every frame. */
+.panel.glass{left:0;top:0;width:1440px;height:980px;border:0;border-radius:0;
+  background:transparent;box-shadow:none;overflow:visible;transform-origin:0 0;
+  transition:none;opacity:0;pointer-events:none}
+/* opaque the moment it lands: the transform is rewritten every frame, so a
+   fade here only shows the attract art through the page */
+.panel.glass.on{pointer-events:auto;transform:none;opacity:1}
+.panel.glass .panel-bar{display:none}
+.panel.glass .panel-view{width:1440px;height:980px;flex:none;overflow:hidden;
+  box-shadow:0 0 70px rgba(255,190,110,.3)}
+.panel.glass iframe{transform:none}
+
 /* the room dims behind the screen rather than disappearing */
 .dimmed #view{filter:brightness(.62) saturate(.9)}
 #view{transition:filter .45s ease}
