@@ -80,6 +80,18 @@
     K.play('lay', 0, 0.7);
     K.save(); render();
   }
+  /* Right-click (or long-press) pulls one chip back off a spot, so a bet can be
+     trimmed without clearing the whole table. */
+  function takeFrom(spot) {
+    if (!canBet()) return;
+    var cur = spot === 'ante' ? S.uthAnte : S.uthTrips;
+    if (!cur) return;
+    var off = Math.min(S.chip || 500, cur);
+    if (spot === 'ante') { S.uthAnte -= off; K.addBank(off * 2); }
+    else { S.uthTrips -= off; K.addBank(off); }
+    K.play('handle', 0, 0.55);
+    K.save(); render();
+  }
   function clearBets() {
     if (!canBet()) return;
     K.addBank(S.uthAnte * 2 + S.uthTrips);
@@ -238,8 +250,17 @@
     var bar = $('shoeBar'); if (bar) bar.style.width = Math.round(K.remaining(shoe) / 52 * 100) + '%';
     $('deal').textContent = stage === 'done' ? 'NEXT HAND' : 'DEAL';
     $('deal').disabled = busy || (stage !== 'bet' && stage !== 'done');
+    paintChips();
     paintActs();
     paintHead();
+  }
+  /* The rail is redrawn whenever the selection changes; drawing it once at
+     startup left the ring stuck on whichever chip was selected back then. */
+  function paintChips() {
+    var el = $('chips');
+    if (el.__chip === S.chip) return;
+    el.__chip = S.chip;
+    K.renderChips(el, S.chip, function (c) { S.chip = c; K.save(); K.play('lay', 0, 0.4); render(); });
   }
   function paintSpot(id, amount, live) {
     var el = $(id);
@@ -338,9 +359,9 @@
 
   /* ---------- wiring ---------- */
   $('nav').innerHTML = K.nav('hold’em');
-  K.renderChips($('chips'), S.chip, function (c) { S.chip = c; K.save(); K.play('lay', 0, 0.4); render(); });
   document.querySelectorAll('[data-spot]').forEach(function (el) {
     el.addEventListener('click', function () { addTo(el.dataset.spot); });
+    el.addEventListener('contextmenu', function (e) { e.preventDefault(); takeFrom(el.dataset.spot); });
   });
   $('acts').addEventListener('click', function (e) {
     var b = e.target.closest('[data-act]');

@@ -403,4 +403,69 @@ for (const mode of ['craps','crapless']) { const t=C.newTable(mode); let bank=1e
   eq(t.comeOddsHeld, 0, 'orphaned odds are not left held');
   eq(r.back, 5000, 'they come back instead');
 }
-console.log('all passed', n, 'asserts + 400k sim rolls');
+
+/* ---- come odds, audited against an independent oracle ------------------- */
+{
+  /* The unit tests above check the come-odds path by hand. This walks it
+     randomly with the bets set to ride, and checks two things on every roll:
+     that no money is created or destroyed, and that what the engine paid
+     matches a payout re-derived from the table as it stood before the roll. */
+  const TR = { 2:[6,1], 12:[6,1], 3:[3,1], 11:[3,1], 4:[2,1], 10:[2,1], 5:[3,2], 9:[3,2], 6:[6,5], 8:[6,5] };
+  const times = (c, r) => Math.floor(c * r[0] / r[1]);
+  const die = () => 1 + Math.floor(Math.random() * 6);
+  let rolls = 0, audited = 0;
+  for (const mode of ['craps', 'crapless']) {
+    const pts = C.MODES[mode].points, dont = C.MODES[mode].dont;
+    const t = C.newTable(mode); t.keepCome = true;
+    let bank = 1e9;
+    for (let i = 0; i < 60000; i++) {
+      for (let j = 0; j < 2; j++) {
+        const k = Math.random() < 0.5 ? 'come'
+          : Math.random() < 0.7 ? 'comeOdds:' + pts[Math.floor(Math.random() * pts.length)]
+          : ['pass', 'passOdds', 'dc', 'field'][Math.floor(Math.random() * 4)];
+        const a = C.add(t, k, 100 * (1 + Math.floor(Math.random() * 30)));
+        if (a.ok) bank -= a.added;
+      }
+      if (Math.random() < 0.02) bank += C.removeAll(t);
+      if (Math.random() < 0.02) t.keepCome = !t.keepCome;
+      if (Math.random() < 0.05 && t.bets.come) delete t.bets.come;   // taken down by hand
+
+      const was = { bets: Object.assign({}, t.bets), point: t.point, held: t.comeOddsHeld || 0, keep: t.keepCome };
+      const total = bank + C.onTable(t);
+      const d1 = die(), d2 = die(), s = d1 + d2;
+      const r = C.roll(t, d1, d2);
+      bank += r.back;
+      assert.strictEqual(bank + C.onTable(t) - total, r.net, 'come odds conservation ' + JSON.stringify({ was, s, r }));
+      rolls++;
+
+      let want = 0;
+      for (const num of pts) {
+        const flat = was.bets['comeOn:' + num] || 0, odds = was.bets['comeOdds:' + num] || 0;
+        if (!flat) continue;
+        const oddsLive = was.point !== null;          // come odds sit off on the come-out
+        if (s === num) {
+          want += flat + (was.keep ? 0 : flat);
+          if (odds) want += oddsLive ? times(odds, TR[num]) + (was.keep ? 0 : odds) : odds;
+        } else if (s === 7 && odds && !oddsLive) want += odds;
+      }
+      const box = was.bets.come || 0;
+      const boxWins = dont ? (s === 7 || s === 11) : s === 7;
+      const boxLoses = dont && (s === 2 || s === 3 || s === 12);
+      if (box && boxWins) want += box + (was.keep ? 0 : box);
+      if (was.held) {
+        if (!box) want += was.held;                                  // nothing left to ride with
+        else if (boxWins) want += was.keep ? 0 : was.held;
+        else if (boxLoses) want += was.held;
+        else want += Math.max(0, was.held - box * (C.MODES[mode].odds[s] || 0));
+      }
+      if (!Object.keys(was.bets).some(k => !/^come/.test(k))) {
+        assert.strictEqual(r.back, want, 'come payout ' + JSON.stringify({ was, s, ev: r.ev, back: r.back, want }));
+        audited++;
+      }
+      n += 2;
+    }
+  }
+  assert.ok(audited > rolls / 4, 'the oracle should see a good share of the rolls');
+}
+
+console.log('all passed', n, 'asserts + 520k sim rolls');
