@@ -74,6 +74,25 @@
 .ledger span.tot{border-color:rgba(107,227,148,.6);color:#9ef0bd}
 .ledger span.tot.down{border-color:rgba(214,99,90,.6);color:#ffb0a6}
 
+/* On a table terminal this page has far more room than it needs, so the table
+   grows into it instead of sitting in the top half of a green field: the
+   column fills down to the dock, the felt takes what is left, and the wheel
+   and cloth are given the extra width. */
+html.framed body{padding-bottom:96px}
+html.framed body > .wrap{max-width:1380px;min-height:calc(100vh - 96px);display:flex;flex-direction:column}
+html.framed body > .wrap > .rail{flex:1 1 auto;display:flex;flex-direction:column;min-height:0}
+html.framed .rail > .felt{flex:1 1 auto;display:flex;flex-direction:column;justify-content:center}
+/* the wheel column is square and the cloth is not, so sizing the wheel to
+   (width - gap) / 3.37 makes the two come out the same height and the felt is
+   filled rather than half used */
+html.framed .tablewrap{grid-template-columns:minmax(300px,392px) minmax(0,1fr);gap:28px;align-items:center}
+html.framed .wheel{max-width:392px}
+html.framed .history{max-width:392px}
+html.framed .hint{display:none}
+html.framed .num-t{font-size:30px}
+html.framed .out-t{font-size:19px}
+html.framed .out-t.sm{font-size:16px}
+
 @media (max-width:900px){
   .tablewrap{grid-template-columns:1fr;gap:12px}
   .wheelbox{flex-direction:row;flex-wrap:wrap;justify-content:center}
