@@ -13,7 +13,7 @@ function box(w, h, d, mat, x, y, z, cast = true, receive = true) {
   return m;
 }
 
-export function buildRoom(scene, M) {
+export function buildRoom(scene, M, solids) {
   const room = new THREE.Group();
   room.name = 'room';
   const { w, d, h } = ROOM;
@@ -125,7 +125,10 @@ export function buildRoom(scene, M) {
     return g;
   };
   const cx = ROOM.pit.w / 2 + 2.6, cz = ROOM.pit.d / 2 + 2.2;
-  [[-cx, -cz], [cx, -cz], [-cx, cz], [cx, cz]].forEach(([x, z]) => room.add(colAt(x, z)));
+  [[-cx, -cz], [cx, -cz], [-cx, cz], [cx, cz]].forEach(([x, z]) => {
+    room.add(colAt(x, z));
+    if (solids) solids.add(x, z, 0.55, 0.55, 0, 'column');
+  });
 
   scene.add(room);
   return room;

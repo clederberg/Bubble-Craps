@@ -4,12 +4,18 @@ A first person casino floor for Bubble Craps. Three.js, static files, no build
 step needed to run it: the page loads `index.html`, `floor.css` and
 `floor.bundle.js` and nothing else.
 
-Open `floor/index.html`. Click once to catch the mouse, then **W A S D** to
-walk, mouse to look, **shift** to hurry, **F** to fly, **esc** to let go.
+Open `floor/index.html`, or the **Floor** link in the game bar. Click once to
+catch the mouse, then **W A S D** or the **arrow keys** to walk, mouse to look,
+**shift** to hurry, **F** to fly, **esc** to let the mouse go.
 
-## What is here (step 1)
+Walk up to any table or machine and it names itself. Click to sit: the camera
+walks you into the seat and the table's own page comes up on a screen in front
+of you, sharing the same bankroll as the flat site. **Q** or the button stands
+you back up, where you were, facing where you were.
 
-The room, the lighting and the materials.
+## What is here (steps 1 and 2)
+
+The room, the lighting, the materials, walking, and sitting down to play.
 
 - **Room:** 36 x 28 metres, a sunken pit in the middle with a brass nosed step
   and a waist high rail, four marble columns, panelled walls with a walnut
@@ -24,6 +30,15 @@ The room, the lighting and the materials.
   wash, coloured fill down the slot aisles, and a lot of emissive geometry that
   the bloom pass turns into glow. ACES tone mapping, soft shadows, a little
   haze so the far wall sits back.
+- **Walking:** you are a circle that slides along anything solid, the walls,
+  the rail, the tables, the machines, the columns, the bar and the cage. The
+  carpet steps down into the pit and back up again, and the head rises and
+  falls a little with the stride.
+- **Sitting:** the crosshair casts into the room, a game under it lights up and
+  names itself, and a click hands the camera to a tween into the seated pose.
+  Until the 3D tables are built, the seat opens that game's existing page in a
+  frame, which is the same origin, so the bankroll, the chips and the rules are
+  all the real ones.
 - **Materials:** every surface is generated at load from value noise into a
   canvas, with the normal map derived from the same height field. Carpet with
   a proper repeating medallion, walnut with warped grain, marble with veins,
@@ -67,9 +82,9 @@ Only needed if you edit `src/`.
 
 ## Next
 
-2. Walking with collision, and the click to sit camera move
-3. Craps in 3D: physics dice, chips, the layout on the felt
-4. Blackjack, baccarat and the two slots
+3. Craps in 3D: physics dice, chips, the layout on the felt, replacing the
+   framed page at that one seat
+4. Blackjack, baccarat and the slots the same way
 5. Sound and polish
 
 The rules stay where they are. `engine.js`, `bj.js`, `bac.js`, `slots.js` and

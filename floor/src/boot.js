@@ -11,7 +11,9 @@ import { buildMaterials } from './materials.js';
 import { buildRoom, ROOM } from './room.js';
 import { buildFixtures } from './fixtures.js';
 import { buildLighting } from './lighting.js';
-import { createFlyCamera } from './camera.js';
+import { createPlayer } from './player.js';
+import { createSeating } from './sit.js';
+import { Solids } from './collide.js';
 
 const app = {};
 window.CASINO = app;
@@ -54,11 +56,12 @@ async function start() {
 
   setStatus('Building the room', 0.4);
   await frame();
-  buildRoom(scene, M);
+  const solids = new Solids().addRoom(ROOM.w, ROOM.d);
+  buildRoom(scene, M, solids);
 
   setStatus('Setting the tables', 0.6);
   await frame();
-  buildFixtures(scene, M);
+  buildFixtures(scene, M, solids);
 
   setStatus('Turning on the lights', 0.8);
   await frame();
@@ -77,8 +80,11 @@ async function start() {
   app.composer = composer;
   app.bloom = bloom;
 
-  const fly = createFlyCamera(camera, canvas);
-  app.fly = fly;
+  scene.updateMatrixWorld(true);
+  const player = createPlayer(camera, canvas, solids);
+  const seating = createSeating(camera, scene, player, canvas);
+  app.player = player;
+  app.seating = seating;
 
   addEventListener('resize', () => {
     camera.aspect = innerWidth / innerHeight;
@@ -96,7 +102,8 @@ async function start() {
   let fpsT = 0, fpsN = 0;
   renderer.setAnimationLoop(() => {
     const dt = Math.min(0.05, clock.getDelta());
-    fly.update(dt);
+    player.update(dt);
+    seating.update(dt);
     composer.render();
     fpsT += dt; fpsN++;
     if (fpsT > 0.5) {

@@ -24,12 +24,26 @@
 
 <div id="hud" class="hidden">
   <div class="crosshair"></div>
+  <div class="prompt" id="prompt"></div>
   <div class="keys">
-    <b>W A S D</b> walk <span>&middot;</span> <b>mouse</b> look <span>&middot;</span> <b>shift</b> hurry
-    <span>&middot;</span> <b>F</b> fly <span>&middot;</span> <b>esc</b> release the mouse
+    <b>W A S D</b> or <b>arrows</b> walk <span>&middot;</span> <b>mouse</b> look <span>&middot;</span> <b>shift</b> hurry
+    <span>&middot;</span> <b>click</b> a game to play <span>&middot;</span> <b>F</b> fly
+  </div>
+  <div class="seated" id="seated">
+    <b id="seatedName">Craps</b>
+    <button id="leave">Leave the table <i>Q</i></button>
   </div>
   <div class="corner"><a href="../index.html">Back to the tables</a> <i id="fps"></i></div>
   <div class="click-note" id="clickNote">Click to look around</div>
+</div>
+
+<div id="panel" class="panel">
+  <div class="panel-bar">
+    <span class="dot"></span>
+    <b id="panelName">Craps</b>
+    <button id="panelClose">Leave the table <i>Q</i></button>
+  </div>
+  <iframe id="panelFrame" title="game" allow="autoplay"></iframe>
 </div>
 
 <script type="module" src="floor.bundle.js"></script>

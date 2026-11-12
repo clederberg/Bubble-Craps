@@ -37,7 +37,7 @@ function contact(scene, x, z, rx, rz, strength = 0.55, y = 0.004) {
 /* ---------- the pit rail ----------
    Waist height, with a frosted panel between brass posts and a thin lit edge
    along the bottom, which is what you see glowing from across a floor. */
-function pitRail(M) {
+function pitRail(M, solids) {
   const g = new THREE.Group();
   const { w, d } = ROOM.pit;
   const H = 0.92;
@@ -72,6 +72,7 @@ function pitRail(M) {
     run.rotation.y = rot;
     run.position.set(x + (rot ? 0 : off), 0, z + (rot ? off : 0));
     g.add(run);
+    if (solids) solids.add(run.position.x, run.position.z, len / 2, 0.09, rot, 'rail');
   });
   return g;
 }
@@ -203,16 +204,17 @@ function slotMachine(M, hue) {
   return g;
 }
 
-export function buildFixtures(scene, M) {
+export function buildFixtures(scene, M, solids) {
   const F = new THREE.Group();
   F.name = 'fixtures';
-  F.add(pitRail(M));
+  F.add(pitRail(M, solids));
 
   /* craps in the middle of the pit, the card games either side of it */
   const craps = crapsTable(M);
   craps.position.set(0, -ROOM.pit.drop, 0);
-  craps.userData.game = { id: 'craps', seat: { x: 0, y: 1.25, z: 2.1, look: [0, 0.95, 0] } };
+  craps.userData.game = { id: 'craps', seat: { x: 0, y: 1.42, z: 1.35, look: [0, 0.82, -0.2] } };
   F.add(craps);
+  solids.add(0, 0, 2.0, 0.95, 0, 'craps');
   contact(scene, 0, 0, 5.4, 3.4, 0.6, -ROOM.pit.drop + 0.004);
 
   const places = [
@@ -224,8 +226,9 @@ export function buildFixtures(scene, M) {
     const t = cardTable(M, id);
     t.position.set(x, -ROOM.pit.drop, z);
     t.rotation.y = rot;
-    t.userData.game = { id, seat: { x: 0, y: 1.2, z: 1.9, look: [0, 0.85, 0] } };
+    t.userData.game = { id, seat: { x: 0, y: 1.22, z: 1.62, look: [0, 0.8, -0.1] } };
     F.add(t);
+    solids.add(x, z, 1.9, 1.6, rot, id);
     contact(scene, x, z, 4.2, 3.4, 0.5, -ROOM.pit.drop + 0.004);
   });
 
@@ -236,8 +239,9 @@ export function buildFixtures(scene, M) {
       const off = (i - (n - 1) / 2) * 0.86;
       m.position.set(x + Math.cos(rot) * off, 0, z - Math.sin(rot) * off);
       m.rotation.y = rot;
-      m.userData.game = { id: i % 2 ? 'lights' : 'pinball', seat: { x: 0, y: 1.25, z: 0.95, look: [0, 1.45, 0.2] } };
+      m.userData.game = { id: ['lights', 'purim', 'pinball'][i % 3], seat: { x: 0, y: 1.3, z: 0.82, look: [0, 1.5, 0.18] } };
       F.add(m);
+      solids.add(m.position.x, m.position.z, 0.44, 0.42, rot, 'slot');
     }
     contact(scene, x, z, n * 0.95, 2.4, 0.42);
   };
@@ -258,6 +262,7 @@ export function buildFixtures(scene, M) {
   cage.add(box(7.0, 0.03, 0.06, M.emissive(0xffd9a0, 1.0), 0, 1.18, 0.56, false, false));
   cage.position.set(0, 0, -ROOM.d / 2 + 1.4);
   F.add(cage);
+  solids.add(0, -ROOM.d / 2 + 1.4, 3.7, 0.8, 0, 'cage');
   contact(scene, 0, -ROOM.d / 2 + 1.4, 9, 3, 0.5);
 
   const bar = new THREE.Group();
@@ -280,6 +285,7 @@ export function buildFixtures(scene, M) {
   bar.position.set(0, 0, ROOM.d / 2 - 1.6);
   bar.rotation.y = Math.PI;
   F.add(bar);
+  solids.add(0, ROOM.d / 2 - 1.6, 4.2, 1.1, 0, 'bar');
   contact(scene, 0, ROOM.d / 2 - 1.6, 10, 3.4, 0.5);
 
   scene.add(F);
