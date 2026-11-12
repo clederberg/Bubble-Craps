@@ -4,6 +4,7 @@
    who stands there and breathes. At pit light levels that reads as a person,
    and a bad face would read worse than none. */
 import * as THREE from 'three';
+import { tune } from './materials.js';
 
 const CHIP_COLOURS = { 1: 0xf2efe6, 5: 0xc0392b, 25: 0x1f7a44, 100: 0x1b1b22, 500: 0x6b3fa0, 1000: 0xd4a62a };
 
@@ -22,8 +23,7 @@ function chipTexture(hex) {
     x.arc(s / 2, s / 2, s * 0.42, (i / 8) * Math.PI * 2, (i / 8) * Math.PI * 2 + 0.26);
     x.stroke();
   }
-  const t = new THREE.CanvasTexture(c);
-  t.colorSpace = THREE.SRGBColorSpace;
+  const t = tune(new THREE.CanvasTexture(c));
   return t;
 }
 const chipMats = {};
@@ -86,7 +86,7 @@ function dieTexture() {
     pips.forEach(([px, py]) => {
       x.beginPath(); x.arc(px * s, py * s, s * 0.09, 0, Math.PI * 2); x.fill();
     });
-    const t = new THREE.CanvasTexture(c);
+    const t = tune(new THREE.CanvasTexture(c));
     t.colorSpace = THREE.SRGBColorSpace;
     return new THREE.MeshStandardMaterial({ map: t, roughness: 0.28, metalness: 0 });
   });

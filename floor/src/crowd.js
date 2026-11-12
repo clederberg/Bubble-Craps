@@ -24,19 +24,24 @@ function floorAt(x, z) {
 /* the lane graph, in metres, laid out for ROOM 38 x 30 with the pit rail at
    x = +-11.2 and z = +-7.95 and gates in the middle of the long sides */
 const NODES = [
-  [-12.9, -10.6], [0, -10.6], [12.9, -10.6],      /*  0  1  2  back aisle   */
-  [12.9, 0], [12.9, 10.6], [0, 10.6],             /*  3  4  5             */
-  [-12.9, 10.6], [-12.9, 0],                      /*  6  7                */
-  [0, -8.8], [0, -6.0],                           /*  8  9  north gate    */
-  [-9.0, -6.0], [9.0, -6.0],                      /* 10 11                */
-  [-9.0, 0], [9.0, 0], [0, 0],                    /* 12 13 14  mid aisle  */
-  [-9.0, 6.2], [9.0, 6.2], [0, 6.4], [0, 8.8]     /* 15 16 17 18 south gate */
+  /* the side runs keep off x = +-12.9, which is where the columns stand */
+  [-11.9, -10.6], [0, -10.6], [11.9, -10.6],      /*  0  1  2  back aisle  */
+  [11.9, 0], [11.9, 10.6], [0, 10.6],             /*  3  4  5             */
+  [-11.9, 10.6], [-11.9, 0],                      /*  6  7                */
+  [0, -8.8], [0, -6.2],                           /*  8  9  north gate    */
+  [-9.2, -6.2], [9.2, -6.2],                      /* 10 11                */
+  [-9.2, 0], [9.2, 0],                            /* 12 13  the side runs */
+  [-9.2, 6.3], [9.2, 6.3], [0, 6.5], [0, 8.8],    /* 14 15 16 17 south gate */
+  [-4.9, -0.4], [4.9, -0.4]                       /* 18 19  behind the craps rails */
 ];
+/* Roulette stands in the middle of the pit now, so there is no crossing the
+   floor down the centre line any more: the two side runs are the way through. */
 const EDGES = [
   [0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 7], [7, 0],
-  [1, 8], [8, 9], [9, 10], [9, 11], [9, 14],
-  [10, 12], [11, 13], [12, 14], [13, 14],
-  [12, 15], [13, 16], [15, 17], [16, 17], [17, 18], [18, 5]
+  [1, 8], [8, 9], [9, 10], [9, 11],
+  [10, 12], [11, 13],
+  [12, 14], [13, 15], [14, 16], [15, 16], [16, 17], [17, 5],
+  [12, 18], [13, 19]
 ];
 
 function buildGraph() {
@@ -86,7 +91,7 @@ export function createCrowd(scene, spots, count) {
   /* Every place has a step-back point behind it, the spot you would stand on
      before taking it. Routing through that is what keeps people from cutting
      the corner of the table they are walking up to. */
-  const approach = spots.map(s => [
+  const approach = spots.map(s => s.gate || [
     s.x - Math.sin(s.facing) * 0.85,
     s.z - Math.cos(s.facing) * 0.85
   ]);

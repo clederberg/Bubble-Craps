@@ -25,7 +25,7 @@ export function createSeating(camera, scene, player, dom) {
     craps: '../index.html?mode=craps', crapless: '../index.html?mode=crapless',
     blackjack: '../blackjack.html', baccarat: '../baccarat.html',
     holdem: '../holdem.html', lights: '../lights.html', pinball: '../pinball.html',
-    purim: '../purim.html'
+    purim: '../purim.html', roulette: '../roulette.html'
   };
   const panel = document.getElementById('panel');
   const panelFrame = document.getElementById('panelFrame');
@@ -50,7 +50,7 @@ export function createSeating(camera, scene, player, dom) {
   }
   function label(obj) {
     const id = obj.userData.game.id;
-    return ({ craps: 'Craps', crapless: 'Crapless Craps', blackjack: 'Blackjack', baccarat: 'Baccarat', holdem: 'Hold\u2019em',
+    return ({ craps: 'Craps', crapless: 'Crapless Craps', roulette: 'Roulette', blackjack: 'Blackjack', baccarat: 'Baccarat', holdem: 'Hold\u2019em',
       lights: 'Festival of Lights', pinball: 'Pinball Classic', purim: 'Purim Pots' })[id] || id;
   }
   function setHover(obj) {

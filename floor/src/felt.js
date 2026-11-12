@@ -2,6 +2,7 @@
    as a real table mostly because of the line work on it, so this is where the
    realism comes from rather than from the geometry. */
 import * as THREE from 'three';
+import { tune } from './materials.js';
 
 const GREEN = '#0d4727', LINE = '#f4efdf', GOLD = '#e8c45f', RED = '#c0392b';
 
@@ -24,9 +25,7 @@ function felt(w, h) {
   return { c, x };
 }
 function textured(c, repeatY) {
-  const t = new THREE.CanvasTexture(c);
-  t.colorSpace = THREE.SRGBColorSpace;
-  t.anisotropy = 16;
+  const t = tune(new THREE.CanvasTexture(c));
   return t;
 }
 function label(x, text, cx, cy, size, colour = LINE, weight = 700, spacing = 2, font = 'Oswald, Arial') {
@@ -214,7 +213,179 @@ export function signTexture(text, colour) {
   const total = widths.reduce((a, b) => a + b, 0) - sp;
   let px = 256 - total / 2;
   chars.forEach((ch, i) => { x.fillText(ch, px + widths[i] / 2 - sp / 2, 68); px += widths[i]; });
-  const t = new THREE.CanvasTexture(c);
-  t.colorSpace = THREE.SRGBColorSpace;
+  const t = tune(new THREE.CanvasTexture(c));
   return t;
+}
+
+/* The roulette cloth. The table is long and narrow, with the wheel at the far
+   end, so the layout is drawn running away from the player: the zero and the
+   number grid along the length, the dozens and the even-money boxes beside
+   them, the way a real single-zero table reads from the seat. */
+export function rouletteLayout(american) {
+  const W = 900, H = 1800;
+  const { c, x } = felt(W, H);
+  const REDS = [1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36];
+  const isRed = n => REDS.indexOf(n) >= 0;
+
+  /* the grid runs up the cloth: twelve streets of three */
+  const left = 150, cw = 118, ch = 118;
+  const top = 250, zeroH = 150;
+  x.lineWidth = 4;
+  x.strokeStyle = LINE;
+
+  /* zero (and double zero) across the head of the grid */
+  const cell = (cx, cy, w, h, fill, text, size = 52) => {
+    x.fillStyle = fill;
+    x.fillRect(cx, cy, w, h);
+    x.strokeRect(cx, cy, w, h);
+    if (text != null) label(x, String(text), cx + w / 2, cy + h / 2, size, LINE, 700, 3);
+  };
+  if (american) {
+    cell(left, top - zeroH, cw * 1.5, zeroH, '#0e6b41', '0', 58);
+    cell(left + cw * 1.5, top - zeroH, cw * 1.5, zeroH, '#0e6b41', '00', 58);
+  } else {
+    cell(left, top - zeroH, cw * 3, zeroH, '#0e6b41', '0', 64);
+  }
+  for (let s = 0; s < 12; s++) {
+    for (let p = 0; p < 3; p++) {
+      const n = s * 3 + p + 1;
+      cell(left + p * cw, top + s * ch, cw, ch, isRed(n) ? '#a52f23' : '#1d1a23', n);
+    }
+  }
+  /* the dozens run beside the grid */
+  const dozX = left + cw * 3;
+  ['1st 12', '2nd 12', '3rd 12'].forEach((t, i) => {
+    const cy = top + i * ch * 4;
+    x.fillStyle = 'rgba(0,0,0,.25)';
+    x.fillRect(dozX, cy, cw, ch * 4);
+    x.strokeRect(dozX, cy, cw, ch * 4);
+    x.save();
+    x.translate(dozX + cw / 2, cy + ch * 2);
+    x.rotate(Math.PI / 2);
+    label(x, t.toUpperCase(), 0, 0, 40, LINE, 700, 6);
+    x.restore();
+  });
+  /* and the even-money boxes beside those */
+  const evX = dozX + cw;
+  const ev = ['1 to 18', 'EVEN', 'RED', 'BLACK', 'ODD', '19 to 36'];
+  ev.forEach((t, i) => {
+    const cy = top + i * ch * 2;
+    x.fillStyle = t === 'RED' ? '#a52f23' : t === 'BLACK' ? '#1d1a23' : 'rgba(0,0,0,.25)';
+    x.fillRect(evX, cy, cw, ch * 2);
+    x.strokeRect(evX, cy, cw, ch * 2);
+    x.save();
+    x.translate(evX + cw / 2, cy + ch);
+    x.rotate(Math.PI / 2);
+    label(x, t.toUpperCase(), 0, 0, 34, LINE, 700, 5);
+    x.restore();
+  });
+  /* the 2 to 1 column boxes at the foot */
+  for (let p = 0; p < 3; p++) {
+    cell(left + p * cw, top + 12 * ch, cw, ch * 0.78, 'rgba(0,0,0,.25)', null);
+    label(x, '2 TO 1', left + p * cw + cw / 2, top + 12 * ch + ch * 0.39, 30, LINE, 700, 4);
+  }
+  label(x, american ? 'AMERICAN ROULETTE' : 'ROULETTE', 72, H / 2, 44, GOLD, 700, 10);
+  label(x, 'C M L', 72, H / 2 + 300, 26, 'rgba(244,239,223,.45)', 600, 9, 'Cinzel, serif');
+  return textured(c);
+}
+
+/* The face of the wheel, seen from above: the pocket ring, the frets and the
+   numbers. Drawn rather than modelled, because thirty-seven little wedges of
+   geometry cost far more than one texture and look no better from a seat. */
+export function wheelFace(american) {
+  const S = 1024, c = document.createElement('canvas');
+  c.width = c.height = S;
+  const x = c.getContext('2d');
+  const order = american
+    ? [0, 28, 9, 26, 30, 11, 7, 20, 32, 17, 5, 22, 34, 15, 3, 24, 36, 13, 1,
+      '00', 27, 10, 25, 29, 12, 8, 19, 31, 18, 6, 21, 33, 16, 4, 23, 35, 14, 2]
+    : [0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10,
+      5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26];
+  const REDS = [1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36];
+  const cx = S / 2, cy = S / 2, N = order.length;
+  const rOut = S * 0.49, rIn = S * 0.345, rHub = S * 0.3;
+
+  x.fillStyle = '#16100a';
+  x.beginPath(); x.arc(cx, cy, rOut, 0, Math.PI * 2); x.fill();
+  for (let i = 0; i < N; i++) {
+    const a0 = (i / N) * Math.PI * 2 - Math.PI / 2 - Math.PI / N;
+    const a1 = a0 + (Math.PI * 2) / N;
+    const n = order[i];
+    x.fillStyle = n === 0 || n === '00' ? '#0e6b41' : (REDS.indexOf(n) >= 0 ? '#9e2a20' : '#16141c');
+    x.beginPath();
+    x.arc(cx, cy, rOut, a0, a1);
+    x.arc(cx, cy, rIn, a1, a0, true);
+    x.closePath(); x.fill();
+    /* the fret between pockets */
+    x.strokeStyle = 'rgba(232,206,150,.75)';
+    x.lineWidth = 3;
+    x.beginPath();
+    x.moveTo(cx + Math.cos(a0) * rIn, cy + Math.sin(a0) * rIn);
+    x.lineTo(cx + Math.cos(a0) * rOut, cy + Math.sin(a0) * rOut);
+    x.stroke();
+    /* the number, standing on its head toward the rim */
+    const mid = (a0 + a1) / 2, tr = (rIn + rOut) / 2;
+    x.save();
+    x.translate(cx + Math.cos(mid) * tr, cy + Math.sin(mid) * tr);
+    x.rotate(mid + Math.PI / 2);
+    x.fillStyle = '#fff4de';
+    x.font = '700 ' + Math.round(S * 0.038) + 'px Oswald, Arial';
+    x.textAlign = 'center'; x.textBaseline = 'middle';
+    x.fillText(String(n), 0, 0);
+    x.restore();
+  }
+  /* the cone in the middle, and the turret */
+  const g = x.createRadialGradient(cx, cy, S * 0.04, cx, cy, rHub);
+  g.addColorStop(0, '#9a7336');
+  g.addColorStop(0.55, '#4a3118');
+  g.addColorStop(1, '#241708');
+  x.fillStyle = g;
+  x.beginPath(); x.arc(cx, cy, rHub, 0, Math.PI * 2); x.fill();
+  x.strokeStyle = 'rgba(232,206,150,.5)'; x.lineWidth = 4;
+  x.beginPath(); x.arc(cx, cy, rHub, 0, Math.PI * 2); x.stroke();
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2;
+    x.strokeStyle = 'rgba(232,206,150,.3)'; x.lineWidth = 7;
+    x.beginPath();
+    x.moveTo(cx, cy);
+    x.lineTo(cx + Math.cos(a) * (rHub - 10), cy + Math.sin(a) * (rHub - 10));
+    x.stroke();
+  }
+  x.fillStyle = '#c9962b';
+  x.beginPath(); x.arc(cx, cy, S * 0.055, 0, Math.PI * 2); x.fill();
+  return textured(c);
+}
+
+/* What a table's terminal shows when nobody is sitting at it. A page of felt
+   shrunk onto a 10-inch screen is unreadable, so it gets its own card: the
+   game's name, and an invitation. */
+export function terminalIdle(title, sub, accent = GOLD) {
+  const W = 720, H = 490, c = document.createElement('canvas');
+  c.width = W; c.height = H;
+  const x = c.getContext('2d');
+  const g = x.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, '#13251c');
+  g.addColorStop(1, '#070f0b');
+  x.fillStyle = g;
+  x.fillRect(0, 0, W, H);
+  x.strokeStyle = 'rgba(232,196,95,.5)';
+  x.lineWidth = 4;
+  x.strokeRect(16, 16, W - 32, H - 32);
+  x.strokeStyle = 'rgba(232,196,95,.2)';
+  x.lineWidth = 2;
+  x.strokeRect(28, 28, W - 56, H - 56);
+  label(x, title.toUpperCase(), W / 2, H / 2 - 54, 58, accent, 700, 10);
+  label(x, sub.toUpperCase(), W / 2, H / 2 + 10, 22, 'rgba(244,239,223,.65)', 600, 7);
+  label(x, 'C M L   C A S I N O', W / 2, H - 76, 20, 'rgba(232,196,95,.55)', 600, 8, 'Cinzel, serif');
+  /* a bar of chips along the bottom, so it reads as a betting terminal */
+  const cols = ['#ece6d6', '#c9392f', '#2f8a4f', '#1d1d1f', '#6b3fa0', '#d1a12f'];
+  cols.forEach((col, i) => {
+    const cx = W / 2 + (i - (cols.length - 1) / 2) * 56;
+    x.fillStyle = col;
+    x.beginPath(); x.arc(cx, H - 36, 17, 0, Math.PI * 2); x.fill();
+    x.strokeStyle = 'rgba(255,255,255,.5)';
+    x.lineWidth = 2;
+    x.beginPath(); x.arc(cx, H - 36, 11, 0, Math.PI * 2); x.stroke();
+  });
+  return textured(c);
 }

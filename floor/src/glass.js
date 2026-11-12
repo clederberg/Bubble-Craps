@@ -42,17 +42,23 @@ export function createGlass(camera, el, logical) {
   const src = [[0, 0], [logical.w, 0], [logical.w, logical.h], [0, logical.h]];
   let target = null;
 
-  /* the four corners of the glass, in the machine's own frame, clockwise from
-     the top left as the page sees it */
+  /* The four corners of the glass in the fixture's own frame, clockwise from
+     the top left as the page sees it. A cabinet's screen stands upright; a
+     table's terminal leans back, so the quad's up vector tips with it. */
   function setTarget(obj) {
     target = null;
     if (!obj || !obj.userData || !obj.userData.glass) return false;
     const g = obj.userData.glass;
+    const t = g.tilt || 0;
+    const cx = g.x || 0;
+    const up = new THREE.Vector3(0, Math.cos(t), -Math.sin(t)).multiplyScalar(g.h / 2);
+    const right = new THREE.Vector3(g.w / 2, 0, 0);
+    const c = new THREE.Vector3(cx, g.y, g.z);
     target = { obj, pts: [
-      new THREE.Vector3(-g.w / 2, g.y + g.h / 2, g.z),
-      new THREE.Vector3(g.w / 2, g.y + g.h / 2, g.z),
-      new THREE.Vector3(g.w / 2, g.y - g.h / 2, g.z),
-      new THREE.Vector3(-g.w / 2, g.y - g.h / 2, g.z)
+      c.clone().sub(right).add(up),
+      c.clone().add(right).add(up),
+      c.clone().add(right).sub(up),
+      c.clone().sub(right).sub(up)
     ] };
     return true;
   }

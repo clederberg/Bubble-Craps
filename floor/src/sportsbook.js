@@ -3,6 +3,7 @@
    something is actually happening. Nothing here is a real team or a real
    league: the names are invented and the numbers are made up. */
 import * as THREE from 'three';
+import { tune } from './materials.js';
 
 const TEAMS = [
   ['HARBOUR', 'KESTRELS'], ['IRONSIDE', 'COMETS'], ['WESTGATE', 'BISON'],
@@ -30,7 +31,7 @@ class Game {
     this.c.width = 512; this.c.height = 288;
     this.x = this.c.getContext('2d');
     this.tex = new THREE.CanvasTexture(this.c);
-    this.tex.colorSpace = THREE.SRGBColorSpace;
+    tune(this.tex, { live: true });
     this.draw();
   }
   update(dt) {
@@ -131,7 +132,7 @@ class Board {
     this.c.width = 512; this.c.height = 512;
     this.x = this.c.getContext('2d');
     this.tex = new THREE.CanvasTexture(this.c);
-    this.tex.colorSpace = THREE.SRGBColorSpace;
+    tune(this.tex, { live: true });
     this.draw();
   }
   update(dt) {

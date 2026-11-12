@@ -3,8 +3,9 @@
    game so you can tell a bank apart from across the floor. */
 import * as THREE from 'three';
 import { ROOM } from './room.js';
+import { tune } from './materials.js';
 import { houseSign, monogram, artWall } from './decor.js';
-import { crapsLayout, blackjackLayout, baccaratLayout, signTexture } from './felt.js';
+import { crapsLayout, blackjackLayout, baccaratLayout, rouletteLayout, wheelFace, terminalIdle, signTexture } from './felt.js';
 import { chipRack, chipStack, die, shoe, cards, dealer, patron, bottles, glassware } from './props.js';
 
 function box(w, h, d, mat, x, y, z, cast = true, receive = true) {
@@ -13,19 +14,30 @@ function box(w, h, d, mat, x, y, z, cast = true, receive = true) {
   m.castShadow = cast; m.receiveShadow = receive;
   return m;
 }
-function contact(scene, x, z, rx, rz, strength = 0.55, y = 0.004) {
+/* One soft blob, shared by every fixture that needs a shadow under it; the
+   strength rides on the material's opacity so a dozen of these cost one
+   texture instead of a dozen. */
+let blobTex = null;
+function contactTexture() {
+  if (blobTex) return blobTex;
   const size = 256;
   const c = document.createElement('canvas');
   c.width = c.height = size;
   const ctx = c.getContext('2d');
   const g = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
-  g.addColorStop(0, 'rgba(0,0,0,' + strength + ')');
-  g.addColorStop(0.55, 'rgba(0,0,0,' + strength * 0.45 + ')');
+  g.addColorStop(0, 'rgba(0,0,0,1)');
+  g.addColorStop(0.55, 'rgba(0,0,0,.45)');
   g.addColorStop(1, 'rgba(0,0,0,0)');
   ctx.fillStyle = g;
   ctx.fillRect(0, 0, size, size);
+  blobTex = tune(new THREE.CanvasTexture(c), { srgb: false });
+  return blobTex;
+}
+function contact(scene, x, z, rx, rz, strength = 0.55, y = 0.004) {
   const m = new THREE.Mesh(new THREE.PlaneGeometry(rx, rz),
-    new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false }));
+    new THREE.MeshBasicMaterial({
+      map: contactTexture(), transparent: true, depthWrite: false, opacity: strength
+    }));
   m.rotation.x = -Math.PI / 2;
   m.position.set(x, y, z);
   m.renderOrder = -1;
@@ -131,10 +143,19 @@ function crapsTable(M, crapless) {
   box_.scale.setScalar(1.02);
   g.add(d1, d2, box_);
   g.userData.dealers = [d1, d2, box_];
+  const tm = terminal(M, terminalIdle(crapless ? 'Crapless Craps' : 'Craps', 'Take a seat to play'),
+    { w: 1.02, tilt: 0.52, y: 1.2, z: W / 2 + 0.44, stem: 0.52 });
+  g.add(tm.group);
+  g.userData.glass = tm.glass;
   /* places at the near rail, for whoever turns up: the middle is left clear so
      you can walk in and take the shooter's spot yourself */
-  g.userData.spots = [-1.6, -1.15, -0.7, 0.7, 1.15, 1.6]
-    .map(px => ({ x: px, z: W / 2 + 0.46, facing: Math.PI, sit: false }));
+  g.userData.spots = [-1.7, -1.3, -0.95, 0.95, 1.3, 1.7]
+    .map(px => ({
+      x: px, z: W / 2 + 0.46, facing: Math.PI, sit: false,
+      /* straight back off the rail, which keeps the walk clear of the wheel
+         standing in the middle of the pit */
+      gate: [px, W / 2 + 1.86]
+    }));
 
   /* a lit sign over the table saying which game it is */
   const signMat = new THREE.MeshBasicMaterial({
@@ -190,7 +211,7 @@ function cardTable(M, kind) {
   g.add(cards(-0.1, 0.875, -rz + 0.52, 2));
   const seats = kind === 'baccarat' ? 7 : 5;
   for (let i = 0; i < seats; i++) {
-    const a = Math.PI + (i - (seats - 1) / 2) * 0.42;
+    const a = Math.PI / 2 + (i - (seats - 1) / 2) * 0.42;
     const cx = Math.cos(a) * (rx + 0.75), cz = Math.sin(a) * (rz + 0.75);
     const chair = new THREE.Group();
     chair.add(box(0.46, 0.09, 0.46, M.woodMat, 0, 0.47, 0));
@@ -205,9 +226,12 @@ function cardTable(M, kind) {
     chair.lookAt(0, 0, 0);
     chair.children.forEach(c => { c.castShadow = true; });
     g.add(chair);
-    (g.userData.spots = g.userData.spots || []).push({
-      x: cx * 0.98, z: cz * 0.98, facing: Math.atan2(-cx, -cz), sit: true, seatY: 0.52
-    });
+    /* the middle chair is yours, so nobody else takes it */
+    if (i !== (seats - 1) / 2) {
+      (g.userData.spots = g.userData.spots || []).push({
+        x: cx * 0.98, z: cz * 0.98, facing: Math.atan2(-cx, -cz), sit: true, seatY: 0.52
+      });
+    }
     /* a few chips in front of the occupied seats */
     if (Math.random() < 0.6) {
       const bx = Math.cos(a) * (rx - 0.42), bz = Math.sin(a) * (rz - 0.32);
@@ -217,6 +241,141 @@ function cardTable(M, kind) {
   const d = dealer(0, -(rz + 0.52), 0);
   g.add(d);
   g.userData.dealers = [d];
+  const tm = terminal(M, terminalIdle(kind === 'baccarat' ? 'Baccarat' : 'Blackjack', 'Take a seat to play'),
+    { w: 0.92, tilt: 0.56, y: 1.04, z: rz + 0.34, stem: 0.42 });
+  g.add(tm.group);
+  g.userData.glass = tm.glass;
+  return g;
+}
+
+
+/* ---------- the player's terminal ----------
+   Every table carries one at the seat you take: a screen on a short stand,
+   leaned back so that it reads from a seated eye. Walking past it shows the
+   game's own layout; sitting down puts the live page on the same glass. That
+   is how stadium craps and roulette work on a real floor, and it is what lets
+   the games be played out here rather than in a window over the top. */
+function terminal(M, idleTex, opt) {
+  const g = new THREE.Group();
+  const w = opt.w, h = w * 980 / 1440, tilt = opt.tilt;
+  const bezel = box(w + 0.07, h + 0.07, 0.045, M.darkMetal, 0, 0, 0);
+  bezel.rotation.x = -tilt;
+  g.add(bezel);
+  /* the face sits a couple of centimetres proud of the bezel, along the
+     tilted normal rather than straight out, or it sinks in at the top */
+  const nx = Math.sin(tilt) * 0.026, nz = Math.cos(tilt) * 0.026;
+  const screen = new THREE.Mesh(new THREE.PlaneGeometry(w, h),
+    new THREE.MeshBasicMaterial({ map: idleTex }));
+  screen.rotation.x = -tilt;
+  screen.position.set(0, nx, nz);
+  screen.name = 'glass';
+  g.add(screen);
+  /* a sliver of light under the bezel, so it reads as a lit panel */
+  const lip = box(w + 0.05, 0.02, 0.06, M.emissive(0xffc98a, 0.8),
+    0, -Math.cos(tilt) * (h / 2) - 0.03, Math.sin(tilt) * (h / 2) + 0.04, false, false);
+  g.add(lip);
+  const stem = box(0.1, opt.stem, 0.1, M.darkMetal, 0, -h / 2 - opt.stem / 2, 0.02);
+  g.add(stem);
+  const foot = box(0.34, 0.035, 0.26, M.darkMetal, 0, -h / 2 - opt.stem, 0.02);
+  g.add(foot);
+  g.position.set(0, opt.y, opt.z);
+  g.traverse(o => { if (o.isMesh && o.name !== 'glass') o.castShadow = true; });
+  return { group: g, glass: { w, h, x: 0, y: opt.y + nx, z: opt.z + nz, tilt } };
+}
+
+/* ---------- roulette ----------
+   Long and narrow, the wheel sunk into the far end, the cloth running back
+   toward the players and a terminal at the near end to play it from. */
+function rouletteTable(M, american) {
+  const g = new THREE.Group();
+  const L = 2.9, W = 1.42, FELT = 0.78;
+  const railMat = new THREE.MeshStandardMaterial({ color: 0x3a1420, roughness: 0.72, metalness: 0.05 });
+
+  /* the cloth: the layout fills the half of the table nearest the player */
+  const layout = rouletteLayout(american);
+  const cloth = box(W - 0.3, 0.06, 1.72, new THREE.MeshStandardMaterial({ map: layout, roughness: 0.96 }),
+    0, FELT, 0.52);
+  g.add(cloth);
+  /* plain cloth under the wheel end */
+  g.add(box(W - 0.3, 0.06, L - 2.02, M.feltMat, 0, FELT, -(L / 2) + 0.44));
+  g.add(box(W - 0.28, 0.2, L - 0.28, M.feltMat, 0, FELT - 0.13, 0, false, true));
+
+  /* rails: two long ones down the sides, two short ones across the ends */
+  [[-W / 2 + 0.085, 0, 0.17, L], [W / 2 - 0.085, 0, 0.17, L],
+   [0, -L / 2 + 0.085, W, 0.17], [0, L / 2 - 0.085, W, 0.17]]
+    .forEach(([x, z, sx, sz]) => {
+      g.add(box(sx, 0.22, sz, railMat, x, FELT + 0.14, z));
+      g.add(box(sx + 0.03, 0.045, sz + 0.03, M.woodMat, x, FELT + 0.27, z));
+    });
+  /* the apron */
+  g.add(box(W - 0.06, 0.52, L - 0.06, M.woodMat, 0, FELT - 0.29, 0));
+  g.add(box(W + 0.02, 0.06, L + 0.02, M.brass, 0, FELT - 0.56, 0));
+  const leg = (x, z) => g.add(box(0.12, FELT - 0.56, 0.12, M.darkMetal, x, (FELT - 0.56) / 2, z));
+  leg(-W / 2 + 0.22, -L / 2 + 0.25); leg(W / 2 - 0.22, -L / 2 + 0.25);
+  leg(-W / 2 + 0.22, L / 2 - 0.25); leg(W / 2 - 0.22, L / 2 - 0.25);
+
+  /* ---- the wheel, sunk into the far end ---- */
+  const wz = -L / 2 + 0.62;
+  const bowl = new THREE.Mesh(new THREE.CylinderGeometry(0.44, 0.47, 0.14, 40), M.woodMat);
+  bowl.position.set(0, FELT + 0.04, wz);
+  bowl.castShadow = true;
+  g.add(bowl);
+  g.add(new THREE.Mesh(new THREE.TorusGeometry(0.45, 0.022, 10, 44), M.brass)
+    .translateY(0));
+  const ring = g.children[g.children.length - 1];
+  ring.position.set(0, FELT + 0.11, wz);
+  ring.rotation.x = Math.PI / 2;
+
+  const disc = new THREE.Mesh(new THREE.CircleGeometry(0.4, 56),
+    new THREE.MeshStandardMaterial({ map: wheelFace(american), roughness: 0.55, metalness: 0.15 }));
+  disc.rotation.x = -Math.PI / 2;
+  disc.position.set(0, FELT + 0.112, wz);
+  g.add(disc);
+
+  const ball = new THREE.Mesh(new THREE.SphereGeometry(0.018, 14, 12),
+    new THREE.MeshStandardMaterial({ color: 0xfffdf4, roughness: 0.25 }));
+  ball.position.set(0, FELT + 0.13, wz - 0.33);
+  g.add(ball);
+
+  /* the marker on the winning number, and the dealer beside the wheel */
+  const dolly = box(0.05, 0.14, 0.05, M.emissive(0xffd27a, 0.5), 0.18, FELT + 0.1, 0.45, false, false);
+  g.add(dolly);
+  g.add(chipRack(0, FELT + 0.045, -L / 2 + 1.02, Math.PI / 2, [500, 100, 25]));
+
+  const d = dealer(-W / 2 - 0.45, wz + 0.35, Math.PI / 2);
+  g.add(d);
+  g.userData.dealers = [d];
+  g.userData.spin = { disc, ball, wz, felt: FELT, t: Math.random() * 10 };
+
+  /* seats down both sides */
+  g.userData.spots = [];
+  [-1, 1].forEach(side => {
+    [0.15, 0.78].forEach(z => {
+      const chair = new THREE.Group();
+      chair.add(box(0.44, 0.09, 0.44, M.woodMat, 0, 0.47, 0));
+      chair.add(box(0.42, 0.52, 0.1, M.woodMat, 0, 0.77, -0.19));
+      const post = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.07, 0.47, 10), M.darkMetal);
+      post.position.y = 0.235;
+      chair.add(post);
+      const base = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.27, 0.04, 16), M.darkMetal);
+      base.position.y = 0.02;
+      chair.add(base);
+      chair.position.set(side * (W / 2 + 0.46), 0, z);
+      chair.rotation.y = side * Math.PI / 2;
+      chair.children.forEach(c => { c.castShadow = true; });
+      g.add(chair);
+      g.userData.spots.push({
+        x: side * (W / 2 + 0.44), z: z, facing: -side * Math.PI / 2, sit: true, seatY: 0.52,
+        /* the clear floor beside the table, so nobody walks over the wheel */
+        gate: [side * 2.3, 2.3]
+      });
+    });
+  });
+
+  const tm = terminal(M, terminalIdle('Roulette', american ? 'Double zero' : 'Single zero'),
+    { w: 0.96, tilt: 0.52, y: 1.18, z: L / 2 + 0.42, stem: 0.5 });
+  g.add(tm.group);
+  g.userData.glass = tm.glass;
   return g;
 }
 
@@ -270,23 +429,29 @@ export function buildFixtures(scene, M, solids, screens, book) {
       v3.set(sp.x, 0, sp.z);
       obj.updateMatrixWorld(true);
       v3.applyMatrix4(obj.matrixWorld);
-      spots.push({
+      const rec = {
         x: v3.x, z: v3.z, facing: sp.facing + obj.rotation.y,
         sit: sp.sit, seatY: sp.seatY || 0
-      });
+      };
+      if (sp.gate) {
+        v3.set(sp.gate[0], 0, sp.gate[1]).applyMatrix4(obj.matrixWorld);
+        rec.gate = [v3.x, v3.z];
+      }
+      spots.push(rec);
     });
   };
   const F = new THREE.Group();
   F.name = 'fixtures';
   F.add(pitRail(M, solids));
   const dealers = [];
+  const wheels = [];
   const drop = -ROOM.pit.drop;
 
   /* two craps tables side by side: the regular game and crapless */
   [['craps', -4.8, false], ['crapless', 4.8, true]].forEach(([id, x, isCrapless]) => {
     const t = crapsTable(M, isCrapless);
     t.position.set(x, drop, -2.9);
-    t.userData.game = { id, seat: { x: 0, y: 1.42, z: 1.35, look: [0, 0.82, -0.2] } };
+    t.userData.game = { id, seat: { x: 0, y: 1.56, z: 1.9, look: [0, 1.21, 1.17] } };
     F.add(t);
     dealers.push(...t.userData.dealers);
     collect(t);
@@ -294,13 +459,24 @@ export function buildFixtures(scene, M, solids, screens, book) {
     contact(scene, x, -2.9, 5.6, 3.6, 0.6, drop + 0.004);
   });
 
+  /* roulette, between the two craps tables */
+  const roul = rouletteTable(M, false);
+  roul.position.set(0, drop, -2.9);
+  roul.userData.game = { id: 'roulette', seat: { x: 0, y: 1.58, z: 2.52, look: [0, 1.2, 1.9] } };
+  F.add(roul);
+  dealers.push(...roul.userData.dealers);
+  collect(roul);
+  wheels.push(roul.userData.spin);
+  solids.add(0, -2.3, 1.25, 2.2, 0, 'roulette');
+  contact(scene, 0, -2.9, 3.4, 4.4, 0.55, drop + 0.004);
+
   /* the card games across from them */
   [['blackjack', -6.4, 3.3, 0.22], ['baccarat', 0, 3.6, 0], ['blackjack', 6.4, 3.3, -0.22]]
     .forEach(([id, x, z, rot]) => {
       const t = cardTable(M, id);
       t.position.set(x, drop, z);
       t.rotation.y = rot;
-      t.userData.game = { id, seat: { x: 0, y: 1.22, z: 1.62, look: [0, 0.8, -0.1] } };
+      t.userData.game = { id, seat: { x: 0, y: 1.46, z: 1.84, look: [0, 1.05, 1.31] } };
       F.add(t);
       dealers.push(...t.userData.dealers);
       collect(t);
@@ -317,7 +493,9 @@ export function buildFixtures(scene, M, solids, screens, book) {
       m.rotation.y = rot;
       m.userData.game = { id: game, seat: { x: 0, y: 1.4, z: 0.95, look: [0, 1.36, 0.24] } };
       F.add(m);
-      m.userData.spots = [{ x: 0, z: 1.0, facing: Math.PI, sit: true, seatY: 0.7 }];
+      /* the gate is out in the aisle, clear of the columns that stand between
+         the banks and the pit */
+      m.userData.spots = [{ x: 0, z: 1.0, facing: Math.PI, sit: true, seatY: 0.7, gate: [0, 2.7] }];
       collect(m);
       solids.add(m.position.x, m.position.z, 0.44, 0.42, rot, 'slot');
     }
@@ -456,5 +634,6 @@ export function buildFixtures(scene, M, solids, screens, book) {
   scene.add(F);
   F.userData.dealers = dealers;
   F.userData.spots = spots;
+  F.userData.wheels = wheels;
   return F;
 }

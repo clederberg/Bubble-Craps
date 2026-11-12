@@ -2,6 +2,7 @@
    canvas at load: a house sign, a monogram roundel, and framed pieces that
    are abstract rather than pictures of anything. */
 import * as THREE from 'three';
+import { tune } from './materials.js';
 
 function canvas(w, h) {
   const c = document.createElement('canvas');
@@ -9,7 +10,7 @@ function canvas(w, h) {
   return { c, x: c.getContext('2d') };
 }
 function tex(c, srgb = true) {
-  const t = new THREE.CanvasTexture(c);
+  const t = tune(new THREE.CanvasTexture(c));
   if (srgb) t.colorSpace = THREE.SRGBColorSpace;
   t.anisotropy = 8;
   return t;

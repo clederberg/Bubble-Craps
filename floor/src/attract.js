@@ -3,6 +3,7 @@
    line pays, the logo flashes: enough to tell from across the floor which bank
    is which. */
 import * as THREE from 'three';
+import { tune } from './materials.js';
 
 /* landscape, in the proportion of the real game pages (1440x980), because a
    seated player is looking at the page itself on this glass */
@@ -125,7 +126,7 @@ class Screen {
     this.c.width = W; this.c.height = H;
     this.x = this.c.getContext('2d');
     this.tex = new THREE.CanvasTexture(this.c);
-    this.tex.colorSpace = THREE.SRGBColorSpace;
+    tune(this.tex, { live: true });
     this.t = Math.random() * 6;
     this.phase = 'spin';
     this.timer = 1 + Math.random() * 2;
@@ -227,7 +228,7 @@ function topperTexture(key) {
   x.textAlign = 'center';
   x.textBaseline = 'middle';
   x.fillText(g.name, 256, 68);
-  const t = new THREE.CanvasTexture(c);
+  const t = tune(new THREE.CanvasTexture(c));
   t.colorSpace = THREE.SRGBColorSpace;
   return t;
 }

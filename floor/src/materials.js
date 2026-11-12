@@ -36,6 +36,27 @@ function makeCanvas(size) {
   c.width = c.height = size;
   return c;
 }
+/* One place for the filtering, because a canvas texture left on the defaults
+   gets anisotropy 1, and anything seen at an angle (a sign down a bank of
+   machines, the carpet running away from you) crawls and sparkles.
+   `live` is for the screens that are redrawn every frame: regenerating their
+   mip chain sixty times a second costs more than the mips are worth, and they
+   are looked at straight on anyway. */
+export function tune(t, { srgb = true, live = false } = {}) {
+  t.anisotropy = 16;
+  if (srgb) t.colorSpace = THREE.SRGBColorSpace;
+  if (live) {
+    t.generateMipmaps = false;
+    t.minFilter = THREE.LinearFilter;
+  } else {
+    t.generateMipmaps = true;
+    t.minFilter = THREE.LinearMipmapLinearFilter;
+  }
+  t.magFilter = THREE.LinearFilter;
+  t.needsUpdate = true;
+  return t;
+}
+
 function texFrom(canvas, repeat, srgb) {
   const t = new THREE.CanvasTexture(canvas);
   t.wrapS = t.wrapT = THREE.RepeatWrapping;

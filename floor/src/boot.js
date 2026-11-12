@@ -79,7 +79,16 @@ async function start() {
 
   setStatus('Polishing the brass', 0.92);
   await frame();
-  const composer = new EffectComposer(renderer);
+  /* EffectComposer renders into its own target, and the one it makes for
+     itself has no multisampling, which quietly throws away the renderer's
+     antialiasing: every brass edge and every letter on a sign comes out
+     stepped. Hand it a target that does. */
+  const dpr = renderer.getPixelRatio();
+  const target = new THREE.WebGLRenderTarget(
+    Math.round(innerWidth * dpr), Math.round(innerHeight * dpr),
+    { type: THREE.HalfFloatType, samples: 4 }
+  );
+  const composer = new EffectComposer(renderer, target);
   composer.addPass(new RenderPass(scene, camera));
   /* a high threshold so only the real light sources bloom, not a white shirt */
   const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.46, 0.7, 0.95);
@@ -121,6 +130,14 @@ async function start() {
     screens.update(dt);
     book.update(dt);
     animateDealers(fixtures.userData.dealers, now);
+    /* the wheels never stop turning, which is half of what a pit sounds like */
+    (fixtures.userData.wheels || []).forEach(w => {
+      w.t += dt;
+      w.disc.rotation.z -= dt * 0.55;
+      const a = w.t * 1.9;
+      w.ball.position.x = Math.cos(a) * 0.335;
+      w.ball.position.z = w.wz + Math.sin(a) * 0.335;
+    });
     crowd.update(dt, now);
     composer.render();
     fpsT += dt; fpsN++;
