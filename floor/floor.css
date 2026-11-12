@@ -58,12 +58,15 @@ html,body{margin:0;height:100%;background:#08040a;color:#f3ece2;font-family:Inte
    It is the same page as the flat site and the same origin, so the bankroll
    carries straight over. */
 .panel{position:fixed;z-index:30;left:50%;top:50%;width:min(1380px,94vw);height:min(900px,88vh);
-  transform:translate(-50%,-46%) scale(.965);opacity:0;pointer-events:none;
+  transform:translate(-50%,-46%) scale(.965);opacity:0;pointer-events:none;--ax:50%;--ay:50%;
   display:flex;flex-direction:column;border-radius:18px;overflow:hidden;
   background:#0a1510;border:1px solid rgba(240,196,96,.45);
   box-shadow:0 40px 120px rgba(0,0,0,.8), 0 0 0 1px rgba(0,0,0,.6), 0 0 90px rgba(255,180,100,.16);
   transition:opacity .45s cubic-bezier(.2,.8,.3,1), transform .45s cubic-bezier(.2,.8,.3,1)}
 .panel.on{opacity:1;transform:translate(-50%,-50%) scale(1);pointer-events:auto}
+/* anchored to the machine or table you sat at, rather than floating in the
+   middle of the window */
+.panel.anchored{left:var(--ax);top:var(--ay)}
 .panel-bar{display:flex;align-items:center;gap:12px;padding:8px 10px 8px 14px;flex:none;
   background:linear-gradient(180deg,#2a0f1c,#160810);border-bottom:1px solid rgba(240,196,96,.3)}
 .panel-bar .dot{width:8px;height:8px;border-radius:50%;background:#6ee7a8;box-shadow:0 0 10px #6ee7a8}
@@ -73,7 +76,12 @@ html,body{margin:0;height:100%;background:#08040a;color:#f3ece2;font-family:Inte
 .panel-bar button i{font-style:normal;display:grid;place-items:center;width:16px;height:16px;border-radius:4px;
   background:rgba(42,18,5,.22);font-size:10px}
 .panel-bar button:hover{background:#ffe3ac}
-.panel iframe{flex:1;width:100%;border:0;background:#0a1510}
+.panel-view{position:relative;flex:1;overflow:hidden;background:#0a1510}
+/* The games are built for a desktop window, so the frame is given one at a
+   fixed size and the whole thing is scaled to fit. Handing it whatever space
+   was left over is what threw the spacing out. */
+.panel iframe{position:absolute;left:0;top:0;width:1440px;height:980px;border:0;background:#0a1510;
+  transform-origin:0 0;will-change:transform}
 /* the room dims behind the screen rather than disappearing */
-.dimmed #view{filter:brightness(.42) saturate(.8)}
+.dimmed #view{filter:brightness(.62) saturate(.9)}
 #view{transition:filter .45s ease}
