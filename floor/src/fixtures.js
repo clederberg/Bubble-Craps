@@ -361,7 +361,8 @@ function rouletteTable(M, american) {
       base.position.y = 0.02;
       chair.add(base);
       chair.position.set(side * (W / 2 + 0.46), 0, z);
-      chair.rotation.y = side * Math.PI / 2;
+      /* the backrest is at the chair's own -z, so +z has to point at the table */
+      chair.rotation.y = -side * Math.PI / 2;
       chair.children.forEach(c => { c.castShadow = true; });
       g.add(chair);
       g.userData.spots.push({
