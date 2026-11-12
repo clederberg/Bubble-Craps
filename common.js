@@ -329,6 +329,15 @@
     }).join('') + '</nav>';
   }
 
+  /* Inside the floor's terminal the page is already framed by the table it is
+     on: the floor says which game it is and how to get up again, so the page's
+     own title bar and nav are just stealing room from the felt. */
+  if (typeof document !== 'undefined') {
+    var framed = false;
+    try { framed = root.self !== root.top; } catch (e) { framed = true; }
+    if (framed) document.documentElement.classList.add('framed');
+  }
+
   var api = {
     ac: ac, play: play, say: say, toast: toast, esc: esc, setHTML: setHTML, forceHTML: forceHTML, setText: setText, chipHTML: chipHTML, cardHTML: cardHTML, renderChips: renderChips, nav: nav,
     shoeHTML: shoeHTML, discardHTML: discardHTML, chipStackHTML: chipStackHTML, dealerHTML: dealerHTML, dealer: dealer, winBanner: winBanner, resultBanner: resultBanner,

@@ -212,7 +212,10 @@
       });
       rot.appendChild(p);
       var mid = (a0 + a1) / 2;
-      var tp = polar(200, 200, (R1 + R2) / 2, mid);
+      /* arc() lays its points down with a quarter turn on them; the labels have
+         to use the same convention or they sit nine pockets away from the
+         number they belong to */
+      var tp = polar(200, 200, (R1 + R2) / 2, mid + 90);
       var tx = el('text', {
         x: tp[0], y: tp[1], fill: '#fff6e0', 'font-size': N > 37 ? 13 : 14,
         'font-family': 'Oswald, sans-serif', 'font-weight': 600,
