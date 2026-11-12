@@ -1,0 +1,14 @@
+{
+  "name": "bubble-craps-floor",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "esbuild src/boot.js --bundle --format=esm --minify --target=es2020 --alias:three=./node_modules/three/build/three.module.js --alias:three/addons=./node_modules/three/examples/jsm --outfile=floor.bundle.js",
+    "watch": "npm run build -- --watch",
+    "serve": "python3 -m http.server 8080"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.0",
+    "three": "0.169.0"
+  }
+}
