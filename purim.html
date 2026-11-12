@@ -208,6 +208,22 @@ body.pp{background:radial-gradient(1200px 640px at 50% -18%, #4a1430 0%, #0d0409
 .buyrow .cost{margin-left:auto;font:700 15px Oswald,sans-serif;color:#fff2d2;font-variant-numeric:tabular-nums}
 
 /* ------------------------------------------------------------ responsive */
+
+/* ---- played from the floor ----
+   The terminal is the machine, so the cabinet runs to the edges of the glass
+   and the reel window grows into the height instead of leaving most of the
+   screen empty. The cell cap is raised to match, which purim.js reads. */
+html.framed body{padding-bottom:92px;background:#0d0409}
+html.framed body > .wrap{max-width:none;padding:0;min-height:calc(100vh - 92px);display:flex;flex-direction:column}
+html.framed .statusbar{min-height:0;margin:0;padding:10px 20px 6px;background:#2b0f1f;
+  border-bottom:1px solid rgba(240,196,96,.22)}
+html.framed .hint{display:none}
+html.framed .cabinet{flex:1 1 auto;display:flex;flex-direction:column;border-radius:0;
+  border-left:0;border-right:0;border-bottom:0;box-shadow:none;padding:12px 20px 14px}
+html.framed .board{flex:1 1 auto;align-items:center;justify-content:center}
+html.framed .machine{max-width:min(1000px, calc((100vh - 330px) * 1.9))}
+html.framed #reels{--cellmax:158}
+
 @media (max-width:860px){ .winpanel{display:none} }
 @media (max-width:620px){
   body.pp{padding-bottom:240px}

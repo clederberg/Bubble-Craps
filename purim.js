@@ -58,9 +58,12 @@
     var r = $('reel0');
     if (!r) return;
     var w = r.getBoundingClientRect().width || 60;
-    /* a cell is as wide as it is tall, give or take, and capped so a wide
-       window does not turn into five enormous symbols */
-    CELL = Math.max(34, Math.min(124, Math.round(w * 1.02)));
+    /* A cell is as wide as it is tall, give or take, and capped so a wide
+       window does not turn into five enormous symbols. The cap comes from the
+       stylesheet, so a table terminal, which has far more height than a
+       browser window, can raise it and fill the glass. */
+    var cap = parseFloat(getComputedStyle($('reels')).getPropertyValue('--cellmax')) || 124;
+    CELL = Math.max(34, Math.min(cap, Math.round(w * 1.02)));
     $('reels').style.setProperty('--ch', CELL + 'px');
     for (var i = 0; i < 5; i++) $('reel' + i).style.height = (CELL * 3) + 'px';
   }
