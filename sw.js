@@ -1,24 +1,26 @@
 /* Offline support for the installed app.
 
    Same-origin files are fetched from the network first and only fall back to
-   the cache when the network does not answer, so a deploy is picked up on the
-   next launch with no version to remember. The previous design served the
-   cache first, which meant uploading a new file changed nothing on a phone
-   until this string was edited by hand, and forgetting once left every
-   installed copy running an old build.
+   the cache when the network does not answer. That means a deploy is picked
+   up on the next launch with no version to remember: the previous design
+   served the cache first, so a phone kept running the old build until this
+   string was changed by hand, and forgetting once stranded every installed
+   copy indefinitely.
 
-   The network is raced against a short timer rather than waited on, so a weak
-   signal falls back to the cache quickly instead of hanging.
+   The network is raced against a short timer rather than waited on, so a
+   flaky signal falls back to the cache quickly instead of hanging.
 
-   Every path is relative so it works from a project page in a subdirectory. */
+   Every path is relative so it works from a project page served out of a
+   subdirectory. */
 var VERSION = 'bc-app';          // no longer needs bumping to ship an update
 var FONTS = 'bc-fonts';
 var NET_TIMEOUT = 2500;
 var FILES = [
-  './', './index.html', './blackjack.html', './baccarat.html', './lights.html', './pinball.html',
+  './', './index.html', './blackjack.html', './baccarat.html', './holdem.html',
+  './lights.html', './purim.html', './pinball.html', './roulette.html',
   './casino.css', './app.js', './engine.js', './layout.js', './sounds.js', './common.js',
-  './bj.js', './blackjack.js', './bac.js', './baccarat.js',
-  './slots.js', './games.js', './slotfx.js', './lights.js', './pinball.js',
+  './bj.js', './blackjack.js', './bac.js', './baccarat.js', './uth.js', './holdem.js', './roul.js', './roulette.js',
+  './slots.js', './games.js', './slotfx.js', './lights.js', './pinball.js', './pots.js', './purim.js',
   './manifest.webmanifest', './icon-192.png', './icon-512.png', './icon-maskable-512.png', './apple-touch-icon.png'
 ];
 

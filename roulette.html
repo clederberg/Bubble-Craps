@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bubble Craps · Roulette</title>
+<meta name="description" content="Free-play roulette: the European single-zero wheel and the American double-zero one, with the full inside and outside layout.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2064%2064%27%3E%3Ccircle%20cx%3D%2732%27%20cy%3D%2732%27%20r%3D%2730%27%20fill%3D%27%230b1f17%27%20stroke%3D%27%23c9962b%27%20stroke-width%3D%274%27%2F%3E%3Ccircle%20cx%3D%2732%27%20cy%3D%2732%27%20r%3D%2720%27%20fill%3D%27none%27%20stroke%3D%27%23c9962b%27%20stroke-width%3D%273%27%2F%3E%3Ccircle%20cx%3D%2732%27%20cy%3D%2712%27%20r%3D%274%27%20fill%3D%27%23f7e3a8%27%2F%3E%3C%2Fsvg%3E">
+<link rel="manifest" href="./manifest.webmanifest">
+<meta name="theme-color" content="#071a12">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Roulette">
+<link rel="apple-touch-icon" href="./apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Inter:wght@400;500;600;700&family=Oswald:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="casino.css">
+<style>
+.felt{min-height:0;padding:14px 16px 16px;
+  background:radial-gradient(120% 90% at 50% 10%, #16583c 0%, #0f4a30 48%, #09341f 100%)}
+
+/* ---- the top half: wheel, last numbers, the board ---- */
+.tablewrap{display:grid;grid-template-columns:minmax(260px,330px) minmax(0,1fr);gap:18px;align-items:start;position:relative;z-index:1}
+.wheelbox{display:flex;flex-direction:column;align-items:center;gap:8px}
+.wheel{width:100%;max-width:330px;aspect-ratio:1;filter:drop-shadow(0 18px 34px rgba(0,0,0,.55))}
+.called{display:flex;align-items:center;gap:10px;min-height:44px}
+.called .num{width:46px;height:46px;border-radius:50%;display:grid;place-items:center;
+  font:700 22px Oswald,sans-serif;color:#fff;border:2px solid rgba(255,248,230,.5);
+  box-shadow:0 6px 18px rgba(0,0,0,.5);transition:transform .25s cubic-bezier(.2,1.6,.4,1)}
+.called .num.red{background:linear-gradient(180deg,#c0392b,#8c1c16)}
+.called .num.black{background:linear-gradient(180deg,#2a2730,#15131a)}
+.called .num.green{background:linear-gradient(180deg,#148a52,#0c5733)}
+.called .num.pop{transform:scale(1.18)}
+.called .say{font:600 12px Oswald,sans-serif;letter-spacing:.2em;text-transform:uppercase;color:rgba(255,248,230,.72)}
+.history{display:flex;flex-wrap:wrap;gap:4px;justify-content:center;max-width:330px}
+.history i{font-style:normal;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;
+  font:600 11px Inter,sans-serif;color:#fff;opacity:.92}
+.history i.red{background:#9e2a20}.history i.black{background:#23202a}.history i.green{background:#0f6b40}
+.statline{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;font:600 10px Oswald,sans-serif;
+  letter-spacing:.16em;text-transform:uppercase;color:rgba(255,248,230,.5)}
+.statline b{color:#f2c75c}
+
+/* ---- the cloth ---- */
+.cloth{width:100%;background:rgba(0,0,0,.16);border:1px solid rgba(242,199,92,.3);border-radius:14px;padding:10px}
+.cloth svg{width:100%;height:auto;display:block;touch-action:manipulation}
+.cell{fill:rgba(0,0,0,.32);stroke:rgba(255,248,230,.6);stroke-width:2}
+.cell.red{fill:#a52f23}.cell.black{fill:#1d1a23}.cell.green{fill:#0e6b41}
+.cell.out{fill:rgba(0,0,0,.26)}
+.num-t{fill:#fff8e6;font:700 26px Oswald,sans-serif;text-anchor:middle;dominant-baseline:central;pointer-events:none}
+.out-t{fill:#fff8e6;font:600 17px Oswald,sans-serif;letter-spacing:.1em;text-anchor:middle;dominant-baseline:central;pointer-events:none}
+.out-t.sm{font-size:14px}
+.pip{pointer-events:none}
+.hit{fill:transparent;cursor:pointer}
+.hit:hover{fill:rgba(242,199,92,.3)}
+.cell.live:hover{fill:rgba(242,199,92,.34)}
+.cellhit{cursor:pointer}
+.chip-g{pointer-events:none}
+.chip-g circle{stroke:rgba(0,0,0,.5);stroke-width:2}
+.chip-g text{font:700 14px Inter,sans-serif;text-anchor:middle;dominant-baseline:central;
+  paint-order:stroke;stroke:rgba(0,0,0,.35);stroke-width:2.5px}
+.chip-g circle:first-child{filter:drop-shadow(0 2px 3px rgba(0,0,0,.55))}
+.winglow{fill:none;stroke:#ffe9a8;stroke-width:4;opacity:0;pointer-events:none}
+.winglow.on{animation:wg 1.5s ease-out}
+@keyframes wg{0%{opacity:1}100%{opacity:0}}
+.spinning .hit,.spinning .cellhit{cursor:not-allowed}
+
+/* ---- the receipt ---- */
+.ledger{margin:10px 0 0;display:flex;flex-wrap:wrap;gap:6px;justify-content:center;min-height:26px;position:relative;z-index:1}
+.ledger span{font:600 11px Inter,sans-serif;padding:4px 10px;border-radius:99px;
+  background:rgba(0,0,0,.34);border:1px solid rgba(255,248,230,.18);color:rgba(255,248,230,.78)}
+.ledger span.win{border-color:rgba(242,199,92,.6);color:#ffe3ac;background:rgba(242,199,92,.14)}
+.ledger span.tot{border-color:rgba(107,227,148,.6);color:#9ef0bd}
+.ledger span.tot.down{border-color:rgba(214,99,90,.6);color:#ffb0a6}
+
+@media (max-width:900px){
+  .tablewrap{grid-template-columns:1fr;gap:12px}
+  .wheelbox{flex-direction:row;flex-wrap:wrap;justify-content:center}
+  .wheel{max-width:190px}
+  .num-t{font-size:30px}
+  .out-t{font-size:19px}
+}
+@media (max-width:560px){
+  .felt{padding:10px 8px 12px}
+  .cloth{padding:6px}
+  .wheel{max-width:150px}
+  .called .num{width:38px;height:38px;font-size:18px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Bubble <span>Roulette</span></h1>
+    <div id="nav"></div>
+    <div class="modes" role="tablist">
+      <button class="mode" role="tab" data-mode="euro">European</button>
+      <button class="mode" role="tab" data-mode="american">American</button>
+    </div>
+    <button class="ghost" id="reset">Reset bankroll</button>
+  </header>
+
+  <div class="statusbar">
+    <div class="status">
+      <div class="big" id="headline">Place your bets</div>
+      <div class="sub" id="subline">Single zero · straight up pays 35 to 1</div>
+      <div class="events" id="events"></div>
+    </div>
+    <div class="shoe">
+      <small>House edge</small>
+      <b id="edge">2.70%</b>
+      <div class="shoebar"><i id="edgeBar" style="width:27%"></i></div>
+    </div>
+  </div>
+
+  <div class="rail">
+    <div class="felt">
+      <div class="tablewrap">
+        <div class="wheelbox">
+          <svg class="wheel" id="wheel" viewBox="0 0 400 400" aria-label="Roulette wheel"></svg>
+          <div class="called" id="called"></div>
+          <div class="history" id="history"></div>
+          <div class="statline" id="statline"></div>
+        </div>
+        <div class="cloth">
+          <svg id="cloth" viewBox="0 0 880 372" role="group" aria-label="Roulette layout"></svg>
+        </div>
+      </div>
+      <div class="ledger" id="ledger"></div>
+    </div>
+  </div>
+  <p class="hint">Click a number, a line or an edge to put the selected chip down. Right-click or long-press takes one off. Space spins, R repeats the last bets, B resets your bankroll.</p>
+  <details class="rules" id="rules"></details>
+</div>
+
+<div class="dock">
+  <div class="wrap">
+    <div class="chips" id="chips"></div>
+    <div class="tools">
+      <button class="tool" id="repeat">Repeat</button>
+      <button class="tool" id="double">Double</button>
+      <button class="tool" id="clear">Clear</button>
+      <button class="tool" id="sound">Audio: All</button>
+    </div>
+    <div class="dockstats">
+      <button class="stat bankbtn" id="bankBtn" type="button" title="Reset bankroll (B)"><small>Bankroll <i class="rs">&#8635;</i></small><b id="bank">$0</b></button>
+      <div class="stat"><small>On the layout</small><b id="atstake">$0</b></div>
+    </div>
+    <button class="go-btn" id="spin">SPIN</button>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<dialog id="resetDlg" class="dlg">
+  <form id="resetForm" method="dialog">
+    <h2>Reset bankroll</h2>
+    <label for="resetAmt">Starting amount</label>
+    <div class="amt"><span>$</span><input id="resetAmt" inputmode="decimal" autocomplete="off" value="1,000"></div>
+    <div class="presets" id="resetPresets">
+      <button type="button" data-amt="100">$100</button>
+      <button type="button" data-amt="500">$500</button>
+      <button type="button" data-amt="1000">$1,000</button>
+      <button type="button" data-amt="5000">$5,000</button>
+      <button type="button" data-amt="10000">$10,000</button>
+      <button type="button" data-amt="100000">$100,000</button>
+    </div>
+    <p class="err" id="resetErr"></p>
+    <p class="note">Shared with every other table.</p>
+    <div class="dlg-actions">
+      <button type="button" class="tool" id="resetCancel">Cancel</button>
+      <button type="submit" class="go">Reset</button>
+    </div>
+  </form>
+</dialog>
+
+<script src="common.js"></script>
+<script src="sounds.js"></script>
+<script src="roul.js"></script>
+<script src="roulette.js"></script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('./sw.js').catch(function () {});
+  });
+}
+</script>
+</body>
+</html>
