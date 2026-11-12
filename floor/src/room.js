@@ -4,7 +4,7 @@
    positioned in metres from the middle of the room. */
 import * as THREE from 'three';
 
-export const ROOM = { w: 36, d: 28, h: 5.4, pitH: 6.6, pit: { w: 17, d: 12, drop: 0.18 } };
+export const ROOM = { w: 38, d: 30, h: 5.4, pitH: 6.6, pit: { w: 20, d: 13.5, drop: 0.18 } };
 
 function box(w, h, d, mat, x, y, z, cast = true, receive = true) {
   const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
@@ -29,7 +29,7 @@ export function buildRoom(scene, M, solids) {
   const pit = new THREE.Group();
   const pf = new THREE.Mesh(new THREE.PlaneGeometry(ROOM.pit.w, ROOM.pit.d), M.carpetMat.clone());
   pf.material.map = M.carpetMat.map.clone();
-  pf.material.map.repeat.set(15, 11);
+  pf.material.map.repeat.set(17, 12);
   pf.material.map.needsUpdate = true;
   pf.rotation.x = -Math.PI / 2;
   pf.position.y = -ROOM.pit.drop + 0.002;
@@ -99,7 +99,7 @@ export function buildRoom(scene, M, solids) {
       lip.rotation.y = rot;
       coffer.add(lip);
       /* the cove strip itself, facing up into the coffer */
-      const cove = box(len, 0.04, 0.26, M.emissive(0xffb66e, 2.2), x, h + 0.3, z, false, false);
+      const cove = box(len, 0.04, 0.26, M.emissive(0xffb66e, 1.5), x, h + 0.3, z, false, false);
       cove.rotation.y = rot;
       cove.userData.cove = true;
       coffer.add(cove);
@@ -124,7 +124,7 @@ export function buildRoom(scene, M, solids) {
     g.position.set(x, 0, z);
     return g;
   };
-  const cx = ROOM.pit.w / 2 + 2.6, cz = ROOM.pit.d / 2 + 2.2;
+  const cx = ROOM.pit.w / 2 + 2.9, cz = ROOM.pit.d / 2 + 2.3;
   [[-cx, -cz], [cx, -cz], [-cx, cz], [cx, cz]].forEach(([x, z]) => {
     room.add(colAt(x, z));
     if (solids) solids.add(x, z, 0.55, 0.55, 0, 'column');

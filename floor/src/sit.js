@@ -21,7 +21,8 @@ export function createSeating(camera, scene, player, dom) {
   /* every table has a page already; sitting down opens it on the same origin,
      so the bankroll, the chips and the rules are the ones from the flat site */
   const PAGES = {
-    craps: '../index.html', blackjack: '../blackjack.html', baccarat: '../baccarat.html',
+    craps: '../index.html?mode=craps', crapless: '../index.html?mode=crapless',
+    blackjack: '../blackjack.html', baccarat: '../baccarat.html',
     holdem: '../holdem.html', lights: '../lights.html', pinball: '../pinball.html',
     purim: '../purim.html'
   };
@@ -48,7 +49,7 @@ export function createSeating(camera, scene, player, dom) {
   }
   function label(obj) {
     const id = obj.userData.game.id;
-    return ({ craps: 'Craps', blackjack: 'Blackjack', baccarat: 'Baccarat', holdem: 'Hold\u2019em',
+    return ({ craps: 'Craps', crapless: 'Crapless Craps', blackjack: 'Blackjack', baccarat: 'Baccarat', holdem: 'Hold\u2019em',
       lights: 'Festival of Lights', pinball: 'Pinball Classic', purim: 'Purim Pots' })[id] || id;
   }
   function setHover(obj) {

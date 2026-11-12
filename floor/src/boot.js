@@ -10,6 +10,8 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { buildMaterials } from './materials.js';
 import { buildRoom, ROOM } from './room.js';
 import { buildFixtures } from './fixtures.js';
+import { createScreens } from './attract.js';
+import { animateDealers } from './props.js';
 import { buildLighting } from './lighting.js';
 import { createPlayer } from './player.js';
 import { createSeating } from './sit.js';
@@ -61,7 +63,9 @@ async function start() {
 
   setStatus('Setting the tables', 0.6);
   await frame();
-  buildFixtures(scene, M, solids);
+  const screens = createScreens();
+  const fixtures = buildFixtures(scene, M, solids, screens);
+  app.screens = screens;
 
   setStatus('Turning on the lights', 0.8);
   await frame();
@@ -74,7 +78,8 @@ async function start() {
   await frame();
   const composer = new EffectComposer(renderer);
   composer.addPass(new RenderPass(scene, camera));
-  const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.62, 0.72, 0.82);
+  /* a high threshold so only the real light sources bloom, not a white shirt */
+  const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.46, 0.7, 0.95);
   composer.addPass(bloom);
   composer.addPass(new OutputPass());
   app.composer = composer;
@@ -99,11 +104,15 @@ async function start() {
   document.getElementById('hud').classList.remove('hidden');
 
   const clock = new THREE.Clock();
+  let now = 0;
   let fpsT = 0, fpsN = 0;
   renderer.setAnimationLoop(() => {
     const dt = Math.min(0.05, clock.getDelta());
+    now += dt;
     player.update(dt);
     seating.update(dt);
+    screens.update(dt);
+    animateDealers(fixtures.userData.dealers, now);
     composer.render();
     fpsT += dt; fpsN++;
     if (fpsT > 0.5) {

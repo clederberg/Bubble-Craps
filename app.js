@@ -15,6 +15,12 @@ function freshStats() {
     hands: 0, longest: 0, points: 0, sevenOuts: 0, best: 0, worst: 0, won: 0, lost: 0 };
 }
 var S = load() || fresh();
+/* The floor opens this page at one table or the other, so ?mode=crapless
+   arrives already switched over rather than on whichever was last played. */
+(function () {
+  var want = (location.search.match(/[?&]mode=(craps|crapless)/) || [])[1];
+  if (want && S.tables && S.tables[want]) S.mode = want;
+})();
 if (!S.dice) S.dice = {};
 if (S.sound === undefined) S.sound = true;
 if (S.voice === undefined) S.voice = true;

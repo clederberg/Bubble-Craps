@@ -43,13 +43,14 @@ export function buildLighting(scene, renderer, M) {
 
   /* the pit: three warm pendants, two of them casting */
   const spots = [];
-  [[-5.6, 0, 0xffd7a0, true], [0, 0, 0xffe0b0, true], [5.8, 0, 0xffd7a0, true]].forEach(([x, z, c, cast], i) => {
+  [[-4.8, -2.9, 0xffe0b0, true], [4.8, -2.9, 0xffe0b0, true], [-6.4, 3.3, 0xffd7a0, true],
+   [0, 3.6, 0xffd7a0, false], [6.4, 3.3, 0xffd7a0, false]].forEach(([x, z, c, cast], i) => {
     L.add(pendant(M, x, z, c));
     /* bright and tight: the pool of light on the felt is the whole look of a pit */
     const s = new THREE.SpotLight(c, 95, 12, 0.52, 0.45, 1.5);
     s.position.set(x, SHADE_Y - 0.26, z);
     s.target.position.set(x, 0, z);
-    if (cast && i < 3) {
+    if (cast) {
       s.castShadow = true;
       s.shadow.mapSize.set(1024, 1024);
       s.shadow.bias = -0.0015;
@@ -67,10 +68,10 @@ export function buildLighting(scene, renderer, M) {
   L.add(cove);
 
   /* the slot banks each get a cheap coloured fill so the aisles read */
-  [[-13.4, -6.5, 0x8a4fd8], [-13.4, 6.5, 0xd8742f], [13.4, -6.5, 0x3fb6d8], [13.4, 6.5, 0xd8a53f]]
+  [[-14.6, -7.0, 0x7ab6ff], [-14.6, 7.0, 0xe0a955], [14.6, -7.0, 0xff7a4c], [14.6, 7.0, 0x7ab6ff]]
     .forEach(([x, z, c]) => {
       const p = new THREE.PointLight(c, 11, 13, 2);
-      p.position.set(x + (x < 0 ? 1.4 : -1.4), 2.2, z);
+      p.position.set(x + (x < 0 ? 1.5 : -1.5), 2.2, z);
       L.add(p);
     });
 
