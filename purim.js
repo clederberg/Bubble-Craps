@@ -114,16 +114,36 @@
       if (done) done();
     }, dur + 20);
   }
+  /* The reels stop left to right. If a pot is two up with reels still to come,
+     the rest of them slow right down and the pot glows, because that is the
+     moment worth drawing out. */
   function spinReels(grid, opts, done) {
-    var left = 5, tease = opts && opts.tease;
+    var left = 5;
+    var counts = {};
+    var holdFrom = 99, holdKey = null;
+    G.potSyms.forEach(function (sym) {
+      counts[sym] = 0;
+      for (var x = 0; x < 5; x++) {
+        for (var y = 0; y < 3; y++) if (grid[x][y] === sym) counts[sym]++;
+        /* the first reel at which this pot is one short of closing */
+        if (counts[sym] === G.hold.close - 1 && holdFrom > x + 1) { holdFrom = x + 1; holdKey = sym; }
+      }
+    });
+    if (reduced()) holdFrom = 99;
+
     for (var i = 0; i < 5; i++) {
       (function (i) {
-        var dur = reduced() ? 180 : 620 + i * 155 + (tease && i >= 3 ? 900 : 0);
+        var teasing = i >= holdFrom;
+        var dur = reduced() ? 180 : 620 + i * 155 + (teasing ? 1150 : 0);
         later(function () {
-          if (tease && i === 3) { $('reel3').classList.add('near'); $('reel4').classList.add('near'); fx('anticipate', 1.4); }
+          if (teasing) {
+            $('reel' + i).classList.add('near');
+            var potEl = holdKey && $('pot-' + G.symbols[holdKey].pot);
+            if (potEl) potEl.classList.add('near');
+            fx('anticipate', 1.6);
+          }
           spinReel(i, grid[i], dur, function () {
-            if (tease && i >= 3) $('reel' + i).classList.remove('near');
-            if (tease && i === 4) fx('stopAnticipate');
+            if (teasing) { $('reel' + i).classList.remove('near'); fx('stopAnticipate'); }
             if (!--left && done) done();
           });
         }, i * 95);
@@ -141,13 +161,16 @@
     var h = '';
     G.pots.forEach(function (p) {
       h += '<div class="pot ' + p.key + '" id="pot-' + p.key + '">'
-        + '<div class="potart">' + symSVG(p.sym, 'sym') + '</div>'
+        + '<div class="potart" id="potart-' + p.key + '"></div>'
         + '<div class="potmeta"><b>' + p.name + '</b><small>' + p.note + '</small></div>'
         + '<span class="potcount" id="potseen-' + p.key + '"></span></div>';
     });
     K.setHTML($('potrail'), h);
+    G.pots.forEach(function (p) { fillPot(p.key, 0); });
     paintPots(null);
   }
+  /* What the strip is for: showing how close the last spin came. One of a pot
+     drops a hamantasch into it, two sets it rattling, three closes it. */
   function paintPots(pots) {
     G.pots.forEach(function (p) {
       var n = pots && pots.seen ? (pots.seen[p.key] || 0) : 0;
@@ -156,7 +179,23 @@
       el.classList.toggle('ready', !!closed);
       el.classList.toggle('near', !closed && n === G.hold.close - 1);
       K.setText($('potseen-' + p.key), closed ? 'CLOSED' : n ? n + ' of ' + G.hold.close : '');
+      fillPot(p.key, closed ? G.hold.close : n);
     });
+  }
+  /* the hamantaschen sitting in the mouth of a pot */
+  function fillPot(key, n) {
+    var art = $('potart-' + key);
+    if (!art) return;
+    if (art.__n === n) return;
+    art.__n = n;
+    var h = '<svg viewBox="0 0 64 64" aria-hidden="true">';
+    var spots = [[22, 16], [42, 16], [32, 9]];
+    for (var i = 0; i < Math.min(3, n); i++) {
+      h += '<g class="potfill" style="--d:' + (i * 0.09) + 's" transform="translate(' + (spots[i][0] - 9) + ','
+        + (spots[i][1] - 9) + ') scale(.28)"><use href="#s-HAMAN"/></g>';
+    }
+    h += '<use href="#s-' + key.toUpperCase() + '"/></svg>';
+    K.forceHTML(art, h);
   }
 
   /* ------------------------------------------------------------ jackpots */
@@ -199,9 +238,13 @@
   /* A tray is five columns of three. Cells are poked one at a time so a
      hamantasch already in place is never torn out and re-animated. */
   function trayHTML(ti) {
-    var h = '<div class="tray" id="tray' + ti + '"><div class="letters">';
+    var h = '<div class="tray" id="tray' + ti + '">'
+      + '<div class="trayhead"><div class="collector" id="pot' + ti + '">'
+      + '<svg viewBox="0 0 64 64"><use href="#s-POPPY"/></svg>'
+      + '<i id="potcount' + ti + '">0</i></div>'
+      + '<div class="letters">';
     P.GRAND_LETTERS.forEach(function (ch, c) { h += '<i id="L' + ti + '_' + c + '">' + ch + '</i>'; });
-    h += '</div><div class="cols">';
+    h += '</div></div><div class="cols">';
     for (var c = 0; c < G.cols; c++) {
       h += '<div class="col" id="col' + ti + '_' + c + '">';
       for (var r = 0; r < G.rows; r++) h += '<div class="hscell" id="hs' + ti + '_' + (c * G.rows + r) + '"></div>';
@@ -228,28 +271,80 @@
     el.innerHTML = '<svg class="bg" viewBox="0 0 64 64"><use href="#s-HAMAN"/></svg>'
       + '<span class="hsv">' + (v.jackpot ? v.label + '<br>' + money(v.amount) : money(v.amount)) + '</span>';
   }
-  /* An order up: the column lights, its total floats off it, and the cells
-     empty for the next spin. */
+  /* An order up. The column lights, the three hamantaschen fly up into the pot
+     one after another, the letter above the column comes on, and only then do
+     the cells open again. Seeing them leave is the whole point of the mechanic,
+     so this is deliberately unhurried. */
+  var collected = [0, 0];
   function orderUp(order, after) {
     var ti = order.tray, c = order.col;
     var col = $('col' + ti + '_' + c);
+    var pot = $('pot' + ti);
     if (!col) return after && after();
     col.classList.add('done');
-    var pop = $('pop' + ti + '_' + c);
-    K.setHTML(pop, money(order.amount) + (order.grand ? '<b>GRAND</b>' : ''));
-    pop.classList.add('show');
-    fx(order.grand ? 'jackpot' : 'coinRun', order.grand ? 'grand' : 2);
-    if (order.letter) {
-      var L = $('L' + ti + '_' + c);
-      if (L) { L.classList.add('lit'); }
+    fx('ratchet');
+
+    var cells = [];
+    for (var r = 0; r < G.rows; r++) {
+      var el = $('hs' + ti + '_' + (c * G.rows + r));
+      if (el && el.classList.contains('on')) cells.push(el);
     }
-    later(function () {
-      for (var r = 0; r < G.rows; r++) paintCell(ti, c * G.rows + r, null);
-      col.classList.remove('done');
-      pop.classList.remove('show');
-      if (after) after();
-    }, reduced() ? 60 : 900);
+    if (reduced() || !pot) {
+      cells.forEach(function (el) { el.className = 'hscell'; el.innerHTML = ''; });
+      finishOrder();
+      return;
+    }
+
+    var potBox = pot.getBoundingClientRect();
+    cells.forEach(function (el, n) {
+      later(function () {
+        var from = el.getBoundingClientRect();
+        var fly = document.createElement('div');
+        fly.className = 'flycell';
+        fly.innerHTML = el.innerHTML;
+        fly.style.width = from.width + 'px';
+        fly.style.height = from.height + 'px';
+        document.body.appendChild(fly);
+        var x0 = from.left, y0 = from.top;
+        var x1 = potBox.left + potBox.width / 2 - from.width * 0.18;
+        var y1 = potBox.top + potBox.height * 0.1;
+        fly.animate([
+          { transform: 'translate(' + x0 + 'px,' + y0 + 'px) scale(1)', opacity: 1 },
+          { transform: 'translate(' + ((x0 + x1) / 2) + 'px,' + (Math.min(y0, y1) - 52) + 'px) scale(.8)', opacity: 1, offset: 0.55 },
+          { transform: 'translate(' + x1 + 'px,' + y1 + 'px) scale(.32)', opacity: 0.1 }
+        ], { duration: 520, easing: 'cubic-bezier(.35,.02,.4,1)', fill: 'forwards' }).onfinish = function () {
+          fly.remove();
+          collected[ti]++;
+          K.setText($('potcount' + ti), String(collected[ti]));
+          pot.classList.remove('gulp');
+          void pot.offsetWidth;
+          pot.classList.add('gulp');
+          fx('pocket');
+        };
+        el.className = 'hscell';
+        el.innerHTML = '';
+      }, n * 170);
+    });
+    later(finishOrder, cells.length * 170 + 560);
+
+    function finishOrder() {
+      if (order.letter) {
+        var L = $('L' + ti + '_' + c);
+        if (L) L.classList.add('lit');
+        fx('reveal');
+      }
+      var pop = $('pop' + ti + '_' + c);
+      K.setHTML(pop, money(order.amount) + (order.grand ? '<b>GRAND</b>' : ''));
+      pop.classList.add('show');
+      fx(order.grand ? 'jackpot' : 'coinRun', order.grand ? 'grand' : 2);
+      later(function () {
+        col.classList.remove('done');
+        pop.classList.remove('show');
+        if (after) after();
+      }, order.grand ? 2200 : 1050);
+    }
   }
+
   function rollTo(el, from, to, ms) {
     if (!el) return;
     if (reduced() || from === to) { K.setText(el, money(to)); return; }
@@ -266,9 +361,10 @@
      under the trays is what has actually been collected. */
   function playBoard(round, title, sub, done) {
     var trays = round.trays;
+    collected = [0, 0];
     openBoard(title, sub, trays);
     var shown = 0, i = 0;
-    var BEAT = reduced() ? 60 : 520;
+    var BEAT = reduced() ? 60 : 680;
 
     function paintStep(st) {
       st.trays.forEach(function (t, ti) {
@@ -298,8 +394,8 @@
     var seed = round.steps[0];
     var seeded = [];
     seed.trays.forEach(function (t, ti) { t.cells.forEach(function (v, k) { if (v) seeded.push([ti, k, v]); }); });
-    seeded.forEach(function (c, n) { later(function () { paintCell(c[0], c[1], c[2]); fx('thud'); }, 140 + n * 120); });
-    var t0 = 140 + seeded.length * 120 + 200;
+    seeded.forEach(function (c, n) { later(function () { paintCell(c[0], c[1], c[2]); fx('thud'); }, 180 + n * 175); });
+    var t0 = 180 + seeded.length * 175 + 320;
     later(function () {
       runOrders(seed.orders, function () {
         rollTo($('pillBank'), shown, worth(seed), 400);
@@ -318,7 +414,7 @@
       $('pillRespins').classList.toggle('live', st.respins <= 1);
 
       var drops = st.drops || [];
-      if (drops.length) later(function () { rollTo($('pillBank'), shown, worth(st), 500); shown = worth(st); }, 220 + drops.length * 150);
+      if (drops.length) later(function () { rollTo($('pillBank'), shown, worth(st), 500); shown = worth(st); }, 260 + drops.length * 200);
       drops.forEach(function (d, n) {
         later(function () {
           if (d.drizzle) {
@@ -333,10 +429,10 @@
             paintCell(d.tray, d.idx, d.value);
             fx(d.value.jackpot ? 'reveal' : 'thud');
           }
-        }, 220 + n * 150);
+        }, 260 + n * 200);
       });
 
-      var wait = drops.length ? 220 + drops.length * 150 + 220 : BEAT;
+      var wait = drops.length ? 260 + drops.length * 200 + 320 : BEAT;
       later(function () {
         runOrders(st.orders || [], function () {
           rollTo($('pillBank'), shown, worth(st), 420);
@@ -355,7 +451,7 @@
         : lit === 4 ? 'One letter short of the Grand'
         : round.left ? 'The tray pays what is left on it'
         : 'Bonus over');
-      later(function () { closeBoard(); if (done) done(); }, 1800);
+      later(function () { closeBoard(); if (done) done(); }, 2200);
     }
   }
 
@@ -380,11 +476,7 @@
     paint();
     K.save();
 
-    var early = 0;
-    G.potSyms.forEach(function (sym) {
-      S.positionsOf(res.grid, sym).forEach(function (p) { if (p[0] < 3) early++; });
-    });
-    spinReels(res.grid, { tease: early >= 2 && !reduced() }, function () { resolve(res); });
+    spinReels(res.grid, {}, function () { resolve(res); });
   }
 
   function resolve(res) {
