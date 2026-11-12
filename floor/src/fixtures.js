@@ -130,15 +130,11 @@ function crapsTable(M, crapless) {
   const box_ = dealer(0, -W / 2 - 0.52, 0);
   box_.scale.setScalar(1.02);
   g.add(d1, d2, box_);
-  const crowd = [d1, d2, box_];
-  /* players along the near rail, leaving the middle clear so you can walk in */
-  [-1.55, -1.1, 1.1, 1.55, -0.6].forEach(px => {
-    if (Math.random() < 0.3) return;
-    const p = patron(px, W / 2 + 0.42, Math.PI, false);
-    g.add(p);
-    crowd.push(p);
-  });
-  g.userData.dealers = crowd;
+  g.userData.dealers = [d1, d2, box_];
+  /* places at the near rail, for whoever turns up: the middle is left clear so
+     you can walk in and take the shooter's spot yourself */
+  g.userData.spots = [-1.6, -1.15, -0.7, 0.7, 1.15, 1.6]
+    .map(px => ({ x: px, z: W / 2 + 0.46, facing: Math.PI, sit: false }));
 
   /* a lit sign over the table saying which game it is */
   const signMat = new THREE.MeshBasicMaterial({
@@ -209,12 +205,9 @@ function cardTable(M, kind) {
     chair.lookAt(0, 0, 0);
     chair.children.forEach(c => { c.castShadow = true; });
     g.add(chair);
-    /* somebody in about half of them */
-    if (Math.random() < 0.55) {
-      const sitter = patron(cx * 0.97, cz * 0.97, Math.atan2(-cx, -cz), true);
-      g.add(sitter);
-      g.userData.sitters = (g.userData.sitters || []).concat([sitter]);
-    }
+    (g.userData.spots = g.userData.spots || []).push({
+      x: cx * 0.98, z: cz * 0.98, facing: Math.atan2(-cx, -cz), sit: true, seatY: 0.52
+    });
     /* a few chips in front of the occupied seats */
     if (Math.random() < 0.6) {
       const bx = Math.cos(a) * (rx - 0.42), bz = Math.sin(a) * (rz - 0.32);
@@ -223,23 +216,35 @@ function cardTable(M, kind) {
   }
   const d = dealer(0, -(rz + 0.52), 0);
   g.add(d);
-  g.userData.dealers = [d].concat(g.userData.sitters || []);
+  g.userData.dealers = [d];
   return g;
 }
 
 /* ---------- slot machine ---------- */
 function slotMachine(M, screens, game) {
   const g = new THREE.Group();
-  g.add(box(0.72, 1.0, 0.62, M.darkMetal, 0, 0.5, 0));
-  g.add(box(0.76, 0.1, 0.66, M.brass, 0, 1.02, 0));
-  const screen = box(0.6, 0.78, 0.03, screens.material(game), 0, 1.5, 0.23, false, false);
+  /* The glass is in the proportion of the game page itself (1440x980), so the
+     real game can be laid onto it when you sit down without squashing. */
+  const GW = 0.69, GH = GW * 980 / 1440, GY = 1.36, GZ = 0.245;
+  g.add(box(0.78, 1.1, 0.62, M.darkMetal, 0, 0.55, 0));
+  g.add(box(0.82, 0.1, 0.66, M.brass, 0, 1.12, 0));
+  const screen = box(GW, GH, 0.03, screens.material(game), 0, GY, GZ - 0.015, false, false);
+  screen.name = 'glass';
   g.add(screen);
-  g.add(box(0.7, 0.92, 0.1, M.darkMetal, 0, 1.5, 0.17));
-  const topper = box(0.74, 0.3, 0.03, screens.topper(game), 0, 2.08, 0.14, false, false);
+  g.add(box(GW + 0.08, GH + 0.1, 0.1, M.darkMetal, 0, GY, 0.17));
+  const topper = box(0.76, 0.42, 0.03, screens.topper(game), 0, 1.98, 0.14, false, false);
   g.add(topper);
-  g.add(box(0.8, 0.38, 0.1, M.darkMetal, 0, 2.08, 0.09));
-  g.add(box(0.78, 0.06, 0.2, M.brass, 0, 1.88, 0.1));
-  g.add(box(0.76, 0.08, 0.3, M.woodMat, 0, 1.02, 0.4));
+  g.add(box(0.82, 0.5, 0.1, M.darkMetal, 0, 1.98, 0.09));
+  g.add(box(0.8, 0.06, 0.2, M.brass, 0, 1.69, 0.1));
+  g.add(box(0.8, 0.08, 0.3, M.woodMat, 0, 1.12, 0.4));
+  /* the button deck, which is what your hands are over while you play */
+  g.add(box(0.74, 0.04, 0.26, M.darkMetal, 0, 1.1, 0.42));
+  for (let i = -2; i <= 2; i++) {
+    const b = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.02, 14),
+      M.emissive(i === 2 ? 0xffc14a : 0x7fe8ff, 0.5));
+    b.position.set(i * 0.13, 1.13, 0.44);
+    g.add(b);
+  }
   const stool = new THREE.Group();
   const seat = new THREE.Mesh(new THREE.CylinderGeometry(0.21, 0.21, 0.08, 18), M.woodMat);
   seat.position.y = 0.66;
@@ -251,10 +256,26 @@ function slotMachine(M, screens, game) {
   stool.position.set(0, 0, 1.0);
   stool.children.forEach(c => { c.castShadow = true; });
   g.add(stool);
+  /* where the game page gets laid, in the machine's own coordinates */
+  g.userData.glass = { w: GW, h: GH, y: GY, z: GZ };
   return g;
 }
 
 export function buildFixtures(scene, M, solids, screens, book) {
+  const spots = [];
+  /* a place recorded in a fixture's own frame, lifted into the room */
+  const v3 = new THREE.Vector3();
+  const collect = obj => {
+    (obj.userData.spots || []).forEach(sp => {
+      v3.set(sp.x, 0, sp.z);
+      obj.updateMatrixWorld(true);
+      v3.applyMatrix4(obj.matrixWorld);
+      spots.push({
+        x: v3.x, z: v3.z, facing: sp.facing + obj.rotation.y,
+        sit: sp.sit, seatY: sp.seatY || 0
+      });
+    });
+  };
   const F = new THREE.Group();
   F.name = 'fixtures';
   F.add(pitRail(M, solids));
@@ -268,6 +289,7 @@ export function buildFixtures(scene, M, solids, screens, book) {
     t.userData.game = { id, seat: { x: 0, y: 1.42, z: 1.35, look: [0, 0.82, -0.2] } };
     F.add(t);
     dealers.push(...t.userData.dealers);
+    collect(t);
     solids.add(x, -2.9, 2.0, 1.1, 0, id);
     contact(scene, x, -2.9, 5.6, 3.6, 0.6, drop + 0.004);
   });
@@ -281,6 +303,7 @@ export function buildFixtures(scene, M, solids, screens, book) {
       t.userData.game = { id, seat: { x: 0, y: 1.22, z: 1.62, look: [0, 0.8, -0.1] } };
       F.add(t);
       dealers.push(...t.userData.dealers);
+      collect(t);
       solids.add(x, z, 1.9, 1.7, rot, id);
       contact(scene, x, z, 4.6, 3.8, 0.5, drop + 0.004);
     });
@@ -292,13 +315,10 @@ export function buildFixtures(scene, M, solids, screens, book) {
       const off = (i - (n - 1) / 2) * 0.86;
       m.position.set(x + Math.cos(rot) * off, 0, z - Math.sin(rot) * off);
       m.rotation.y = rot;
-      m.userData.game = { id: game, seat: { x: 0, y: 1.3, z: 0.62, look: [0, 1.5, 0.22] } };
+      m.userData.game = { id: game, seat: { x: 0, y: 1.4, z: 0.95, look: [0, 1.36, 0.24] } };
       F.add(m);
-      if (Math.random() < 0.3) {
-        const sitter = patron(0, 1.0, Math.PI, true);
-        m.add(sitter);
-        dealers.push(sitter);
-      }
+      m.userData.spots = [{ x: 0, z: 1.0, facing: Math.PI, sit: true, seatY: 0.7 }];
+      collect(m);
       solids.add(m.position.x, m.position.z, 0.44, 0.42, rot, 'slot');
     }
     contact(scene, x, z, n * 0.95, 2.4, 0.42);
@@ -399,16 +419,13 @@ export function buildFixtures(scene, M, solids, screens, book) {
   const keep = dealer(0, -0.95, Math.PI);
   bar.add(keep);
   dealers.push(keep);
-  [-2.1, -1.05, 1.05, 2.1].forEach(bx => {
-    if (Math.random() < 0.35) return;
-    const drinker = patron(bx, 1.05, 0, true);
-    bar.add(drinker);
-    dealers.push(drinker);
-  });
+  bar.userData.spots = [-3.15, -2.1, -1.05, 0, 1.05, 2.1, 3.15]
+    .map(bx => ({ x: bx, z: 1.05, facing: Math.PI, sit: true, seatY: 0.79 }));
   bar.position.set(0, 0, ROOM.d / 2 - 1.6);
   bar.rotation.y = Math.PI;
   F.add(bar);
-  solids.add(0, ROOM.d / 2 - 1.6, 4.2, 1.1, 0, 'bar');
+  collect(bar);
+  solids.add(0, ROOM.d / 2 - 1.6, 4.2, 0.85, 0, 'bar');
   contact(scene, 0, ROOM.d / 2 - 1.6, 10, 3.4, 0.5);
 
   /* ---- the name over the cage, and something on the walls ---- */
@@ -438,5 +455,6 @@ export function buildFixtures(scene, M, solids, screens, book) {
 
   scene.add(F);
   F.userData.dealers = dealers;
+  F.userData.spots = spots;
   return F;
 }

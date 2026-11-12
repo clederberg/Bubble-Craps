@@ -145,6 +145,11 @@ const OUTFITS = [
   { top: 0x202028, trouser: 0x202028 }, { top: 0xa83f4a, trouser: 0x2a2630 }
 ];
 
+/* ---- the people ----
+   One rig, posed. The legs hinge at the hip and bend at the knee, so the same
+   figure stands at a rail, walks the aisle and sits on a stool without being
+   rebuilt; the arms hinge at the shoulder and the elbow, which is enough for
+   placing a bet, pressing a button and throwing both hands up. */
 function figure(opt) {
   const g = new THREE.Group();
   const skin = new THREE.MeshStandardMaterial({ color: opt.skin, roughness: 0.8 });
@@ -152,56 +157,101 @@ function figure(opt) {
   const trouser = new THREE.MeshStandardMaterial({ color: opt.trouser, roughness: 0.88 });
   const hair = new THREE.MeshStandardMaterial({ color: opt.hair, roughness: 0.9 });
   const body = new THREE.Group();
-  const sit = !!opt.sitting;
-  const hip = sit ? 0.52 : 0.86;          // a seated figure folds at the hip
+  const HIP = 0.86, THIGH = 0.42, SHIN = 0.44;
 
-  const legs = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.19, hip, 14), trouser);
-  legs.position.y = hip / 2;
-  body.add(legs);
-  if (sit) {
-    /* thighs forward, so it reads as sat on the stool rather than sunk in it */
-    const thigh = new THREE.Mesh(new THREE.CapsuleGeometry(0.11, 0.3, 5, 10), trouser);
-    thigh.position.set(0, hip, 0.2);
-    thigh.rotation.x = Math.PI / 2;
-    body.add(thigh);
-  }
+  const hips = new THREE.Group();
+  hips.position.y = HIP;
+  body.add(hips);
+  const seat = new THREE.Mesh(new THREE.CapsuleGeometry(0.16, 0.1, 4, 12), trouser);
+  seat.position.y = -0.04;
+  hips.add(seat);
+
+  const legs = [];
+  [-1, 1].forEach(side => {
+    const leg = new THREE.Group();
+    leg.position.set(side * 0.095, -0.05, 0);
+    const thigh = new THREE.Mesh(new THREE.CapsuleGeometry(0.085, THIGH - 0.1, 4, 10), trouser);
+    thigh.position.y = -THIGH / 2;
+    leg.add(thigh);
+    const knee = new THREE.Group();
+    knee.position.y = -THIGH;
+    const shin = new THREE.Mesh(new THREE.CapsuleGeometry(0.072, SHIN - 0.12, 4, 10), trouser);
+    shin.position.y = -SHIN / 2;
+    knee.add(shin);
+    const foot = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.055, 0.2), new THREE.MeshStandardMaterial({ color: 0x14100e, roughness: 0.7 }));
+    foot.position.set(0, -SHIN - 0.02, 0.04);
+    knee.add(foot);
+    leg.add(knee);
+    hips.add(leg);
+    legs.push({ leg, knee });
+  });
+
   const torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.19, 0.34, 6, 16), top);
-  torso.position.y = hip + 0.26;
-  body.add(torso);
+  torso.position.y = 0.26;
+  hips.add(torso);
   if (opt.vest) {
     const waist = new THREE.Mesh(new THREE.CylinderGeometry(0.202, 0.207, 0.56, 16),
       new THREE.MeshStandardMaterial({ color: opt.vest, roughness: 0.7 }));
-    waist.position.y = hip + 0.24;
-    body.add(waist);
+    waist.position.y = 0.24;
+    hips.add(waist);
   }
   const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.065, 0.1, 10), skin);
-  neck.position.y = hip + 0.55;
-  body.add(neck);
+  neck.position.y = 0.55;
+  hips.add(neck);
+  const headPivot = new THREE.Group();
+  headPivot.position.y = 0.58;
+  hips.add(headPivot);
   const head = new THREE.Mesh(new THREE.SphereGeometry(0.108, 20, 16), skin);
-  head.position.y = hip + 0.67;
+  head.position.y = 0.09;
   head.scale.set(0.92, 1.1, 1);
-  body.add(head);
+  headPivot.add(head);
   const cap = new THREE.Mesh(new THREE.SphereGeometry(0.113, 18, 14, 0, Math.PI * 2, 0, Math.PI * 0.58), hair);
-  cap.position.y = hip + 0.685;
+  cap.position.y = 0.105;
   cap.scale.set(0.95, 1.05, 1.02);
-  body.add(cap);
+  headPivot.add(cap);
+
+  const arms = [];
   [-1, 1].forEach(side => {
-    const arm = new THREE.Mesh(new THREE.CapsuleGeometry(0.052, 0.3, 5, 10), top);
-    arm.position.set(side * 0.22, hip + 0.26, 0.03);
-    arm.rotation.set(-0.5, 0, side * 0.2);
-    body.add(arm);
-    const fore = new THREE.Mesh(new THREE.CapsuleGeometry(0.046, 0.26, 5, 10), top);
-    fore.position.set(side * 0.27, hip + 0.09, 0.26);
-    fore.rotation.set(-1.15, 0, side * 0.1);
-    body.add(fore);
+    const sh = new THREE.Group();
+    sh.position.set(side * 0.215, 0.42, 0);
+    const upper = new THREE.Mesh(new THREE.CapsuleGeometry(0.052, 0.22, 5, 10), top);
+    upper.position.y = -0.15;
+    sh.add(upper);
+    const elbow = new THREE.Group();
+    elbow.position.y = -0.3;
+    const fore = new THREE.Mesh(new THREE.CapsuleGeometry(0.046, 0.2, 5, 10), top);
+    fore.position.y = -0.14;
+    elbow.add(fore);
     const hand = new THREE.Mesh(new THREE.SphereGeometry(0.052, 12, 10), skin);
-    hand.position.set(side * 0.29, hip + 0.04, 0.41);
-    body.add(hand);
+    hand.position.y = -0.29;
+    elbow.add(hand);
+    sh.add(elbow);
+    hips.add(sh);
+    arms.push({ sh, elbow, side });
   });
+
   body.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
   g.add(body);
-  g.userData.anim = { body, seed: Math.random() * 10 };
+  g.userData.anim = { body, hips, legs, arms, head: headPivot, seed: Math.random() * 10, HIP };
+  setPose(g, opt.sitting ? 1 : 0);
   return g;
+}
+
+/* 0 stands, 1 sits. The hips drop, the thighs come forward and the knees send
+   the shins back down, which is the whole of sitting on a stool. */
+export function setPose(fig, k, drop = 0.2) {
+  const a = fig.userData.anim;
+  if (!a) return;
+  a.sitK = k;
+  a.hips.position.y = a.HIP - drop * k;
+  a.legs.forEach(l => {
+    l.leg.rotation.x = -1.48 * k;
+    l.knee.rotation.x = 1.42 * k;
+  });
+  a.arms.forEach(m => {
+    m.sh.rotation.set(-0.22 - 0.45 * k, 0, m.side * 0.16);
+    m.elbow.rotation.x = -0.55 - 0.5 * k;
+  });
 }
 
 export function dealer(x, z, facing) {
@@ -227,7 +277,7 @@ export function patron(x, z, facing, sitting) {
   g.rotation.y = facing + (Math.random() - 0.5) * 0.18;
   g.scale.setScalar(0.94 + Math.random() * 0.12);
   /* a punter must never get between you and the game you are trying to click */
-  g.traverse(o => { o.raycast = () => {}; });
+  g.traverse(o2 => { o2.raycast = () => {}; });
   return g;
 }
 

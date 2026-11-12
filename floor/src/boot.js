@@ -13,6 +13,7 @@ import { buildFixtures } from './fixtures.js';
 import { createScreens } from './attract.js';
 import { createSportsbook } from './sportsbook.js';
 import { animateDealers } from './props.js';
+import { createCrowd } from './crowd.js';
 import { buildLighting } from './lighting.js';
 import { createPlayer } from './player.js';
 import { createSeating } from './sit.js';
@@ -88,8 +89,12 @@ async function start() {
   app.bloom = bloom;
 
   scene.updateMatrixWorld(true);
+  app.solids = solids;
   const player = createPlayer(camera, canvas, solids);
   const seating = createSeating(camera, scene, player, canvas);
+  /* the floor's own custom, walking between the games */
+  const crowd = createCrowd(scene, fixtures.userData.spots, 22);
+  app.crowd = crowd;
   app.player = player;
   app.seating = seating;
 
@@ -116,6 +121,7 @@ async function start() {
     screens.update(dt);
     book.update(dt);
     animateDealers(fixtures.userData.dealers, now);
+    crowd.update(dt, now);
     composer.render();
     fpsT += dt; fpsN++;
     if (fpsT > 0.5) {

@@ -3,6 +3,7 @@
    click hands the camera over to a tween that walks it into the seated pose.
    Esc, Q or the button gives it back. */
 import * as THREE from 'three';
+import { createGlass } from './glass.js';
 
 const ease = t => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 
@@ -98,6 +99,11 @@ export function createSeating(camera, scene, player, dom) {
      game gets the desktop layout it was built for whatever size the panel
      ends up. */
   const LOGICAL = { w: 1440, h: 980 };
+  /* A machine has a glass to play on, so its page goes there instead of into a
+     window. A table does not: a layout seen at table height is too foreshortened
+     to read, so those keep the panel. */
+  const glass = createGlass(camera, panel, LOGICAL);
+  const onGlass = obj => !!(obj && obj.userData.glass);
   function fitPanel() {
     if (!panel || !panel.classList.contains('on')) return;
     const view = panel.querySelector('.panel-view');
@@ -128,6 +134,18 @@ export function createSeating(camera, scene, player, dom) {
     if (!url) return;
     panelFrame.src = url;
     panel.classList.add('on');
+    if (onGlass(obj)) {
+      /* laid on the cabinet: no window chrome, no dimming, and the HUD bar
+         keeps the way out */
+      panel.classList.add('glass');
+      panel.classList.remove('anchored');
+      panelFrame.style.transform = '';
+      glass.setTarget(obj);
+      glass.update();
+      return;
+    }
+    panel.classList.remove('glass');
+    glass.clear();
     /* the panel carries its own title and leave button, so the HUD one would
        only sit underneath it saying the same thing twice */
     if (seatedBar) seatedBar.classList.remove('on');
@@ -136,10 +154,16 @@ export function createSeating(camera, scene, player, dom) {
     fitPanel();
     requestAnimationFrame(fitPanel);
   }
-  addEventListener('resize', () => { fitPanel(); if (current) anchorPanel(current); });
+  addEventListener('resize', () => {
+    if (glass.active) { glass.update(); return; }
+    fitPanel();
+    if (current) anchorPanel(current);
+  });
   function closePanel() {
     if (!panel) return;
+    glass.clear();
     panel.classList.remove('on');
+    panel.classList.remove('glass');
     panel.classList.remove('anchored');
     document.body.classList.remove('dimmed');
     setTimeout(() => { if (state !== 'seated') panelFrame.src = 'about:blank'; }, 480);
@@ -161,6 +185,8 @@ export function createSeating(camera, scene, player, dom) {
     get table() { return current; },
     sit, stand,
     update(dt) {
+      /* the page rides the cabinet, so it is re-laid every frame */
+      if (glass.active) glass.update();
       if (state === 'walking') {
         if (!player.locked) { setHover(null); return; }
         ray.setFromCamera(centre, camera);

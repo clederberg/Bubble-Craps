@@ -4,7 +4,10 @@
    is which. */
 import * as THREE from 'three';
 
-const W = 256, H = 320;
+/* landscape, in the proportion of the real game pages (1440x980), because a
+   seated player is looking at the page itself on this glass */
+const W = 384, H = 262;
+const REELS = 5;
 
 /* each game gets a palette, a name and a way of drawing one symbol */
 const GAMES = {
@@ -157,25 +160,25 @@ class Screen {
     x.fillRect(0, 0, W, H);
     /* top glass with the name */
     x.fillStyle = 'rgba(0,0,0,.35)';
-    x.fillRect(0, 0, W, 54);
+    x.fillRect(0, 0, W, 40);
     x.fillStyle = this.phase === 'win' && Math.floor(this.t * 6) % 2 ? '#fff' : g.frame;
-    x.font = '700 19px Oswald, Arial';
+    x.font = '700 17px Oswald, Arial';
     x.textAlign = 'center';
     x.textBaseline = 'middle';
-    x.fillText(g.name, W / 2, 28);
+    x.fillText(g.name, W / 2, 21);
 
-    /* three reels */
-    const rw = (W - 24) / 3, top = 64, h = H - 64 - 44;
-    for (let r = 0; r < 3; r++) {
-      const rx = 8 + r * (rw + 4);
+    /* five reels */
+    const rw = (W - 8 - 4 * REELS) / REELS, top = 48, h = H - 48 - 32;
+    for (let r = 0; r < REELS; r++) {
+      const rx = 4 + r * (rw + 4);
       x.fillStyle = 'rgba(0,0,0,.45)';
       x.fillRect(rx, top, rw, h);
       x.save();
       x.beginPath(); x.rect(rx, top, rw, h); x.clip();
-      const off = this.offsets[r] % 1;
+      const off = this.offsets[r % 3] % 1;
       for (let i = -1; i < 4; i++) {
         const sy = top + (i + off) * (h / 3) + h / 6;
-        const k = (((Math.floor(this.offsets[r] * 3) + i + r * 2) % g.symbols.length) + g.symbols.length) % g.symbols.length;
+        const k = (((Math.floor(this.offsets[r % 3] * 3) + i + r * 2) % g.symbols.length) + g.symbols.length) % g.symbols.length;
         drawSymbol(x, g.symbols[k], rx + rw / 2, sy, rw * 0.3, g.colours[k]);
       }
       x.restore();
@@ -188,20 +191,20 @@ class Screen {
       x.strokeStyle = '#fff6c8';
       x.lineWidth = 4;
       x.beginPath();
-      x.moveTo(6, top + h / 2); x.lineTo(W - 6, top + h / 2);
+      x.moveTo(4, top + h / 2); x.lineTo(W - 4, top + h / 2);
       x.stroke();
       x.fillStyle = 'rgba(255,214,110,.16)';
-      x.fillRect(6, top + h / 3, W - 12, h / 3);
+      x.fillRect(4, top + h / 3, W - 8, h / 3);
     }
     /* credit strip */
     x.fillStyle = 'rgba(0,0,0,.5)';
-    x.fillRect(0, H - 40, W, 40);
+    x.fillRect(0, H - 30, W, 30);
     x.fillStyle = g.ink;
-    x.font = '600 15px Oswald, Arial';
+    x.font = '600 14px Oswald, Arial';
     x.textAlign = 'left';
-    x.fillText('CREDIT', 10, H - 20);
+    x.fillText('CREDIT', 9, H - 15);
     x.textAlign = 'right';
-    x.fillText(this.phase === 'win' ? 'WIN ' + (20 + Math.floor(this.t * 7) % 400) : '2,480', W - 10, H - 20);
+    x.fillText(this.phase === 'win' ? 'WIN ' + (20 + Math.floor(this.t * 7) % 400) : '2,480', W - 9, H - 15);
   }
 }
 
