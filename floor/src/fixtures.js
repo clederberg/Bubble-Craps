@@ -2,7 +2,8 @@
    chips and dice and a dealer at each one, and the slot screens run their own
    game so you can tell a bank apart from across the floor. */
 import * as THREE from 'three';
-import { ROOM } from './room.js';
+import { ROOM, SALON } from './room.js';
+import { cardMesh } from './theatre.js';
 import { tune } from './materials.js';
 import { houseSign, monogram, artWall } from './decor.js';
 import { crapsLayout, blackjackLayout, baccaratLayout, rouletteLayout, wheelFace, terminalIdle, signTexture } from './felt.js';
@@ -135,8 +136,21 @@ function crapsTable(M, crapless) {
   g.add(chipRack(0, FELT + 0.045, -W / 2 + 0.17));
   g.add(chipRack(-1.3, FELT + 0.045, -W / 2 + 0.17, 0, [500, 100, 25]));
   g.add(chipRack(1.3, FELT + 0.045, -W / 2 + 0.17, 0, [500, 100, 25]));
-  g.add(die(0.42, FELT + 0.04, 0.26, [0.3, 0.8, 0]));
-  g.add(die(0.49, FELT + 0.04, 0.22, [1.2, 0.2, 0.4]));
+  /* the pair the shooter throws, and a few bets for the dealers to settle */
+  const dieA = die(-L / 2 + 0.5, FELT + 0.05, 0.3, [0.3, 0.8, 0]);
+  const dieB = die(-L / 2 + 0.6, FELT + 0.05, 0.22, [1.2, 0.2, 0.4]);
+  dieA.visible = dieB.visible = false;
+  g.add(dieA, dieB);
+  const stacks = [[-0.9, 0.18], [-0.25, 0.3], [0.5, 0.22], [1.15, 0.3]].map(([bx, bz]) => {
+    const st = chipStack([25, 100, 500][Math.floor(Math.random() * 3)], 2 + Math.floor(Math.random() * 4),
+      bx, FELT + 0.035, bz);
+    g.add(st);
+    return st;
+  });
+  g.userData.act = {
+    kind: 'craps', dice: [dieA, dieB], stacks, y: FELT + 0.03,
+    from: [-L / 2 + 0.55, 0.26], to: [L / 2 - 0.5, -0.1]
+  };
   const d1 = dealer(-1.0, -W / 2 - 0.42, 0);
   const d2 = dealer(1.0, -W / 2 - 0.42, 0);
   const box_ = dealer(0, -W / 2 - 0.52, 0);
@@ -164,6 +178,28 @@ function crapsTable(M, crapless) {
   g.add(box(1.25, 0.31, 0.03, signMat, 0, 1.72, -W / 2 - 0.19, false, false));
   g.add(box(1.33, 0.39, 0.09, M.darkMetal, 0, 1.72, -W / 2 - 0.23));
   g.add(box(0.05, 0.9, 0.05, M.darkMetal, 0, 1.3, -W / 2 - 0.24));
+  return g;
+}
+
+
+/* A lit panel on a bracket: the game's name over a table, or the name of a
+   room over the way into it. */
+function gameSign(M, text, colour, x, y, z, w = 1.6, h = 0.4) {
+  const g = new THREE.Group();
+  const hex = '#' + colour.toString(16).padStart(6, '0');
+  const mat = new THREE.MeshBasicMaterial({ map: signTexture(text, hex), toneMapped: false });
+  g.add(box(w, h, 0.03, mat, 0, 0, 0.02, false, false));
+  g.add(box(w + 0.1, h + 0.1, 0.09, M.darkMetal, 0, 0, -0.03));
+  g.position.set(x, y, z);
+  return g;
+}
+/* the smaller plate under it, with the limits on */
+function limitPlate(M, text, x, y, z) {
+  const g = new THREE.Group();
+  const mat = new THREE.MeshBasicMaterial({ map: signTexture(text, '#e8dcc0'), toneMapped: false });
+  g.add(box(1.15, 0.2, 0.025, mat, 0, 0, 0.02, false, false));
+  g.add(box(1.22, 0.26, 0.07, M.darkMetal, 0, 0, -0.02));
+  g.position.set(x, y, z);
   return g;
 }
 
@@ -208,7 +244,6 @@ function cardTable(M, kind) {
   /* the dealer's side: rack, shoe, a hand already out */
   g.add(chipRack(0, 0.875, -rz + 0.18));
   g.add(shoe(0.62, 0.875, -rz + 0.34, -0.3));
-  g.add(cards(-0.1, 0.875, -rz + 0.52, 2));
   const seats = kind === 'baccarat' ? 7 : 5;
   for (let i = 0; i < seats; i++) {
     const a = Math.PI / 2 + (i - (seats - 1) / 2) * 0.42;
@@ -226,6 +261,10 @@ function cardTable(M, kind) {
     chair.lookAt(0, 0, 0);
     chair.children.forEach(c => { c.castShadow = true; });
     g.add(chair);
+    /* where this seat's cards land, just inside the edge of the cloth */
+    (g.userData.dealSpots = g.userData.dealSpots || []).push([
+      Math.cos(a) * (rx - 0.34), Math.sin(a) * (rz - 0.22), -a + Math.PI / 2
+    ]);
     /* the middle chair is yours, so nobody else takes it */
     if (i !== (seats - 1) / 2) {
       (g.userData.spots = g.userData.spots || []).push({
@@ -238,6 +277,27 @@ function cardTable(M, kind) {
       g.add(chipStack([5, 25, 100][Math.floor(Math.random() * 3)], 3 + Math.floor(Math.random() * 6), bx, 0.875, bz));
     }
   }
+  const hands = [];
+  /* two cards to every seat, then two to the dealer, one of them face down */
+  (g.userData.dealSpots || []).forEach(([sx, sz, rot]) => {
+    for (let k = 0; k < 2; k++) {
+      const m = cardMesh();
+      g.add(m);
+      hands.push({ mesh: m, to: [sx + k * 0.05, sz + k * 0.012], rot: rot, hole: false });
+    }
+  });
+  for (let k = 0; k < 2; k++) {
+    const m = cardMesh();
+    g.add(m);
+    hands.push({ mesh: m, to: [-0.12 + k * 0.08, -rz + 0.5], rot: 0, hole: k === 1 });
+  }
+  g.userData.act = {
+    /* the extruded table top stands 0.90 proud of the group, so the cards have
+       to lie above that or they are inside the furniture */
+    kind: 'cards', cards: hands, y: 0.905,
+    shoe: [0.62, -rz + 0.34], discard: [-0.72, -rz + 0.3],
+    look: kind === 'baccarat' ? 3.4 : 4.4
+  };
   const d = dealer(0, -(rz + 0.52), 0);
   g.add(d);
   g.userData.dealers = [d];
@@ -338,7 +398,8 @@ function rouletteTable(M, american) {
   g.add(ball);
 
   /* the marker on the winning number, and the dealer beside the wheel */
-  const dolly = box(0.05, 0.14, 0.05, M.emissive(0xffd27a, 0.5), 0.18, FELT + 0.1, 0.45, false, false);
+  const dolly = box(0.05, 0.14, 0.05, M.emissive(0xffd27a, 0.5),
+    W / 2 - 0.28, FELT + 0.1, -L / 2 + 1.5, false, false);
   g.add(dolly);
   g.add(chipRack(0, FELT + 0.045, -L / 2 + 1.02, Math.PI / 2, [500, 100, 25]));
 
@@ -346,27 +407,28 @@ function rouletteTable(M, american) {
   g.add(d);
   g.userData.dealers = [d];
   g.userData.spin = { disc, ball, wz, felt: FELT, t: Math.random() * 10 };
+  /* The cloth is 1.12 by 1.72 centred just forward of the middle of the table,
+     and the layout texture is laid on it un-rotated, so a point on the canvas
+     maps straight onto it. That is how the marker finds the winning number. */
+  const CLOTH_W = W - 0.3, CLOTH_D = 1.72, CLOTH_Z = 0.52;
+  g.userData.act = {
+    kind: 'roulette', spin: g.userData.spin, dolly, american: !!american,
+    order: american
+      ? [0, 28, 9, 26, 30, 11, 7, 20, 32, 17, 5, 22, 34, 15, 3, 24, 36, 13, 1,
+        '00', 27, 10, 25, 29, 12, 8, 19, 31, 18, 6, 21, 33, 16, 4, 23, 35, 14, 2]
+      : [0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10,
+        5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26],
+    dollyHome: [W / 2 - 0.28, -L / 2 + 1.5],
+    uvToLocal: (u, v) => [(u - 0.5) * CLOTH_W, CLOTH_Z + (v - 0.5) * CLOTH_D]
+  };
 
-  /* seats down both sides */
+  /* Roulette is played standing, so there are no chairs: people take a place
+     at the rail down either side and across the end away from the wheel. */
   g.userData.spots = [];
   [-1, 1].forEach(side => {
-    [0.15, 0.78].forEach(z => {
-      const chair = new THREE.Group();
-      chair.add(box(0.44, 0.09, 0.44, M.woodMat, 0, 0.47, 0));
-      chair.add(box(0.42, 0.52, 0.1, M.woodMat, 0, 0.77, -0.19));
-      const post = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.07, 0.47, 10), M.darkMetal);
-      post.position.y = 0.235;
-      chair.add(post);
-      const base = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.27, 0.04, 16), M.darkMetal);
-      base.position.y = 0.02;
-      chair.add(base);
-      chair.position.set(side * (W / 2 + 0.46), 0, z);
-      /* the backrest is at the chair's own -z, so +z has to point at the table */
-      chair.rotation.y = -side * Math.PI / 2;
-      chair.children.forEach(c => { c.castShadow = true; });
-      g.add(chair);
+    [-0.1, 0.5, 1.05].forEach(z => {
       g.userData.spots.push({
-        x: side * (W / 2 + 0.44), z: z, facing: -side * Math.PI / 2, sit: true, seatY: 0.52,
+        x: side * (W / 2 + 0.42), z: z, facing: -side * Math.PI / 2, sit: false,
         /* the clear floor beside the table, so nobody walks over the wheel */
         gate: [side * 2.3, 2.3]
       });
@@ -446,6 +508,7 @@ export function buildFixtures(scene, M, solids, screens, book) {
   F.add(pitRail(M, solids));
   const dealers = [];
   const wheels = [];
+  const acts = [];
   const drop = -ROOM.pit.drop;
 
   /* two craps tables side by side: the regular game and crapless */
@@ -456,6 +519,7 @@ export function buildFixtures(scene, M, solids, screens, book) {
     F.add(t);
     dealers.push(...t.userData.dealers);
     collect(t);
+    if (t.userData.act) acts.push(t.userData.act);
     solids.add(x, -2.9, 2.0, 1.1, 0, id);
     contact(scene, x, -2.9, 5.6, 3.6, 0.6, drop + 0.004);
   });
@@ -467,7 +531,7 @@ export function buildFixtures(scene, M, solids, screens, book) {
   F.add(roul);
   dealers.push(...roul.userData.dealers);
   collect(roul);
-  wheels.push(roul.userData.spin);
+  if (roul.userData.act) acts.push(roul.userData.act);
   solids.add(0, -2.3, 1.25, 2.2, 0, 'roulette');
   contact(scene, 0, -2.9, 3.4, 4.4, 0.55, drop + 0.004);
 
@@ -481,6 +545,7 @@ export function buildFixtures(scene, M, solids, screens, book) {
       F.add(t);
       dealers.push(...t.userData.dealers);
       collect(t);
+      if (t.userData.act) acts.push(t.userData.act);
       solids.add(x, z, 1.9, 1.7, rot, id);
       contact(scene, x, z, 4.6, 3.8, 0.5, drop + 0.004);
     });
@@ -607,6 +672,64 @@ export function buildFixtures(scene, M, solids, screens, book) {
   solids.add(0, ROOM.d / 2 - 1.6, 4.2, 0.85, 0, 'bar');
   contact(scene, 0, ROOM.d / 2 - 1.6, 10, 3.4, 0.5);
 
+  /* ---- the high limit salon ----
+     Three tables and a host's desk, in a room that is deliberately emptier
+     than the floor outside it. The limits are the point, so they are on the
+     signs. */
+  {
+    const S = SALON, cx = S.cx;
+    const hl = [
+      ['blackjack', cx - 3.2, -3.6, 0, 'BLACKJACK', '$500 \u2013 $25,000'],
+      /* turned to face the room, so its players are not backed against the wall */
+      ['baccarat', cx + 3.6, 0, -Math.PI / 2, 'BACCARAT', '$1,000 \u2013 $100,000']
+    ];
+    hl.forEach(([id, x, z, rot, name, limit]) => {
+      const t = cardTable(M, id);
+      t.position.set(x, 0, z);
+      t.rotation.y = rot;
+      t.userData.game = { id, seat: { x: 0, y: 1.46, z: 1.84, look: [0, 1.05, 1.31] } };
+      F.add(t);
+      dealers.push(...t.userData.dealers);
+      collect(t);
+      if (t.userData.act) acts.push(t.userData.act);
+      solids.add(x, z, 1.9, 1.7, rot, id);
+      contact(scene, x, z, 4.6, 3.8, 0.5);
+      const sg = gameSign(M, name, 0xffd9a0, x, 2.5, z - 2.6);
+      F.add(sg);
+      F.add(limitPlate(M, limit, x, 2.12, z - 2.6));
+    });
+    /* roulette, standing, at the far end */
+    const hr = rouletteTable(M, false);
+    hr.position.set(cx - 3.2, 0, 3.6);
+    hr.rotation.y = Math.PI;
+    hr.userData.game = { id: 'roulette', seat: { x: 0, y: 1.58, z: 2.52, look: [0, 1.2, 1.9] } };
+    F.add(hr);
+    dealers.push(...hr.userData.dealers);
+    collect(hr);
+    if (hr.userData.act) acts.push(hr.userData.act);
+    solids.add(cx - 3.2, 3.6 + 0.6, 1.25, 2.2, Math.PI, 'roulette');
+    contact(scene, cx - 3.2, 3.6, 3.4, 4.4, 0.55);
+
+    /* the host's desk by the way in */
+    const desk = new THREE.Group();
+    desk.add(box(2.2, 1.04, 0.7, M.woodMat, 0, 0.52, 0));
+    desk.add(box(2.34, 0.07, 0.84, M.marbleMat, 0, 1.08, 0));
+    desk.add(box(2.1, 0.03, 0.06, M.emissive(0xffd9a0, 0.9), 0, 0.62, 0.36, false, false));
+    desk.position.set(S.x0 + 1.9, 0, -6.7);
+    desk.rotation.y = 0.5;
+    F.add(desk);
+    solids.add(S.x0 + 1.9, -6.7, 1.2, 0.45, 0.5, 'desk');
+    const host = dealer(S.x0 + 1.4, -7.0, 2.4);
+    F.add(host);
+    dealers.push(host);
+
+    /* HIGH LIMIT over the way in, read from the main floor */
+    const portal = gameSign(M, 'HIGH LIMIT', 0xffd9a0, ROOM.w / 2 - 0.42, 3.25, SALON.door.z);
+    portal.rotation.y = -Math.PI / 2;
+    portal.scale.setScalar(1.25);
+    F.add(portal);
+  }
+
   /* ---- the name over the cage, and something on the walls ---- */
   const sign = houseSign(7.6, 1.9);
   sign.position.set(0, 4.3, -ROOM.d / 2 + 0.72);
@@ -626,7 +749,11 @@ export function buildFixtures(scene, M, solids, screens, book) {
   /* framed pieces: the side walls get runs of them, the end walls only the
      stretches either side of the cage and the bar */
   F.add(artWall(M, ROOM.d - 6, 2.7, Math.PI / 2, -ROOM.w / 2 + 0.6, 0, 0, 5));
-  F.add(artWall(M, ROOM.d - 6, 2.7, -Math.PI / 2, ROOM.w / 2 - 0.6, 0, 5, 5));
+  /* the east wall has the way into the salon in the middle of it, so its
+     pictures hang either side of the opening rather than over it */
+  [-1, 1].forEach(side => {
+    F.add(artWall(M, 8, 2.7, -Math.PI / 2, ROOM.w / 2 - 0.6, side * 7.2, 5 + (side > 0 ? 3 : 0), 3));
+  });
   [-1, 1].forEach(side => {
     F.add(artWall(M, 8.5, 2.7, 0, side * 12.5, -ROOM.d / 2 + 0.6, 10 + side * 3, 3));
     F.add(artWall(M, 8.5, 2.7, Math.PI, side * 12.5, ROOM.d / 2 - 0.6, 20 + side * 3, 3));
@@ -636,5 +763,6 @@ export function buildFixtures(scene, M, solids, screens, book) {
   F.userData.dealers = dealers;
   F.userData.spots = spots;
   F.userData.wheels = wheels;
+  F.userData.acts = acts;
   return F;
 }

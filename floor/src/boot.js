@@ -8,12 +8,13 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { buildMaterials } from './materials.js';
-import { buildRoom, ROOM } from './room.js';
+import { buildRoom, buildSalon, ROOM, SALON } from './room.js';
 import { buildFixtures } from './fixtures.js';
 import { createScreens } from './attract.js';
 import { createSportsbook } from './sportsbook.js';
 import { animateDealers } from './props.js';
 import { createCrowd } from './crowd.js';
+import { createTheatre } from './theatre.js';
 import { buildLighting } from './lighting.js';
 import { createPlayer } from './player.js';
 import { createSeating } from './sit.js';
@@ -60,8 +61,19 @@ async function start() {
 
   setStatus('Building the room', 0.4);
   await frame();
-  const solids = new Solids().addRoom(ROOM.w, ROOM.d);
+  /* The east wall has a way through to the salon, so the shell is built by
+     hand rather than with addRoom: four walls, one of them in two pieces. */
+  const solids = new Solids();
+  const t = 1, gz = SALON.door.z, gw = SALON.door.w;
+  solids.add(0, -ROOM.d / 2 - t / 2 + 0.35, ROOM.w / 2, t / 2, 0, 'wall');
+  solids.add(0, ROOM.d / 2 + t / 2 - 0.35, ROOM.w / 2, t / 2, 0, 'wall');
+  solids.add(-ROOM.w / 2 - t / 2 + 0.35, 0, t / 2, ROOM.d / 2, 0, 'wall');
+  [-1, 1].forEach(side => {
+    const run = (ROOM.d - gw) / 2;
+    solids.add(ROOM.w / 2 + t / 2 - 0.35, gz + side * (gw / 2 + run / 2), t / 2, run / 2, 0, 'wall');
+  });
   buildRoom(scene, M, solids);
+  buildSalon(scene, M, solids);
 
   setStatus('Setting the tables', 0.6);
   await frame();
@@ -102,7 +114,10 @@ async function start() {
   const player = createPlayer(camera, canvas, solids);
   const seating = createSeating(camera, scene, player, canvas);
   /* the floor's own custom, walking between the games */
-  const crowd = createCrowd(scene, fixtures.userData.spots, 22);
+  const crowd = createCrowd(scene, fixtures.userData.spots, 30);
+  /* and the games themselves, running a round each */
+  const theatre = createTheatre(fixtures.userData.acts || []);
+  app.theatre = theatre;
   app.crowd = crowd;
   app.player = player;
   app.seating = seating;
@@ -130,14 +145,10 @@ async function start() {
     screens.update(dt);
     book.update(dt);
     animateDealers(fixtures.userData.dealers, now);
-    /* the wheels never stop turning, which is half of what a pit sounds like */
-    (fixtures.userData.wheels || []).forEach(w => {
-      w.t += dt;
-      w.disc.rotation.z -= dt * 0.55;
-      const a = w.t * 1.9;
-      w.ball.position.x = Math.cos(a) * 0.335;
-      w.ball.position.z = w.wz + Math.sin(a) * 0.335;
-    });
+    /* the wheels never stop turning, which is half of what a pit sounds like.
+       The ball is the theatre's business now, so this only turns the disc. */
+    (fixtures.userData.wheels || []).forEach(w => { w.disc.rotation.z -= dt * 0.55; });
+    theatre.update(dt);
     crowd.update(dt, now);
     composer.render();
     fpsT += dt; fpsN++;

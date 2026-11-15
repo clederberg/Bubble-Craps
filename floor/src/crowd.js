@@ -32,7 +32,10 @@ const NODES = [
   [-9.2, -6.2], [9.2, -6.2],                      /* 10 11                */
   [-9.2, 0], [9.2, 0],                            /* 12 13  the side runs */
   [-9.2, 6.3], [9.2, 6.3], [0, 6.5], [0, 8.8],    /* 14 15 16 17 south gate */
-  [-4.9, -0.4], [4.9, -0.4]                       /* 18 19  behind the craps rails */
+  [-4.9, -0.4], [4.9, -0.4],                      /* 18 19  behind the craps rails */
+  /* out through the east wall and into the high limit salon */
+  [16.0, 0], [20.6, 0], [20.6, -5.9], [20.6, 5.6],/* 20 21 22 23 */
+  [26.6, 0], [26.6, -5.9], [26.6, 5.6]            /* 24 25 26 */
 ];
 /* Roulette stands in the middle of the pit now, so there is no crossing the
    floor down the centre line any more: the two side runs are the way through. */
@@ -41,7 +44,8 @@ const EDGES = [
   [1, 8], [8, 9], [9, 10], [9, 11],
   [10, 12], [11, 13],
   [12, 14], [13, 15], [14, 16], [15, 16], [16, 17], [17, 5],
-  [12, 18], [13, 19]
+  [12, 18], [13, 19],
+  [3, 20], [20, 21], [21, 22], [21, 23], [21, 24], [24, 25], [24, 26], [22, 25]
 ];
 
 function buildGraph() {

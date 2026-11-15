@@ -4,13 +4,14 @@
    Only the pit lights cast shadows, because shadow maps are the expensive part
    and the pit is where the eye goes. */
 import * as THREE from 'three';
-import { ROOM } from './room.js';
+import { ROOM, SALON } from './room.js';
 
-const SHADE_Y = 3.25;        // the lamp hangs this far above the carpet
+const SHADE_DEF = 3.25;        // the lamp hangs this far above the carpet
 
-function pendant(M, x, z, colour) {
+function pendant(M, x, z, colour, shadeY) {
   const g = new THREE.Group();
-  const rodLen = ROOM.pitH - SHADE_Y - 0.2;
+  const SHADE_Y = shadeY == null ? SHADE_DEF : shadeY;
+  const rodLen = (shadeY == null ? ROOM.pitH : SALON.h + 0.7) - SHADE_Y - 0.2;
   const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, rodLen, 8), M.darkMetal);
   rod.position.y = SHADE_Y + 0.2 + rodLen / 2;
   g.add(rod);
@@ -50,7 +51,7 @@ export function buildLighting(scene, renderer, M) {
     /* bright enough to pool on the cloth, not so bright it washes the
        layout off it */
     const s = new THREE.SpotLight(c, 42, 11, 0.6, 0.55, 1.6);
-    s.position.set(x, SHADE_Y - 0.26, z);
+    s.position.set(x, SHADE_DEF - 0.26, z);
     s.target.position.set(x, 0, z);
     if (cast) {
       s.castShadow = true;
@@ -63,6 +64,33 @@ export function buildLighting(scene, renderer, M) {
     L.add(s, s.target);
     spots.push(s);
   });
+
+  /* ---- the salon ----
+     Fewer lights, warmer and lower: a high limit room is dimmer than the floor
+     it sits off, and the pools on the three tables are the only bright things
+     in it. */
+  [[SALON.cx - 3.2, -3.6], [SALON.cx - 3.2, 3.6], [SALON.cx + 3.6, 0]].forEach(([x, z], i) => {
+    L.add(pendant(M, x, z, 0xffd9a8, SALON.h - 1.5));
+    const s = new THREE.SpotLight(0xffd9a8, 30, 9, 0.62, 0.6, 1.6);
+    s.position.set(x, SALON.h - 1.76, z);
+    s.target.position.set(x, 0, z);
+    if (i < 2) {
+      s.castShadow = true;
+      s.shadow.mapSize.set(1024, 1024);
+      s.shadow.bias = -0.0015;
+      s.shadow.normalBias = 0.02;
+      s.shadow.camera.near = 0.4;
+      s.shadow.camera.far = 8;
+    }
+    L.add(s, s.target);
+    spots.push(s);
+  });
+  const salonCove = new THREE.PointLight(0xffb878, 8, 16, 2);
+  salonCove.position.set(SALON.cx, SALON.h + 0.5, 0);
+  L.add(salonCove);
+  const salonFill = new THREE.PointLight(0xffc89a, 7, 18, 1.8);
+  salonFill.position.set(SALON.cx, 2.6, 0);
+  L.add(salonFill);
 
   /* the cove behind the coffer lip: a wide, soft, warm wash with no shadow */
   const cove = new THREE.PointLight(0xffa860, 42, 30, 2);

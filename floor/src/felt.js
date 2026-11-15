@@ -221,6 +221,25 @@ export function signTexture(text, colour) {
    end, so the layout is drawn running away from the player: the zero and the
    number grid along the length, the dozens and the even-money boxes beside
    them, the way a real single-zero table reads from the seat. */
+/* The roulette cloth's own measurements, kept out here because the table in
+   the room needs them too: to put the dealer's marker on the winning number,
+   and later to work out which bet a click on the felt landed on. One set of
+   numbers, one layout. */
+export const ROULETTE_GEO = { W: 900, H: 1800, left: 150, cw: 118, ch: 118, top: 250, zeroH: 150 };
+
+/* Where a number's cell sits on the cloth, as a fraction of the texture. */
+export function numberUV(n, american) {
+  const G = ROULETTE_GEO;
+  if (n === 0 || n === '00') {
+    const x = american
+      ? G.left + G.cw * (n === 0 ? 0.75 : 2.25)
+      : G.left + G.cw * 1.5;
+    return [x / G.W, (G.top - G.zeroH / 2) / G.H];
+  }
+  const s = Math.floor((n - 1) / 3), p = (n - 1) % 3;
+  return [(G.left + (p + 0.5) * G.cw) / G.W, (G.top + (s + 0.5) * G.ch) / G.H];
+}
+
 export function rouletteLayout(american) {
   const W = 900, H = 1800;
   const { c, x } = felt(W, H);

@@ -92,7 +92,8 @@ function dieTexture() {
   });
 }
 export function die(x, y, z, rot) {
-  if (!diceGeo) { diceGeo = new THREE.BoxGeometry(0.019, 0.019, 0.019); diceMat = dieTexture(); }
+  /* a shade larger than real dice, which at 16mm are a speck from a rail */
+  if (!diceGeo) { diceGeo = new THREE.BoxGeometry(0.027, 0.027, 0.027); diceMat = dieTexture(); }
   const m = new THREE.Mesh(diceGeo, diceMat);
   m.position.set(x, y, z);
   m.rotation.set(rot[0], rot[1], rot[2]);

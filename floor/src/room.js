@@ -6,6 +6,11 @@ import * as THREE from 'three';
 
 export const ROOM = { w: 38, d: 30, h: 5.4, pitH: 6.6, pit: { w: 20, d: 13.5, drop: 0.18 } };
 
+/* The high limit room: a salon off the east wall, through a single wide
+   opening. Lower ceiling, darker carpet, fewer and bigger tables. */
+export const SALON = { x0: 19, w: 15, d: 15, h: 4.4, door: { z: 0, w: 3.6 } };
+SALON.cx = SALON.x0 + SALON.w / 2;
+
 function box(w, h, d, mat, x, y, z, cast = true, receive = true) {
   const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
   m.position.set(x, y, z);
@@ -72,7 +77,22 @@ export function buildRoom(scene, M, solids) {
   room.add(mkWall(w, 0, 0, -d / 2));
   room.add(mkWall(w, Math.PI, 0, d / 2));
   room.add(mkWall(d, Math.PI / 2, -w / 2, 0));
-  room.add(mkWall(d, -Math.PI / 2, w / 2, 0));
+  /* the east wall is in two runs, with the way through to the salon between
+     them and a header carried over the opening */
+  {
+    const gap = SALON.door.w, gz = SALON.door.z;
+    const run = (d - gap) / 2;
+    room.add(mkWall(run, -Math.PI / 2, w / 2, gz - gap / 2 - run / 2));
+    room.add(mkWall(run, -Math.PI / 2, w / 2, gz + gap / 2 + run / 2));
+    const head = box(0.42, wallH - 2.75, gap, M.wallMat, w / 2, 2.75 + (wallH - 2.75) / 2, gz, false, true);
+    room.add(head);
+    room.add(box(0.56, 0.16, gap + 0.5, M.brass, w / 2, 2.72, gz, false, false));
+    /* the jambs */
+    [-1, 1].forEach(side => {
+      room.add(box(0.56, 2.8, 0.5, M.woodMat, w / 2, 1.4, gz + side * (gap / 2 + 0.25), false, true));
+      room.add(box(0.6, 0.12, 0.56, M.brass, w / 2, 2.84, gz + side * (gap / 2 + 0.25), false, false));
+    });
+  }
 
   /* ---- ceiling ---- */
   const ceil = new THREE.Mesh(new THREE.PlaneGeometry(w, d), M.ceilingMat);
@@ -132,4 +152,107 @@ export function buildRoom(scene, M, solids) {
 
   scene.add(room);
   return room;
+}
+
+/* ---------------------------------------------------------------
+   The high limit salon: one room off the east wall, reached through
+   the opening in it. Lower ceiling, darker floor, quieter light. The
+   point of the room is that it does not look like the main floor. */
+export function buildSalon(scene, M, solids) {
+  const g = new THREE.Group();
+  g.name = 'salon';
+  const { x0, w, d, h } = SALON;
+  const cx = x0 + w / 2;
+
+  /* ---- floor: a deeper carpet with a marble border round the edge ---- */
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(w, d), M.carpetMat.clone());
+  floor.material = M.carpetMat.clone();
+  floor.material.map = M.carpetMat.map.clone();
+  floor.material.map.repeat.set(11, 11);
+  floor.material.map.needsUpdate = true;
+  floor.material.color = new THREE.Color(0x6a5560);
+  floor.rotation.x = -Math.PI / 2;
+  floor.position.set(cx, 0.001, 0);
+  floor.receiveShadow = true;
+  g.add(floor);
+  const border = new THREE.Mesh(new THREE.RingGeometry(0, 1, 4), M.marbleMat);
+  border.visible = false;
+  g.add(border);
+  [[0, -d / 2 + 0.6, w, 1.2], [0, d / 2 - 0.6, w, 1.2],
+   [-w / 2 + 0.6, 0, 1.2, d], [w / 2 - 0.6, 0, 1.2, d]].forEach(([ox, oz, sw, sd]) => {
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(sw, sd), M.marbleMat);
+    m.rotation.x = -Math.PI / 2;
+    m.position.set(cx + ox, 0.004, oz);
+    m.receiveShadow = true;
+    g.add(m);
+  });
+
+  /* ---- walls ---- */
+  const wall = (len, rotY, x, z) => {
+    const p = new THREE.Group();
+    p.add(box(len, h - 1.6, 0.3, M.wallMat, 0, 1.6 + (h - 1.6) / 2, 0, false, true));
+    p.add(box(len, 1.6, 0.38, M.woodMat, 0, 0.8, 0, false, true));
+    p.add(box(len, 0.09, 0.46, M.brass, 0, 1.64, 0, false, false));
+    p.add(box(len, 0.24, 0.5, M.woodMat, 0, h - 0.12, 0, false, false));
+    const n = Math.max(2, Math.round(len / 4.5));
+    for (let i = 0; i <= n; i++) {
+      const px = -len / 2 + (len / n) * i;
+      p.add(box(0.5, h - 0.3, 0.5, M.woodMat, px, (h - 0.3) / 2, 0, false, true));
+      p.add(box(0.56, 0.1, 0.56, M.brass, px, h - 0.38, 0, false, false));
+      /* a sconce between the pilasters */
+      if (i < n) {
+        const sx = px + (len / n) / 2;
+        p.add(box(0.26, 0.5, 0.1, M.emissive(0xffc98a, 1.0), sx, 2.5, 0.2, false, false));
+        p.add(box(0.32, 0.06, 0.16, M.brass, sx, 2.78, 0.22, false, false));
+      }
+    }
+    p.rotation.y = rotY;
+    p.position.set(x, 0, z);
+    return p;
+  };
+  g.add(wall(w, 0, cx, -d / 2));
+  g.add(wall(w, Math.PI, cx, d / 2));
+  g.add(wall(d, -Math.PI / 2, x0 + w, 0));
+  /* the near side is the main floor's own east wall, already built, except
+     for the two returns that frame the way in */
+  const gap = SALON.door.w;
+  [-1, 1].forEach(side => {
+    const run = (d - gap) / 2;
+    g.add(wall(run, Math.PI / 2, x0, side * (gap / 2 + run / 2)));
+  });
+
+  /* ---- ceiling, with a cove over the middle ---- */
+  const ceil = new THREE.Mesh(new THREE.PlaneGeometry(w, d), M.ceilingMat);
+  ceil.rotation.x = Math.PI / 2;
+  ceil.position.set(cx, h, 0);
+  g.add(ceil);
+  const lw = w - 4, ld = d - 4;
+  const lid = new THREE.Mesh(new THREE.PlaneGeometry(lw, ld), M.ceilingMat);
+  lid.rotation.x = Math.PI / 2;
+  lid.position.set(cx, h + 0.7, 0);
+  g.add(lid);
+  [[0, -ld / 2, lw, 0], [0, ld / 2, lw, 0], [-lw / 2, 0, ld, Math.PI / 2], [lw / 2, 0, ld, Math.PI / 2]]
+    .forEach(([ox, oz, len, rot]) => {
+      const sideW = box(len, 0.7, 0.2, M.wallMat, cx + ox, h + 0.35, oz, false, false);
+      sideW.rotation.y = rot;
+      g.add(sideW);
+      const cove = box(len - 0.3, 0.05, 0.1, M.emissive(0xffb070, 0.85), cx + ox, h + 0.1, oz, false, false);
+      cove.rotation.y = rot;
+      g.add(cove);
+    });
+  g.add(box(lw - 0.2, 0.1, ld - 0.2, M.brass, cx, h + 0.02, 0, false, false));
+
+  /* ---- collision: the three outer walls and the two returns ---- */
+  if (solids) {
+    solids.add(cx, -d / 2 - 0.35, w / 2, 0.5, 0, 'salonwall');
+    solids.add(cx, d / 2 + 0.35, w / 2, 0.5, 0, 'salonwall');
+    solids.add(x0 + w + 0.35, 0, 0.5, d / 2, 0, 'salonwall');
+    [-1, 1].forEach(side => {
+      const run = (d - gap) / 2;
+      solids.add(x0 - 0.35, side * (gap / 2 + run / 2), 0.5, run / 2, 0, 'salonwall');
+    });
+  }
+
+  scene.add(g);
+  return g;
 }
