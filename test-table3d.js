@@ -73,11 +73,11 @@ const URL = process.env.URL || 'http://localhost:8877/floor/index.html';
     ok(wrong.length === 0, 'all ' + bets.length + ' bets pick themselves up ('
       + wrong.length + ' wrong: ' + wrong.slice(0, 10).join(', ') + ')');
 
-    /* a point off the cloth is not a bet */
-    app.camera.quaternion.set(0, 0, 0, 1);
-    app.camera.updateMatrixWorld(true);
-    app.table3d.update(0);
-    ok(app.table3d.hover === null, 'looking at the room picks up nothing');
+    /* the window is up, and a click on the bare cloth at the edge of it is
+       not a bet */
+    ok(app.table3d.panel.shown, 'the betting window is open');
+    ok(app.table3d.panel.pickAt(0.985, 0.995) === null, 'the corner of the cloth is not a bet');
+    ok(app.table3d.panel.pickAt(0.5, 0.012) === null, 'nor is the top edge');
 
     return { n, log, bets: bets.length };
   });
@@ -160,10 +160,12 @@ const URL = process.env.URL || 'http://localhost:8877/floor/index.html';
       const before = C.bank();
       t3.spin();
       ok(t3.busy, 'round ' + r + ': the table is closed');
+      ok(!t3.panel.shown, 'round ' + r + ': the window is out of the way');
       t3.lay(true);
       ok(R.staked(t3.game) === staked, 'round ' + r + ': no bet after the call');
       for (let i = 0; i < 1200 && t3.busy; i++) window.__step(1, 1 / 60);
       ok(!t3.busy, 'round ' + r + ': the ball dropped and it settled');
+      ok(t3.panel.shown, 'round ' + r + ': the window came back for the next bet');
       const res = t3.game.last;
       ok(C.bank() === before + res.returned,
         'round ' + r + ': paid exactly the engine figure ' + res.returned);
