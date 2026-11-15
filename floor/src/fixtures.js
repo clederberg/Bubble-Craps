@@ -6,7 +6,7 @@ import { ROOM, SALON } from './room.js';
 import { cardMesh } from './theatre.js';
 import { tune } from './materials.js';
 import { houseSign, monogram, artWall } from './decor.js';
-import { crapsLayout, blackjackLayout, baccaratLayout, rouletteLayout, wheelFace, terminalIdle, signTexture } from './felt.js';
+import { crapsLayout, blackjackLayout, baccaratLayout, rouletteLayout, wheelFace, terminalIdle, signTexture, numberBoard } from './felt.js';
 import { chipRack, chipStack, die, shoe, cards, dealer, patron, bottles, glassware } from './props.js';
 
 function box(w, h, d, mat, x, y, z, cast = true, receive = true) {
@@ -351,21 +351,27 @@ function rouletteTable(M, american) {
   const L = 2.9, W = 1.42, FELT = 0.78;
   const railMat = new THREE.MeshStandardMaterial({ color: 0x3a1420, roughness: 0.72, metalness: 0.05 });
 
-  /* the cloth: the layout fills the half of the table nearest the player */
+  /* The cloth: the layout fills the half of the table nearest the player, and
+     stops short of the near rail so that standing at the table you can see all
+     of it rather than losing the column boxes behind the woodwork. */
+  const CLOTH_W = W - 0.3, CLOTH_D = 1.52, CLOTH_Z = 0.4;
   const layout = rouletteLayout(american);
-  const cloth = box(W - 0.3, 0.06, 1.72, new THREE.MeshStandardMaterial({ map: layout, roughness: 0.96 }),
-    0, FELT, 0.52);
+  const cloth = box(CLOTH_W, 0.06, CLOTH_D, new THREE.MeshStandardMaterial({ map: layout, roughness: 0.96 }),
+    0, FELT, CLOTH_Z);
+  cloth.name = 'cloth';
   g.add(cloth);
-  /* plain cloth under the wheel end */
-  g.add(box(W - 0.3, 0.06, L - 2.02, M.feltMat, 0, FELT, -(L / 2) + 0.44));
+  /* plain cloth over the rest of the table */
+  g.add(box(CLOTH_W, 0.06, L - 0.3, M.feltMat, 0, FELT - 0.001, 0));
   g.add(box(W - 0.28, 0.2, L - 0.28, M.feltMat, 0, FELT - 0.13, 0, false, true));
 
   /* rails: two long ones down the sides, two short ones across the ends */
+  /* A padded rail, the height a real one is: it is an armrest, not a wall,
+     and a wall is what it was doing to the view down the table. */
   [[-W / 2 + 0.085, 0, 0.17, L], [W / 2 - 0.085, 0, 0.17, L],
    [0, -L / 2 + 0.085, W, 0.17], [0, L / 2 - 0.085, W, 0.17]]
     .forEach(([x, z, sx, sz]) => {
-      g.add(box(sx, 0.22, sz, railMat, x, FELT + 0.14, z));
-      g.add(box(sx + 0.03, 0.045, sz + 0.03, M.woodMat, x, FELT + 0.27, z));
+      g.add(box(sx, 0.11, sz, railMat, x, FELT + 0.055, z));
+      g.add(box(sx + 0.03, 0.035, sz + 0.03, M.woodMat, x, FELT + 0.125, z));
     });
   /* the apron */
   g.add(box(W - 0.06, 0.52, L - 0.06, M.woodMat, 0, FELT - 0.29, 0));
@@ -410,7 +416,6 @@ function rouletteTable(M, american) {
   /* The cloth is 1.12 by 1.72 centred just forward of the middle of the table,
      and the layout texture is laid on it un-rotated, so a point on the canvas
      maps straight onto it. That is how the marker finds the winning number. */
-  const CLOTH_W = W - 0.3, CLOTH_D = 1.72, CLOTH_Z = 0.52;
   g.userData.act = {
     kind: 'roulette', spin: g.userData.spin, dolly, american: !!american,
     order: american
@@ -420,6 +425,10 @@ function rouletteTable(M, american) {
         5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26],
     dollyHome: [W / 2 - 0.28, -L / 2 + 1.5],
     uvToLocal: (u, v) => [(u - 0.5) * CLOTH_W, CLOTH_Z + (v - 0.5) * CLOTH_D]
+  };
+  /* what the playable table needs to know about this one */
+  g.userData.cloth = {
+    mesh: cloth, w: CLOTH_W, d: CLOTH_D, z: CLOTH_Z, y: FELT + 0.03, american: !!american
   };
 
   /* Roulette is played standing, so there are no chairs: people take a place
@@ -435,10 +444,27 @@ function rouletteTable(M, american) {
     });
   });
 
-  const tm = terminal(M, terminalIdle('Roulette', american ? 'Double zero' : 'Single zero'),
-    { w: 0.96, tilt: 0.52, y: 1.18, z: L / 2 + 0.42, stem: 0.5 });
-  g.add(tm.group);
-  g.userData.glass = tm.glass;
+  /* The board beside the wheel, the way a real table has one. There used to
+     be a betting terminal at the player's end, which is where the layout is:
+     now that the cloth takes the bets there is nothing to put on a screen in
+     front of you, and anything stood there is in the way of the table. */
+  const board = numberBoard();
+  const bg = new THREE.Group();
+  const panel = box(0.5, 0.9, 0.05, M.darkMetal, 0, 0, 0);
+  const face = box(0.45, 0.85, 0.01, new THREE.MeshBasicMaterial({ map: board.texture }),
+    0, 0, 0.031, false, false);
+  const BY = FELT + 0.54;
+  const post = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.05, BY - 0.48, 10), M.darkMetal);
+  post.position.y = -(BY + 0.48) / 2 + 0.03;
+  const foot = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.19, 0.05, 16), M.darkMetal);
+  foot.position.y = -BY + 0.025;
+  bg.add(panel, face, post, foot);
+  bg.position.set(0, BY, -L / 2 - 0.26);
+  bg.rotation.x = 0.05;
+  g.add(bg);
+  g.userData.board = board;
+  g.userData.act.board = board;
+  g.userData.act.seen = [];
   return g;
 }
 
@@ -527,7 +553,7 @@ export function buildFixtures(scene, M, solids, screens, book) {
   /* roulette, between the two craps tables */
   const roul = rouletteTable(M, false);
   roul.position.set(0, drop, -2.9);
-  roul.userData.game = { id: 'roulette', seat: { x: 0, y: 1.58, z: 2.52, look: [0, 1.2, 1.9] } };
+  roul.userData.game = { id: 'roulette', seat: { x: 0, y: 1.58, z: 2.52, look: [0, 1.2, 1.9] }, play: { x: 0, y: 1.72, z: 2.02, look: [0, 0.97, 0.72] } };
   F.add(roul);
   dealers.push(...roul.userData.dealers);
   collect(roul);
@@ -702,7 +728,7 @@ export function buildFixtures(scene, M, solids, screens, book) {
     const hr = rouletteTable(M, false);
     hr.position.set(cx - 3.2, 0, 3.6);
     hr.rotation.y = Math.PI;
-    hr.userData.game = { id: 'roulette', seat: { x: 0, y: 1.58, z: 2.52, look: [0, 1.2, 1.9] } };
+    hr.userData.game = { id: 'roulette', seat: { x: 0, y: 1.58, z: 2.52, look: [0, 1.2, 1.9] }, play: { x: 0, y: 1.72, z: 2.02, look: [0, 0.97, 0.72] } };
     F.add(hr);
     dealers.push(...hr.userData.dealers);
     collect(hr);

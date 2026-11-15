@@ -3,6 +3,8 @@
    realism comes from rather than from the geometry. */
 import * as THREE from 'three';
 import { tune } from './materials.js';
+import { GEO as ROULETTE_GEO, numberUV } from './rlayout.js';
+export { ROULETTE_GEO, numberUV };
 
 const GREEN = '#0d4727', LINE = '#f4efdf', GOLD = '#e8c45f', RED = '#c0392b';
 
@@ -221,34 +223,17 @@ export function signTexture(text, colour) {
    end, so the layout is drawn running away from the player: the zero and the
    number grid along the length, the dozens and the even-money boxes beside
    them, the way a real single-zero table reads from the seat. */
-/* The roulette cloth's own measurements, kept out here because the table in
-   the room needs them too: to put the dealer's marker on the winning number,
-   and later to work out which bet a click on the felt landed on. One set of
-   numbers, one layout. */
-export const ROULETTE_GEO = { W: 900, H: 1800, left: 150, cw: 118, ch: 118, top: 250, zeroH: 150 };
-
-/* Where a number's cell sits on the cloth, as a fraction of the texture. */
-export function numberUV(n, american) {
-  const G = ROULETTE_GEO;
-  if (n === 0 || n === '00') {
-    const x = american
-      ? G.left + G.cw * (n === 0 ? 0.75 : 2.25)
-      : G.left + G.cw * 1.5;
-    return [x / G.W, (G.top - G.zeroH / 2) / G.H];
-  }
-  const s = Math.floor((n - 1) / 3), p = (n - 1) % 3;
-  return [(G.left + (p + 0.5) * G.cw) / G.W, (G.top + (s + 0.5) * G.ch) / G.H];
-}
-
 export function rouletteLayout(american) {
-  const W = 900, H = 1800;
+  const W = ROULETTE_GEO.W, H = ROULETTE_GEO.H;
   const { c, x } = felt(W, H);
   const REDS = [1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36];
   const isRed = n => REDS.indexOf(n) >= 0;
 
-  /* the grid runs up the cloth: twelve streets of three */
-  const left = 150, cw = 118, ch = 118;
-  const top = 250, zeroH = 150;
+  /* the grid runs up the cloth: twelve streets of three. The measurements
+     come from rlayout.js, which is also what the table in the room picks
+     bets with, so the picture and the picking cannot drift apart. */
+  const left = ROULETTE_GEO.left, cw = ROULETTE_GEO.cw, ch = ROULETTE_GEO.ch;
+  const top = ROULETTE_GEO.top, zeroH = ROULETTE_GEO.zeroH;
   x.lineWidth = 4;
   x.strokeStyle = LINE;
 
@@ -407,4 +392,46 @@ export function terminalIdle(title, sub, accent = GOLD) {
     x.beginPath(); x.arc(cx, H - 36, 11, 0, Math.PI * 2); x.stroke();
   });
   return textured(c);
+}
+
+/* ---------------- the number board ----------------
+   The board beside the wheel that every roulette table has: the numbers that
+   have come up, newest at the top, in the colour they fell. It is redrawn in
+   place rather than rebuilt, so the table can push a number onto it the moment
+   the dealer marks one. */
+export function numberBoard() {
+  const W = 300, H = 560, c = document.createElement('canvas');
+  c.width = W; c.height = H;
+  const x = c.getContext('2d');
+  const tex = textured(c);
+  const COLS = { red: '#b2302a', black: '#1d1a23', green: '#0e6b41' };
+  function draw(list) {
+    x.fillStyle = '#07100c';
+    x.fillRect(0, 0, W, H);
+    x.strokeStyle = 'rgba(232,196,95,.45)';
+    x.lineWidth = 3;
+    x.strokeRect(10, 10, W - 20, H - 20);
+    label(x, 'LAST NUMBERS', W / 2, 44, 20, 'rgba(232,196,95,.8)', 600, 5);
+    x.strokeStyle = 'rgba(232,196,95,.22)';
+    x.lineWidth = 2;
+    x.beginPath(); x.moveTo(26, 64); x.lineTo(W - 26, 64); x.stroke();
+    const rows = (list || []).slice(0, 12);
+    if (!rows.length) {
+      label(x, 'TABLE OPEN', W / 2, H / 2, 22, 'rgba(244,239,223,.4)', 600, 6);
+    }
+    rows.forEach((h, i) => {
+      const big = i === 0;
+      const cy = 104 + i * 38 + (big ? 6 : 14);
+      const r = big ? 28 : 15;
+      x.fillStyle = COLS[h.colour] || COLS.green;
+      x.beginPath(); x.arc(W / 2, cy, r, 0, Math.PI * 2); x.fill();
+      x.strokeStyle = 'rgba(255,248,230,' + (big ? 0.7 : 0.3) + ')';
+      x.lineWidth = big ? 3 : 2;
+      x.stroke();
+      label(x, String(h.n), W / 2, cy + 1, big ? 30 : 17, '#fff', 700, 1);
+    });
+    tex.needsUpdate = true;
+  }
+  draw([]);
+  return { texture: tex, draw };
 }

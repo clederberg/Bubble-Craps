@@ -14,6 +14,9 @@ import * as THREE from 'three';
 import { numberUV } from './felt.js';
 
 const rnd = (a, b) => a + Math.random() * (b - a);
+/* the reds, so the board can colour a number without the rules engine */
+const REDS = [1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36];
+const colourOf = n => (n === 0 || n === '00') ? 'green' : (REDS.indexOf(n) >= 0 ? 'red' : 'black');
 const ease = t => t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
 
 /* the rotation that turns a die so a given number is face up */
@@ -157,6 +160,13 @@ function roulette(a, dt) {
       a.marked = true;
       const p = a.numberPos(a.pick);
       a.dollyTo = [p[0], p[1]];
+      /* and it goes up on the board, whether the table is playing itself or
+         somebody is stood at it */
+      if (a.board) {
+        a.seen.unshift({ n: a.pick, colour: colourOf(a.pick) });
+        if (a.seen.length > 14) a.seen.pop();
+        a.board.draw(a.seen);
+      }
     }
     if (a.dollyTo) {
       const k = Math.min(1, dt * 4);

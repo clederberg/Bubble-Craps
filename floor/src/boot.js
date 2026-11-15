@@ -18,6 +18,7 @@ import { createTheatre } from './theatre.js';
 import { buildLighting } from './lighting.js';
 import { createPlayer } from './player.js';
 import { createSeating } from './sit.js';
+import { createTable3d } from './table3d.js';
 import { Solids } from './collide.js';
 
 const app = {};
@@ -112,7 +113,9 @@ async function start() {
   scene.updateMatrixWorld(true);
   app.solids = solids;
   const player = createPlayer(camera, canvas, solids);
-  const seating = createSeating(camera, scene, player, canvas);
+  /* the tables you play on the cloth rather than through a screen */
+  const table3d = createTable3d(camera, scene, canvas);
+  const seating = createSeating(camera, scene, player, canvas, table3d);
   /* the floor's own custom, walking between the games */
   const crowd = createCrowd(scene, fixtures.userData.spots, 30);
   /* and the games themselves, running a round each */
@@ -121,6 +124,7 @@ async function start() {
   app.crowd = crowd;
   app.player = player;
   app.seating = seating;
+  app.table3d = table3d;
 
   addEventListener('resize', () => {
     camera.aspect = innerWidth / innerHeight;
