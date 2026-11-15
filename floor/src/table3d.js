@@ -1,19 +1,23 @@
-/* Playing roulette on the table itself.
+/* Playing roulette at the table.
 
-   Walking up to the roulette table no longer opens the flat page over the top
-   of it. You stand at the rail, the crosshair runs over the cloth and names
-   whatever bet is under it, a click puts your chip down there, and the wheel
-   you were already watching from across the room is the one that decides it.
+   Walking up to the roulette table no longer opens the flat game over the top
+   of it. You stand at the rail and the layout comes up in a window in front of
+   you, at a size you can actually put a chip on. Every chip you place there
+   appears on the cloth in the same spot, so the window is a betting slip and
+   the table is the game. Hit spin and the window drops away, the ball goes
+   round the wheel you have been watching all along, and the dealer marks the
+   number before you are asked for the next bet.
 
-   Nothing about the game is new. The rules are roul.js, the same engine the
-   flat page runs and the same one test-roul.js checks; the money is the shared
-   bankroll, so what you win here you can spend at craps. The only new thing is
-   where a click lands, and that comes out of rlayout.js, which holds the
-   measurements the cloth was drawn from, so the chip goes on the line you
-   aimed at rather than near it. */
+   Nothing about the game itself is new. The rules are roul.js, the same engine
+   the flat page runs and the same one test-roul.js checks; the money is the
+   shared bankroll, so what you win here you can spend at craps. Where a chip
+   lands comes out of rlayout.js, which holds the measurements the cloth was
+   drawn from, and both the window and the table read it, so the slip and the
+   felt can never disagree. */
 import * as THREE from 'three';
-import { keyAt, anchorUV } from './rlayout.js';
+import { anchorUV } from './rlayout.js';
 import { chipStack } from './props.js';
+import { createBetPanel } from './betpanel.js';
 
 /* the chips you can pick up, in cents: a dollar to a thousand */
 const CHIPS = [100, 500, 2500, 10000, 50000, 100000];
@@ -45,12 +49,6 @@ export function createTable3d(camera, scene, dom) {
   const C = window.Casino, R = window.Roul;
   if (!C || !R) return null;
 
-  const ray = new THREE.Raycaster();
-  ray.far = 8;
-  const centre = new THREE.Vector2(0, 0);
-  const local = new THREE.Vector3();
-  const UP = new THREE.Vector3(0, 1, 0);
-  const look = new THREE.Matrix4();
   const world = new THREE.Vector3();
 
   let table = null;       // the table being played
@@ -60,7 +58,8 @@ export function createTable3d(camera, scene, dom) {
   let chip = 500;
   let hover = null;       // the bet key under the crosshair
   let busy = false;
-  let waiting = 0;        // seconds left of the spin
+  let waiting = 0;        // how long the ball has been running
+  let reopen = 0;         // seconds until the window comes back
 
   const chipRoot = new THREE.Group();
   chipRoot.name = 'playerChips';
@@ -77,15 +76,17 @@ export function createTable3d(camera, scene, dom) {
   const hud = document.getElementById('table3d');
   const el = id => document.getElementById(id);
 
+  /* the layout in front of you, which is where the bets are actually made */
+  const panel = createBetPanel({
+    hover(key) { hover = key; mark(key); paintHud(); },
+    pick(key, remove) { hover = key; lay(!remove); }
+  });
+
   /* ---------- the cloth as a map ---------- */
-  /* The layout texture is laid on the cloth un-rotated, so a point on the
-     table turns into a point on the canvas with nothing more than a scale.
-     This is the same mapping the dealer's marker uses, read backwards. */
-  function pointToUV(p) {
-    local.copy(p);
-    table.worldToLocal(local);
-    return [local.x / cloth.w + 0.5, (local.z - cloth.z) / cloth.d + 0.5];
-  }
+  /* The layout texture is laid on the cloth un-rotated, so a place on the
+     canvas is a place on the table with nothing more than a scale between
+     them. That is how a chip put down in the window finds its spot on the
+     felt, and it is the same mapping the dealer's marker uses. */
   function uvToWorld(u, v, out) {
     out.set((u - 0.5) * cloth.w, cloth.y, cloth.z + (v - 0.5) * cloth.d);
     return table.localToWorld(out);
@@ -102,6 +103,7 @@ export function createTable3d(camera, scene, dom) {
   function paintChips() {
     clearChips();
     if (!G) return;
+    panel.setBets(G.bets, C.chipColor, a => '$' + C.chipText(a));
     Object.keys(G.bets).forEach(key => {
       const amt = G.bets[key];
       if (!amt) return;
@@ -116,6 +118,15 @@ export function createTable3d(camera, scene, dom) {
         h += n * 0.0033 * CHIP_SCALE * 0.85;
       });
     });
+  }
+
+  /* the ring on the felt that shows where the chip in the window will land */
+  function mark(key) {
+    if (!key || !table) { marker.visible = false; return; }
+    anchorWorld(key, world);
+    marker.position.copy(world);
+    marker.position.y += 0.007;
+    marker.visible = true;
   }
 
   /* ---------- the panel along the bottom of the screen ---------- */
@@ -180,7 +191,9 @@ export function createTable3d(camera, scene, dom) {
     const out = R.spin(G);
     busy = true;
     marker.visible = false;
-    say('No more bets');
+    /* out of the way: the table is the thing to watch now */
+    panel.hide();
+    say('No more bets \u00b7 watch the wheel');
     paintHud();
     act.phase = 'slow';
     act.t = 0;
@@ -208,7 +221,11 @@ export function createTable3d(camera, scene, dom) {
     say(line);
     if (res.net > 0) C.play('stack', 0.25, 0.9);
     else C.play('collide', 0, 0.45);
-    busy = false;
+    /* The round is not over when the money moves, it is over when the dealer
+       lifts the marker and asks for the next bet. Holding the table shut for
+       that beat is what leaves you looking at the number instead of at a
+       layout that jumped back over it. */
+    reopen = 1.8;
     paintHud();
   }
 
@@ -225,8 +242,10 @@ export function createTable3d(camera, scene, dom) {
     busy = false; hover = null; pending = null;
     if (hud) hud.classList.add('on');
     document.body.classList.add('playing');
+    panel.mount(cloth.american, cloth.w / cloth.d);
+    panel.show();
     paintChips(); paintHud();
-    say('Pick a chip, then put it on the cloth');
+    say('Pick a chip, then put it on the layout');
     /* the sound pack is 190k and the floor does not otherwise need it, so it
        only comes down when somebody actually sits at a table */
     if (!window.CRAPS_SOUNDS && !document.getElementById('sfx')) {
@@ -243,9 +262,11 @@ export function createTable3d(camera, scene, dom) {
        up and left. */
     if (busy && pending) finish();
     if (G) { const back = R.clear(G); if (back) C.addBank(back); }
+    reopen = 0;
     G = null; table = null; cloth = null; act = null; pending = null;
     busy = false; hover = null;
     marker.visible = false;
+    panel.close();
     clearChips();
     if (hud) hud.classList.remove('on');
     document.body.classList.remove('playing');
@@ -253,35 +274,25 @@ export function createTable3d(camera, scene, dom) {
 
   /* ---------- every frame ---------- */
   function update(dt) {
-    if (!table) return;
-    if (busy) {
+    if (!table || !busy) return;
+    if (pending) {
       waiting += dt;
       /* the ball has dropped and the dealer has reached for the marker */
-      if (pending && (act.phase === 'mark' || waiting > 9)) finish();
+      if (act.phase === 'mark' || waiting > 9) finish();
       return;
     }
-    ray.setFromCamera(centre, camera);
-    const hit = ray.intersectObject(cloth.mesh, false)[0];
-    let key = null;
-    if (hit) {
-      const uv = pointToUV(hit.point);
-      key = keyAt(uv[0], uv[1], cloth.american);
+    if (reopen > 0) {
+      reopen -= dt;
+      if (reopen <= 0) {
+        busy = false;
+        panel.show();
+        say('Place your bets');
+        paintHud();
+      }
     }
-    if (key !== hover) { hover = key; paintHud(); }
-    if (!key) { marker.visible = false; return; }
-    anchorWorld(key, world);
-    marker.position.copy(world);
-    marker.position.y += 0.007;
-    marker.visible = true;
   }
 
   /* ---------- wiring ---------- */
-  dom.addEventListener('mousedown', e => {
-    if (!table) return;
-    if (e.button === 0) lay(true);
-    else if (e.button === 2) lay(false);
-  });
-  dom.addEventListener('contextmenu', e => { if (table) e.preventDefault(); });
   addEventListener('keydown', e => {
     if (!table) return;
     if (e.code === 'Space') { e.preventDefault(); spin(); }
@@ -316,17 +327,17 @@ export function createTable3d(camera, scene, dom) {
     get game() { return G; },
     get busy() { return busy; },
     pick(c) { chip = c; paintHud(); },
-    /* point the crosshair at a named bet and report what it picked up; this is
-       how the tests check that a click lands where it was aimed */
+    /* click the window where a bet is written and report what was picked up;
+       this is the path a person's click takes, so it is the one to test */
     aim(key) {
       if (!table) return null;
-      anchorWorld(key, world);
-      look.lookAt(camera.position, world, UP);
-      camera.quaternion.setFromRotationMatrix(look);
-      camera.updateMatrixWorld(true);
-      update(0);
+      const p = panel.rectFor(key);
+      panel.wrapEl.dispatchEvent(new MouseEvent('mousemove', {
+        clientX: p.x, clientY: p.y, bubbles: true
+      }));
       return hover;
     },
+    get panel() { return panel; },
     lay, spin, clearBets
   };
 }

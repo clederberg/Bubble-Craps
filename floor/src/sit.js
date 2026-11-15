@@ -19,18 +19,12 @@ export function createSeating(camera, scene, player, dom, live) {
   let toPos = new THREE.Vector3(), toQuat = new THREE.Quaternion();
   let standPos = new THREE.Vector3(), standYaw = 0, current = null;
 
-  /* Some tables are played on the table: the cloth itself takes the bets, so
-     instead of a page over the top you keep the room, the crosshair and the
-     mouse. Those get the standing pose rather than the terminal one, and a
-     look that is free inside the arc the table fills. */
+  /* Some tables are played at the table rather than through a page laid over
+     it: the game puts its own layout up and the room stays behind it. Those
+     stand you at the rail instead of sitting you at a terminal, and they want
+     the mouse as a cursor, so the pointer lock goes. */
   const isLive = obj => !!(live && live.claims(obj) && obj.userData.game.play);
-  let atLive = false, lYaw = 0, lPitch = 0, baseYaw = 0, basePitch = 0;
-  const LOOK = { yaw: 0.78, up: 0.42, down: 0.52 };
-  document.addEventListener('mousemove', e => {
-    if (!atLive || document.pointerLockElement !== dom) return;
-    lYaw = Math.max(baseYaw - LOOK.yaw, Math.min(baseYaw + LOOK.yaw, lYaw - e.movementX * 0.0021));
-    lPitch = Math.max(basePitch - LOOK.down, Math.min(basePitch + LOOK.up, lPitch - e.movementY * 0.0021));
-  });
+  let atLive = false;
 
   /* every table has a page already; sitting down opens it on the same origin,
      so the bankroll, the chips and the rules are the ones from the flat site */
@@ -91,8 +85,7 @@ export function createSeating(camera, scene, player, dom, live) {
     state = 'sitting';
     player.hold(true);
     setHover(null);
-    /* a table played on the cloth keeps the mouse: that is how you aim */
-    if (document.pointerLockElement && !isLive(obj)) document.exitPointerLock();
+    if (document.pointerLockElement) document.exitPointerLock();
     if (seatedName) seatedName.textContent = label(obj);
     if (panelName) panelName.textContent = label(obj);
   }
@@ -146,9 +139,6 @@ export function createSeating(camera, scene, player, dom, live) {
   }
   function openPanel(obj) {
     if (isLive(obj)) {
-      const e = new THREE.Euler().setFromQuaternion(toQuat, 'YXZ');
-      baseYaw = lYaw = e.y;
-      basePitch = lPitch = e.x;
       atLive = true;
       live.open(obj);
       return;
@@ -199,11 +189,6 @@ export function createSeating(camera, scene, player, dom, live) {
     if (e.button !== 0) return;
     if (state === 'walking' && hover && player.locked) sit(hover);
   });
-  /* standing at a live table the mouse is the hand, so if the lock is dropped
-     a click takes it back instead of walking off */
-  dom.addEventListener('click', () => {
-    if (atLive && !document.pointerLockElement) dom.requestPointerLock();
-  });
   addEventListener('keydown', (e) => {
     if ((e.code === 'KeyQ' || e.code === 'Escape') && state === 'seated') stand();
   });
@@ -219,7 +204,7 @@ export function createSeating(camera, scene, player, dom, live) {
       if (glass.active) glass.update();
       if (state === 'seated' && atLive) {
         camera.position.copy(toPos);
-        camera.quaternion.setFromEuler(new THREE.Euler(lPitch, lYaw, 0, 'YXZ'));
+        camera.quaternion.copy(toQuat);
         live.update(dt);
       }
       if (state === 'walking') {
