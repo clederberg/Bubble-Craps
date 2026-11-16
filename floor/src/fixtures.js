@@ -564,10 +564,14 @@ export function buildFixtures(scene, M, solids, screens, book) {
   solids.add(0, -2.3, 1.25, 2.2, 0, 'roulette');
   contact(scene, 0, -2.9, 3.4, 4.4, 0.55, drop + 0.004);
 
-  /* the card games across from them */
-  [['blackjack', -6.4, 3.3, 0.22], ['baccarat', 0, 3.6, 0], ['blackjack', 6.4, 3.3, -0.22]]
-    .forEach(([id, x, z, rot]) => {
-      const t = cardTable(M, id);
+  /* The card games across from them. The felt and the page are not always
+     named the same thing: Ultimate Texas Hold'em is laid out as its own cloth
+     and played on holdem.html. */
+  [['blackjack', 'blackjack', -6.4, 3.3, 0.22],
+   ['baccarat', 'baccarat', 0, 3.6, 0],
+   ['uth', 'holdem', 6.4, 3.3, -0.22]]
+    .forEach(([kind, id, x, z, rot]) => {
+      const t = cardTable(M, kind);
       t.position.set(x, drop, z);
       t.rotation.y = rot;
       t.userData.game = { id, seat: { x: 0, y: 1.46, z: 1.84, look: [0, 1.05, 1.31] } };
@@ -578,27 +582,6 @@ export function buildFixtures(scene, M, solids, screens, book) {
       solids.add(x, z, 1.9, 1.7, rot, id);
       contact(scene, x, z, 4.6, 3.8, 0.5, drop + 0.004);
     });
-
-  /* Ultimate Texas Hold'em, out on the open carpet south of the pit. The pit
-     row is full and this is a table people stand and watch, so it gets room
-     around it and a sign of its own rather than being wedged into the line. */
-  {
-    const t = cardTable(M, 'uth');
-    t.position.set(-5.2, 0, 8.6);
-    t.userData.game = { id: 'holdem', seat: { x: 0, y: 1.46, z: 1.84, look: [0, 1.05, 1.31] } };
-    F.add(t);
-    dealers.push(...t.userData.dealers);
-    collect(t);
-    if (t.userData.act) acts.push(t.userData.act);
-    solids.add(-5.2, 8.6, 2.1, 1.9, 0, 'holdem');
-    contact(scene, -5.2, 8.6, 4.8, 4.0, 0.5);
-    /* read from the pit, which is the side everybody comes from */
-    const usign = gameSign(M, "ULTIMATE HOLD'EM", 0x9fe8ff, -5.2, 2.42, 6.2, 2.0);
-    const uplate = limitPlate(M, '$25 \u2013 $2,500', -5.2, 2.04, 6.2);
-    usign.rotation.y = Math.PI;
-    uplate.rotation.y = Math.PI;
-    F.add(usign, uplate);
-  }
 
   /* slot banks, one game to a bank so you can see what you are walking towards */
   const bank = (x, z, rot, n, game) => {
