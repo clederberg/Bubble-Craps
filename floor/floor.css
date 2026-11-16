@@ -154,7 +154,7 @@ body.playing .seated{bottom:148px}
    same artwork that is on the table, so a chip here and the chip there are
    in the same place by construction. When the ball goes it drops away and
    the table is what you are looking at. */
-.bp{position:fixed;z-index:29;left:50%;top:14px;height:min(78vh,900px);
+.bp{position:fixed;z-index:29;left:50%;top:12px;height:min(84vh,980px);
   transform:translate(-50%,-14px) scale(.97);opacity:0;pointer-events:none;
   transition:opacity .28s, transform .32s cubic-bezier(.2,.9,.3,1)}
 .bp.on{opacity:1;transform:translate(-50%,0) scale(1);pointer-events:auto}
@@ -162,7 +162,8 @@ body.playing .seated{bottom:148px}
   border-radius:12px;overflow:hidden;
   box-shadow:0 26px 70px rgba(0,0,0,.72),0 0 0 1px rgba(240,196,96,.45),
     0 0 0 7px rgba(10,4,9,.55)}
-.bp-cloth{position:absolute;inset:0;background-size:100% 100%;background-repeat:no-repeat}
+.bp-cloth{position:absolute;inset:0;overflow:hidden}
+.bp-art{position:absolute;display:block}
 .bp-marks{position:absolute;inset:0;pointer-events:none}
 .bp-ring{position:absolute;display:none;pointer-events:none;transform:translate(-50%,-50%);
   border:2px solid rgba(255,233,168,.95);border-radius:7px;
