@@ -34,12 +34,20 @@ export class Solids {
         let dist = Math.hypot(ox, oz);
         if (dist > r) continue;
         if (dist < 1e-6) {
-          /* dead centre: leave by the nearest face */
+          /* Properly inside it, which is where you end up if something was
+             built around you. Step out through the nearest face and stop
+             there, rather than scaling a direction by (r - dist): at dist 0
+             that factor is negative and drives you further in. */
           const left = o.hw + lx, right = o.hw - lx, back = o.hd + lz, front = o.hd - lz;
           const m = Math.min(left, right, back, front);
-          ox = m === left ? -1 : m === right ? 1 : 0;
-          oz = m === back ? -1 : m === front ? 1 : 0;
-          dist = 1;
+          let elx = lx, elz = lz;
+          if (m === left) elx = -o.hw - r;
+          else if (m === right) elx = o.hw + r;
+          else if (m === back) elz = -o.hd - r;
+          else elz = o.hd + r;
+          x = o.cx + elx * o.c + elz * o.s;
+          z = o.cz - elx * o.s + elz * o.c;
+          continue;
         }
         const push = (r - dist) / dist;
         const nlx = lx + ox * push, nlz = lz + oz * push;

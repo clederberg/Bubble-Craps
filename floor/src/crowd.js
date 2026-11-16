@@ -26,12 +26,12 @@ function floorAt(x, z) {
 const NODES = [
   /* the side runs keep off x = +-12.9, which is where the columns stand */
   [-11.9, -10.6], [0, -10.6], [11.9, -10.6],      /*  0  1  2  back aisle  */
-  [11.9, 0], [11.9, 10.6], [0, 10.6],             /*  3  4  5             */
-  [-11.9, 10.6], [-11.9, 0],                      /*  6  7                */
+  [11.9, 0], [11.9, 11.5], [0, 11.5],             /*  3  4  5             */
+  [-11.9, 11.5], [-11.9, 0],                      /*  6  7                */
   [0, -8.8], [0, -6.2],                           /*  8  9  north gate    */
   [-9.2, -6.2], [9.2, -6.2],                      /* 10 11                */
   [-9.2, 0], [9.2, 0],                            /* 12 13  the side runs */
-  [-9.2, 6.3], [9.2, 6.3], [0, 6.5], [0, 8.8],    /* 14 15 16 17 south gate */
+  [-9.2, 6.3], [9.2, 6.3], [0, 6.5], [1.6, 9.2],  /* 14 15 16 17 south gate */
   [-4.9, -0.4], [4.9, -0.4],                      /* 18 19  behind the craps rails */
   /* out through the east wall and into the high limit salon */
   [16.0, 0], [20.6, 0], [20.6, -5.9], [20.6, 5.6],/* 20 21 22 23 */
@@ -89,7 +89,7 @@ function route(a, b) {
 const facingTo = (x, z, tx, tz) => Math.atan2(tx - x, tz - z);
 const wrap = a => Math.atan2(Math.sin(a), Math.cos(a));
 
-export function createCrowd(scene, spots, count) {
+export function createCrowd(scene, spots, count, solids) {
   const people = [];
   const free = spots.map(() => true);
   /* Every place has a step-back point behind it, the spot you would stand on
@@ -139,6 +139,12 @@ export function createCrowd(scene, spots, count) {
     p.path = [from].concat(a === b ? [] : lanes, [to, [spots[want].x, spots[want].z]]);
     p.state = 'walk';
     p.spot = -1;
+    /* standing up means stepping clear of the table first: a place at a rail
+       is right against it, and that is not somewhere to start walking from */
+    if (solids) {
+      const r = solids.resolve(p.px, p.pz, 0.24);
+      p.px = r[0]; p.pz = r[1];
+    }
   }
 
   function update(dt, now) {
@@ -158,6 +164,14 @@ export function createCrowd(scene, spots, count) {
         }
         if (p.timer <= 0) leave(p);
       } else if (p.state === 'walk') {
+        /* The lanes keep to the aisles, but leaving a place and joining the
+           nearest one is a straight line, and a straight line clips the corner
+           of a table. The same push the player gets off the furniture keeps
+           them out of it, from the moment they stand up. */
+        if (solids) {
+          const r0 = solids.resolve(p.px, p.pz, 0.24);
+          p.px = r0[0]; p.pz = r0[1];
+        }
         const tgt = p.path[0];
         if (!tgt) {
           const s = spots[p.want];
@@ -174,6 +188,12 @@ export function createCrowd(scene, spots, count) {
         const step = Math.min(d, p.speed * dt);
         p.px += (dx / d) * step;
         p.pz += (dz / d) * step;
+        /* if the push means they cannot get to this waypoint at all, they
+           give up on it and head for the next, rather than scrubbing against
+           a table for the rest of the night */
+        const left = Math.hypot(tgt[0] - p.px, tgt[1] - p.pz);
+        p.stall = (d - left) < step * 0.3 ? (p.stall || 0) + dt : 0;
+        if (p.stall > 2) { p.path.shift(); p.stall = 0; }
         p.phase += step * 3.4;
         const want = facingTo(0, 0, dx, dz);
         p.fig.rotation.y += wrap(want - p.fig.rotation.y) * Math.min(1, dt * 6);

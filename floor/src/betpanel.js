@@ -31,8 +31,26 @@ export function createBetPanel(handlers) {
   let american = false, hover = null, live = false;
   const art = {};
 
+  /* What the window shows: the part of the cloth you can bet on, and a
+     margin. The rest of it is the name running up the side and bare felt,
+     which on a table is where your hands go and in a window is dead space
+     that shrinks everything you are trying to hit. */
+  const M = { x: 34, y: 44 };
+  const CROP = {
+    u0: (GEO.left - M.x) / GEO.W,
+    u1: (GEO.left + 5 * GEO.cw + M.x) / GEO.W,
+    v0: (GEO.top - GEO.zeroH - M.y) / GEO.H,
+    v1: (GEO.top + 12 * GEO.ch + GEO.ch * 0.78 + M.y) / GEO.H
+  };
+  CROP.du = CROP.u1 - CROP.u0;
+  CROP.dv = CROP.v1 - CROP.v0;
+  const pc = n => (n * 100).toFixed(4) + '%';
+  /* a point on the cloth, as a place in the window */
+  const px = u => pc((u - CROP.u0) / CROP.du);
+  const py = v => pc((v - CROP.v0) / CROP.dv);
+
   /* one cell as a fraction of the window, for sizing the highlight */
-  const CW = GEO.cw / GEO.W, CH = GEO.ch / GEO.H;
+  const CW = (GEO.cw / GEO.W) / CROP.du, CH = (GEO.ch / GEO.H) / CROP.dv;
 
   /* The window is shaped like the cloth, not like the canvas the cloth was
      painted on: the artwork is drawn tall and then stretched onto a table that
@@ -40,21 +58,30 @@ export function createBetPanel(handlers) {
      proportions you never see on the felt. */
   function mount(isAmerican, aspect) {
     american = !!isAmerican;
-    if (aspect) wrap.style.aspectRatio = aspect.toFixed(4);
-    if (!art[american ? 'a' : 'e']) {
-      /* the layout texture's own canvas, drawn once and then shown as an
-         image so the table's copy is never touched */
-      art[american ? 'a' : 'e'] = rouletteLayout(american).image.toDataURL('image/png');
+    /* The window is shaped like the piece of cloth it is showing, so what you
+       click here has the proportions it has on the felt. */
+    if (aspect) wrap.style.aspectRatio = (aspect * CROP.du / CROP.dv).toFixed(4);
+    const key = american ? 'a' : 'e';
+    if (!art[key]) {
+      /* a second drawing of the layout, so the one on the table is untouched */
+      const cv = rouletteLayout(american).image;
+      cv.className = 'bp-art';
+      cv.style.width = pc(1 / CROP.du);
+      cv.style.height = pc(1 / CROP.dv);
+      cv.style.left = pc(-CROP.u0 / CROP.du);
+      cv.style.top = pc(-CROP.v0 / CROP.dv);
+      art[key] = cv;
     }
-    cloth.style.backgroundImage = 'url(' + art[american ? 'a' : 'e'] + ')';
+    cloth.textContent = '';
+    cloth.appendChild(art[key]);
   }
 
   function at(e) {
     const r = wrap.getBoundingClientRect();
     if (!r.width || !r.height) return null;
-    const u = (e.clientX - r.left) / r.width, v = (e.clientY - r.top) / r.height;
-    if (u < 0 || u > 1 || v < 0 || v > 1) return null;
-    return keyAt(u, v, american);
+    const fx = (e.clientX - r.left) / r.width, fy = (e.clientY - r.top) / r.height;
+    if (fx < 0 || fx > 1 || fy < 0 || fy > 1) return null;
+    return keyAt(CROP.u0 + fx * CROP.du, CROP.v0 + fy * CROP.dv, american);
   }
   function setHover(key) {
     if (key === hover) return;
@@ -63,8 +90,8 @@ export function createBetPanel(handlers) {
     else {
       const a = anchorUV(key, american);
       ring.style.display = '';
-      ring.style.left = (a[0] * 100) + '%';
-      ring.style.top = (a[1] * 100) + '%';
+      ring.style.left = px(a[0]);
+      ring.style.top = py(a[1]);
     }
     if (handlers.hover) handlers.hover(key);
   }
@@ -90,8 +117,8 @@ export function createBetPanel(handlers) {
       const col = colourOf(amt);
       const el = document.createElement('b');
       el.className = 'bp-chip';
-      el.style.left = (a[0] * 100) + '%';
-      el.style.top = (a[1] * 100) + '%';
+      el.style.left = px(a[0]);
+      el.style.top = py(a[1]);
       el.style.background = col[0];
       el.style.color = col[1];
       el.textContent = textOf(amt);
@@ -105,8 +132,8 @@ export function createBetPanel(handlers) {
 
   /* the ring is a cell high and wide, so a straight reads as a cell and a
      split as the line between two */
-  ring.style.width = 'calc(' + (CW * 100) + '% + 2px)';
-  ring.style.height = 'calc(' + (CH * 100) + '% + 2px)';
+  ring.style.width = 'calc(' + pc(CW) + ' + 2px)';
+  ring.style.height = 'calc(' + pc(CH) + ' + 2px)';
 
   return {
     mount, setBets, show, hide, close,
@@ -116,7 +143,10 @@ export function createBetPanel(handlers) {
     rectFor(key) {
       const r = wrap.getBoundingClientRect();
       const a = anchorUV(key, american);
-      return { x: r.left + a[0] * r.width, y: r.top + a[1] * r.height };
+      return {
+        x: r.left + ((a[0] - CROP.u0) / CROP.du) * r.width,
+        y: r.top + ((a[1] - CROP.v0) / CROP.dv) * r.height
+      };
     },
     pickAt(u, v) { return keyAt(u, v, american); },
     el: root, wrapEl: wrap

@@ -352,3 +352,69 @@ export function glassware(x, y, z) {
   g.position.set(x, y, z);
   return g;
 }
+
+/* ---------------- the three bottles on the salon shelf ----------------
+   The back bar in the high limit room carries one of each rather than a rank
+   of them, so these are built properly instead of being picked out of the
+   random run: a squat wheated bourbon with a wax top, a champagne with its
+   sloped shoulder and foil, and an anejo tequila in white ceramic with a long
+   neck. They are silhouettes and glass colours only. Nothing is lettered on
+   them, because the label on a real bottle is somebody else's artwork. */
+export function topShelfBottle(M, kind) {
+  const g = new THREE.Group();
+  const glass = (col, rough = 0.08, op = 0.92) => new THREE.MeshPhysicalMaterial({
+    color: col, roughness: rough, metalness: 0.02, transparent: true, opacity: op,
+    transmission: 0.35, thickness: 0.4, clearcoat: 1
+  });
+  const solid = (col, rough = 0.35, metal = 0) =>
+    new THREE.MeshStandardMaterial({ color: col, roughness: rough, metalness: metal });
+  const put = (m, y) => { m.position.y = y; m.castShadow = true; g.add(m); return m; };
+  const lathe = (pts, mat, seg = 20) =>
+    new THREE.Mesh(new THREE.LatheGeometry(pts.map(p => new THREE.Vector2(p[0], p[1])), seg), mat);
+
+  if (kind === 'bourbon') {
+    /* short, wide and round shouldered, the way a wheated bourbon decanter is,
+       with the neck dipped in wax */
+    const body = glass(0xa8601c, 0.1, 0.95);
+    put(lathe([
+      [0, 0], [0.058, 0], [0.062, 0.02], [0.062, 0.13], [0.056, 0.17],
+      [0.03, 0.2], [0.018, 0.225], [0.017, 0.29], [0.021, 0.3], [0, 0.3]
+    ], body), 0);
+    const wax = put(lathe([
+      [0, 0], [0.023, 0], [0.025, 0.035], [0.019, 0.05], [0, 0.052]
+    ], solid(0x8c1f2a, 0.5)), 0.272);
+    wax.name = 'wax';
+    /* the paper band every bourbon carries, blank */
+    put(new THREE.Mesh(new THREE.CylinderGeometry(0.0635, 0.0635, 0.075, 20, 1, true),
+      solid(0xe9dfc4, 0.85)), 0.09);
+  } else if (kind === 'champagne') {
+    /* dark green, heavy base, long sloped shoulder, foil over the cork */
+    const body = glass(0x12361c, 0.12, 0.96);
+    put(lathe([
+      [0, 0], [0.046, 0], [0.049, 0.015], [0.049, 0.17], [0.045, 0.21],
+      [0.03, 0.26], [0.021, 0.3], [0.0205, 0.37], [0.025, 0.385], [0, 0.385]
+    ], body), 0);
+    put(lathe([
+      [0, 0], [0.027, 0.002], [0.028, 0.04], [0.023, 0.07], [0.026, 0.078], [0, 0.08]
+    ], solid(0xcfa23c, 0.3, 0.75)), 0.318);
+    put(new THREE.Mesh(new THREE.CylinderGeometry(0.0208, 0.0208, 0.012, 16),
+      solid(0x2a1c10, 0.6)), 0.352);
+    /* the shield-shaped plate on the shoulder, blank */
+    put(new THREE.Mesh(new THREE.CylinderGeometry(0.0495, 0.0495, 0.09, 22, 1, true),
+      solid(0x14120f, 0.75)), 0.085);
+  } else {
+    /* white ceramic, a wide foot and a long slim neck under a round stopper */
+    const cer = solid(0xf2efe6, 0.55);
+    put(lathe([
+      [0, 0], [0.056, 0], [0.059, 0.018], [0.057, 0.1], [0.044, 0.15],
+      [0.021, 0.2], [0.016, 0.26], [0.016, 0.38], [0.021, 0.395], [0, 0.395]
+    ], cer, 24), 0);
+    put(lathe([
+      [0, 0], [0.026, 0.006], [0.028, 0.026], [0.022, 0.042], [0.009, 0.05], [0, 0.05]
+    ], solid(0xdcc98a, 0.4, 0.4)), 0.39);
+    /* a plain band at the waist where the painted one would be */
+    put(new THREE.Mesh(new THREE.CylinderGeometry(0.0455, 0.0455, 0.05, 24, 1, true),
+      solid(0xcbd6e2, 0.6)), 0.128);
+  }
+  return g;
+}

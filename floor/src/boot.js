@@ -117,7 +117,7 @@ async function start() {
   const table3d = createTable3d(camera, scene, canvas);
   const seating = createSeating(camera, scene, player, canvas, table3d);
   /* the floor's own custom, walking between the games */
-  const crowd = createCrowd(scene, fixtures.userData.spots, 30);
+  const crowd = createCrowd(scene, fixtures.userData.spots, 30, solids);
   /* and the games themselves, running a round each */
   const theatre = createTheatre(fixtures.userData.acts || []);
   app.theatre = theatre;

@@ -6,8 +6,8 @@ import { ROOM, SALON } from './room.js';
 import { cardMesh } from './theatre.js';
 import { tune } from './materials.js';
 import { houseSign, monogram, artWall } from './decor.js';
-import { crapsLayout, blackjackLayout, baccaratLayout, rouletteLayout, wheelFace, terminalIdle, signTexture, numberBoard } from './felt.js';
-import { chipRack, chipStack, die, shoe, cards, dealer, patron, bottles, glassware } from './props.js';
+import { crapsLayout, blackjackLayout, baccaratLayout, uthLayout, rouletteLayout, wheelFace, terminalIdle, signTexture, numberBoard } from './felt.js';
+import { chipRack, chipStack, die, shoe, cards, dealer, patron, bottles, glassware, topShelfBottle } from './props.js';
 
 function box(w, h, d, mat, x, y, z, cast = true, receive = true) {
   const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
@@ -206,10 +206,11 @@ function limitPlate(M, text, x, y, z) {
 /* ---------- card tables ---------- */
 function cardTable(M, kind) {
   const g = new THREE.Group();
-  const rx = kind === 'baccarat' ? 1.5 : 1.25, rz = 0.95;
+  const rx = kind === 'baccarat' ? 1.5 : kind === 'uth' ? 1.4 : 1.25, rz = 0.95;
   const shape = new THREE.Shape();
   shape.absellipse(0, 0, rx, rz, 0, Math.PI * 2, false, 0);
-  const layout = kind === 'baccarat' ? baccaratLayout() : blackjackLayout();
+  const layout = kind === 'baccarat' ? baccaratLayout()
+    : kind === 'uth' ? uthLayout() : blackjackLayout();
   const top = new THREE.Mesh(new THREE.ExtrudeGeometry(shape, {
     depth: 0.09, bevelEnabled: true, bevelThickness: 0.03, bevelSize: 0.05, bevelSegments: 3, curveSegments: 48
   }), [new THREE.MeshStandardMaterial({ map: layout, roughness: 0.96 }),
@@ -301,7 +302,9 @@ function cardTable(M, kind) {
   const d = dealer(0, -(rz + 0.52), 0);
   g.add(d);
   g.userData.dealers = [d];
-  const tm = terminal(M, terminalIdle(kind === 'baccarat' ? 'Baccarat' : 'Blackjack', 'Take a seat to play'),
+  const NAME = { baccarat: 'Baccarat', uth: "Ultimate Hold'em", blackjack: 'Blackjack' };
+  const SUB = { uth: 'Ante, blind and trips' };
+  const tm = terminal(M, terminalIdle(NAME[kind] || 'Blackjack', SUB[kind] || 'Take a seat to play'),
     { w: 0.92, tilt: 0.56, y: 1.04, z: rz + 0.34, stem: 0.42 });
   g.add(tm.group);
   g.userData.glass = tm.glass;
@@ -576,6 +579,27 @@ export function buildFixtures(scene, M, solids, screens, book) {
       contact(scene, x, z, 4.6, 3.8, 0.5, drop + 0.004);
     });
 
+  /* Ultimate Texas Hold'em, out on the open carpet south of the pit. The pit
+     row is full and this is a table people stand and watch, so it gets room
+     around it and a sign of its own rather than being wedged into the line. */
+  {
+    const t = cardTable(M, 'uth');
+    t.position.set(-5.2, 0, 8.6);
+    t.userData.game = { id: 'holdem', seat: { x: 0, y: 1.46, z: 1.84, look: [0, 1.05, 1.31] } };
+    F.add(t);
+    dealers.push(...t.userData.dealers);
+    collect(t);
+    if (t.userData.act) acts.push(t.userData.act);
+    solids.add(-5.2, 8.6, 2.1, 1.9, 0, 'holdem');
+    contact(scene, -5.2, 8.6, 4.8, 4.0, 0.5);
+    /* read from the pit, which is the side everybody comes from */
+    const usign = gameSign(M, "ULTIMATE HOLD'EM", 0x9fe8ff, -5.2, 2.42, 6.2, 2.0);
+    const uplate = limitPlate(M, '$25 \u2013 $2,500', -5.2, 2.04, 6.2);
+    usign.rotation.y = Math.PI;
+    uplate.rotation.y = Math.PI;
+    F.add(usign, uplate);
+  }
+
   /* slot banks, one game to a bank so you can see what you are walking towards */
   const bank = (x, z, rot, n, game) => {
     for (let i = 0; i < n; i++) {
@@ -735,6 +759,70 @@ export function buildFixtures(scene, M, solids, screens, book) {
     if (hr.userData.act) acts.push(hr.userData.act);
     solids.add(cx - 3.2, 3.6 + 0.6, 1.25, 2.2, Math.PI, 'roulette');
     contact(scene, cx - 3.2, 3.6, 3.4, 4.4, 0.55);
+
+    /* ---- the salon bar ----
+       Not the long rank of bottles the floor bar has. A high limit back bar
+       carries three things and lets you see all of them: a wheated bourbon in
+       its squat decanter, a vintage champagne, and an anejo tequila in white
+       ceramic. They are built as the silhouettes those bottles have, with no
+       lettering on them, because what is on a real one is somebody's label. */
+    {
+      const bar = new THREE.Group();
+      const W = 3.9;
+      bar.add(box(W, 1.15, 0.72, M.woodMat, 0, 0.575, 0));
+      bar.add(box(W + 0.22, 0.08, 0.96, M.marbleMat, 0, 1.19, 0));
+      bar.add(box(W + 0.06, 0.06, 0.1, M.brass, 0, 1.15, 0.47));
+      bar.add(box(W + 0.06, 0.08, 0.16, M.brass, 0, 0.18, 0.52));
+      /* the case behind, with one lit shelf: three bottles, nothing else */
+      bar.add(box(W + 0.2, 2.9, 0.36, M.darkMetal, 0, 1.45, -1.2));
+      bar.add(box(W - 0.1, 2.3, 0.05, new THREE.MeshStandardMaterial({
+        color: 0x140b11, roughness: 0.22, metalness: 0.55
+      }), 0, 1.5, -1.03));
+      /* One shelf, three bottles, and nothing above it: a second shelf with
+         nothing on it is what makes a back bar look unstocked. */
+      const SY = 1.34;
+      bar.add(box(W - 0.3, 0.06, 0.34, M.woodMat, 0, SY, -0.96));
+      bar.add(box(W - 0.4, 0.025, 0.07, M.emissive(0xffcf8a, 1.8), 0, SY + 0.042, -0.8, false, false));
+      [[-1.1, 'bourbon'], [0, 'champagne'], [1.1, 'tequila']].forEach(([bx, kind]) => {
+        const b = topShelfBottle(M, kind);
+        b.position.set(bx, SY + 0.03, -0.96);
+        /* shown at a size you can tell them apart from a bar stool */
+        b.scale.setScalar(1.45);
+        bar.add(b);
+        /* each one lit on its own, the way a back bar shows three bottles */
+        const l = new THREE.PointLight(0xffc98a, 2.1, 1.8, 2);
+        l.position.set(bx, SY + 0.62, -0.7);
+        bar.add(l);
+      });
+      /* the name on the case, facing the room */
+      bar.add(gameSign(M, 'RESERVE', 0xffd9a0, 0, SY + 1.0, -1.0, 1.6, 0.36));
+      bar.add(glassware(-1.7, 1.235, 0.08));
+      bar.add(glassware(1.7, 1.235, -0.04));
+      [-1.2, 0, 1.2].forEach(sx => {
+        const st = new THREE.Group();
+        const seat = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.1, 18), M.woodMat);
+        seat.position.y = 0.74;
+        const post = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.07, 0.74, 10), M.brass);
+        post.position.y = 0.37;
+        st.add(seat, post);
+        st.position.set(sx, 0, 0.78);
+        st.children.forEach(ch => { ch.castShadow = true; });
+        bar.add(st);
+      });
+      /* stood at the end of the well, not in front of the bottles */
+      const keep = dealer(1.72, -0.5, Math.PI);
+      bar.add(keep);
+      dealers.push(keep);
+      bar.userData.spots = [-1.2, 0, 1.2].map(sx =>
+        ({ x: sx, z: 0.78, facing: Math.PI, sit: true, seatY: 0.79 }));
+      /* in the far corner, clear of the roulette and out of the walking line */
+      bar.position.set(cx + 3.8, 0, 6.3);
+      bar.rotation.y = Math.PI;
+      F.add(bar);
+      collect(bar);
+      solids.add(cx + 3.8, 6.3, 2.5, 0.55, 0, 'salonbar');
+      contact(scene, cx + 3.8, 6.3, 5.4, 2.6, 0.45);
+    }
 
     /* the host's desk by the way in */
     const desk = new THREE.Group();

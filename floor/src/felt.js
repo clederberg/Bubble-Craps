@@ -172,6 +172,69 @@ export function blackjackLayout() {
   return textured(c);
 }
 
+/* ---------------- ultimate texas hold'em ----------------
+   Five seats, each with its own trips, ante, blind and play boxes stacked the
+   way they are on a real UTH felt, and the board across the middle where the
+   community cards come out. The paytables are the ones in uth.js, written out
+   so the table tells you what it pays without opening the rules. */
+export function uthLayout() {
+  const W = 1600, H = 1000;
+  const { c, x } = felt(W, H);
+
+  label(x, "ULTIMATE TEXAS HOLD'EM", W / 2, 96, 50, GOLD, 700, 9);
+  label(x, 'BLIND PAYS ON A STRAIGHT OR BETTER  \u00b7  TRIPS ALWAYS PAYS', W / 2, 152, 24, LINE, 600, 3);
+
+  /* the two paytables, one either side of the board */
+  const pays = (cx, cy, title, rows, accent) => {
+    x.strokeStyle = accent; x.lineWidth = 4;
+    x.beginPath(); x.roundRect(cx - 170, cy, 340, 44 + rows.length * 32, 10); x.stroke();
+    label(x, title, cx, cy + 26, 24, accent, 700, 5);
+    rows.forEach((r, i) => {
+      const y = cy + 62 + i * 32;
+      x.fillStyle = 'rgba(244,239,223,.82)';
+      x.font = '600 21px Oswald, Arial';
+      x.textAlign = 'left';  x.textBaseline = 'middle';
+      x.fillText(r[0], cx - 152, y);
+      x.textAlign = 'right';
+      x.fillText(r[1], cx + 152, y);
+    });
+    x.textAlign = 'center';
+  };
+  pays(300, 210, 'BLIND', [
+    ['Royal flush', '500 to 1'], ['Straight flush', '50 to 1'], ['Four of a kind', '10 to 1'],
+    ['Full house', '3 to 1'], ['Flush', '3 to 2'], ['Straight', '1 to 1']
+  ], GOLD);
+  pays(W - 300, 210, 'TRIPS', [
+    ['Royal flush', '50 to 1'], ['Straight flush', '40 to 1'], ['Four of a kind', '30 to 1'],
+    ['Full house', '8 to 1'], ['Flush', '6 to 1'], ['Straight', '5 to 1'], ['Three of a kind', '3 to 1']
+  ], LINE);
+
+  /* the board: five community cards across the middle of the table */
+  for (let i = 0; i < 5; i++) {
+    const cx = W / 2 + (i - 2) * 112;
+    x.strokeStyle = 'rgba(244,239,223,.4)'; x.lineWidth = 3;
+    x.beginPath(); x.roundRect(cx - 44, 452, 88, 124, 8); x.stroke();
+  }
+  label(x, 'BOARD', W / 2, 428, 22, 'rgba(244,239,223,.55)', 600, 6);
+
+  /* five betting positions along the players' edge */
+  const box = (cx, cy, w, h, stroke, text, size) => {
+    x.strokeStyle = stroke; x.lineWidth = 4;
+    x.beginPath(); x.roundRect(cx - w / 2, cy, w, h, 8); x.stroke();
+    label(x, text, cx, cy + h / 2, size, stroke, 700, 4);
+  };
+  for (let i = 0; i < 5; i++) {
+    const cx = W / 2 + (i - 2) * 290;
+    /* trips sits out to the side; ante and blind are a pair; play is in front */
+    box(cx - 104, 650, 86, 52, LINE, 'TRIPS', 19);
+    box(cx - 2, 650, 104, 52, GOLD, 'ANTE', 21);
+    box(cx + 104, 650, 86, 52, GOLD, 'BLIND', 19);
+    box(cx, 722, 212, 60, LINE, 'PLAY', 24);
+  }
+  label(x, 'C M L', W / 2, 836, 26, 'rgba(244,239,223,.4)', 600, 9, 'Cinzel, serif');
+  return textured(c);
+}
+
 /* ---------------- baccarat ---------------- */
 export function baccaratLayout() {
   const W = 1800, H = 1000;
@@ -206,13 +269,19 @@ export function signTexture(text, colour) {
   x.lineWidth = 5;
   x.strokeRect(10, 10, 492, 108);
   x.fillStyle = colour;
-  x.font = '700 52px Oswald, Arial';
   x.textAlign = 'center';
   x.textBaseline = 'middle';
+  /* a long name is set smaller rather than run off the ends of its own sign */
   const chars = text.split('');
-  const sp = 7;
-  const widths = chars.map(ch => x.measureText(ch).width + sp);
-  const total = widths.reduce((a, b) => a + b, 0) - sp;
+  let size = 52, sp = 7, widths, total;
+  for (;;) {
+    x.font = '700 ' + size + 'px Oswald, Arial';
+    widths = chars.map(ch => x.measureText(ch).width + sp);
+    total = widths.reduce((a, b) => a + b, 0) - sp;
+    if (total <= 452 || size <= 22) break;
+    size -= 2;
+    sp = Math.max(3, sp - 0.3);
+  }
   let px = 256 - total / 2;
   chars.forEach((ch, i) => { x.fillText(ch, px + widths[i] / 2 - sp / 2, 68); px += widths[i]; });
   const t = tune(new THREE.CanvasTexture(c));
@@ -288,8 +357,18 @@ export function rouletteLayout(american) {
     cell(left + p * cw, top + 12 * ch, cw, ch * 0.78, 'rgba(0,0,0,.25)', null);
     label(x, '2 TO 1', left + p * cw + cw / 2, top + 12 * ch + ch * 0.39, 30, LINE, 700, 4);
   }
-  label(x, american ? 'AMERICAN ROULETTE' : 'ROULETTE', 72, H / 2, 44, GOLD, 700, 10);
-  label(x, 'C M L', 72, H / 2 + 300, 26, 'rgba(244,239,223,.45)', 600, 9, 'Cinzel, serif');
+  /* The name runs up the margin beside the grid, the way it does on a real
+     cloth. Set horizontally it is wider than the margin and the last letters
+     end up sitting on the numbers. */
+  const upright = (text, y, size, colour, weight, spacing, font) => {
+    x.save();
+    x.translate(74, y);
+    x.rotate(Math.PI / 2);
+    label(x, text, 0, 0, size, colour, weight, spacing, font);
+    x.restore();
+  };
+  upright(american ? 'AMERICAN ROULETTE' : 'ROULETTE', H / 2 - 170, 44, GOLD, 700, 10);
+  upright('C M L', H / 2 + 330, 26, 'rgba(244,239,223,.45)', 600, 9, 'Cinzel, serif');
   return textured(c);
 }
 
