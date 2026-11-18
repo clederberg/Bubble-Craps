@@ -17,10 +17,11 @@ var FONTS = 'bc-fonts';
 var NET_TIMEOUT = 2500;
 var FILES = [
   './', './index.html', './blackjack.html', './baccarat.html', './holdem.html',
-  './lights.html', './purim.html', './pinball.html', './roulette.html',
+  './lights.html', './purim.html', './sukkot.html', './pinball.html', './roulette.html',
   './casino.css', './app.js', './engine.js', './layout.js', './sounds.js', './common.js',
   './bj.js', './blackjack.js', './bac.js', './baccarat.js', './uth.js', './holdem.js', './roul.js', './roulette.js',
   './slots.js', './games.js', './slotfx.js', './lights.js', './pinball.js', './pots.js', './purim.js',
+  './sukkah.js', './sukkot.js',
   './manifest.webmanifest', './icon-192.png', './icon-512.png', './icon-maskable-512.png', './apple-touch-icon.png'
 ];
 
