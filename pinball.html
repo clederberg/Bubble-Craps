@@ -81,6 +81,16 @@
 .p-bell{color:#c8901a}
 .p-cherry{color:#c9241f}
 .p-ball{color:#6c7b87}
+/* the ball gets the whole cell, and the cell reads as the shooter lane */
+.psym.p-ball{background:linear-gradient(180deg,#e7edf3,#c3cdd6)}
+.psym.p-ball svg{width:84%;height:84%;filter:drop-shadow(0 2px 4px rgba(0,0,0,.35))}
+.psym.p-ball .pb-ball{animation:pbroll 1.8s ease-in-out infinite}
+@keyframes pbroll{0%,100%{transform:translateY(0)}50%{transform:translateY(-2.2px)}}
+/* and when it is the one that landed, it says so */
+.psym.p-ball.lit{background:linear-gradient(180deg,#fff6dc,#ffd970);
+  box-shadow:inset 0 0 0 3px #e0532a, 0 0 26px rgba(255,217,112,.9);
+  animation:pblit .34s steps(1) 4}
+@keyframes pblit{50%{box-shadow:inset 0 0 0 3px #fff2c2, 0 0 34px rgba(255,217,112,1)}}
 .p-blank{color:rgba(0,0,0,.12);font-size:calc(var(--cell)*.2)}
 .psym svg{width:62%;height:62%}
 .bar{display:block;width:62%;height:9%;margin:5% auto;background:#1a1a1a;border-radius:2px}
@@ -166,6 +176,19 @@ html.framed .window{--cell:clamp(112px, calc((100vh - 470px) / 2.2), 196px);
 </style>
 </head>
 <body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs>
+  <radialGradient id="pbSteel" cx=".34" cy=".28" r=".85">
+    <stop offset="0" stop-color="#ffffff"/><stop offset=".26" stop-color="#eaf1f7"/>
+    <stop offset=".58" stop-color="#a8b8c6"/><stop offset=".85" stop-color="#697a88"/>
+    <stop offset="1" stop-color="#3c4852"/>
+  </radialGradient>
+  <linearGradient id="pbLane" x1="0" y1="0" x2="1" y2="0">
+    <stop offset="0" stop-color="#5a6772"/><stop offset=".45" stop-color="#c3ced8"/>
+    <stop offset="1" stop-color="#6b7884"/>
+  </linearGradient>
+</defs></svg>
+
 <div class="wrap">
   <header>
     <h1>Pinball <span>Classic</span></h1>

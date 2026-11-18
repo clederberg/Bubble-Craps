@@ -209,11 +209,13 @@
   };
   /* The silver ball only lives on the third reel: one of them anywhere on the
      line sends the ball to the playfield. */
-  var PIN_SIDE = { SEVEN: 1, BELL: 3, BAR3: 1, BAR2: 2, BAR1: 3, CHERRY: 2, BLANK: 10 };
+  /* Cherries pay from any reel, so there are fewer of them than there would
+     be on a machine that only pays them from the left. */
+  var PIN_SIDE = { SEVEN: 1, BELL: 3, BAR3: 1, BAR2: 2, BAR1: 3, CHERRY: 1, BLANK: 11 };
   /* Reel three carries a single silver ball on a long virtual strip, so the
      shot bonus is a real event rather than something that lands every few
      spins. The other symbols keep their old proportions (every count x16). */
-  var PIN_LAST = { SEVEN: 16, BELL: 48, BAR3: 16, BAR2: 32, BAR1: 48, CHERRY: 32, BALL: 1, BLANK: 112 };
+  var PIN_LAST = { SEVEN: 16, BELL: 48, BAR3: 16, BAR2: 32, BAR1: 48, CHERRY: 10, BALL: 1, BLANK: 134 };
   // Pays are multiples of the bet per credit, on the single line, left to right.
   var PIN_PAYS = {
     SEVEN: { 3: 586, max: 1400 },
@@ -262,9 +264,9 @@
     return g;
   }
 
-  /* Old-school extras: cherries pay from the left even without three, any three
-     bars of mixed kinds pay a consolation, and three sevens on two credits pay
-     the boosted top award. `bet` is the wager per credit. */
+  /* Old-school extras: a cherry anywhere on the line pays even without three,
+     any three bars of mixed kinds pay a consolation, and three sevens on two
+     credits pay the boosted top award. `bet` is the wager per credit. */
   function pinballWin(g, grid, bet, credits) {
     var cr = credits || 1;
     var line = [grid[0][0], grid[1][0], grid[2][0]], wins = [];
@@ -281,9 +283,15 @@
       var bars = line.every(function (s) { return s === 'BAR1' || s === 'BAR2' || s === 'BAR3'; });
       if (bars) add('BAR1', 3, g.anyBar, 'any three bars');
       else {
+        /* Cherries pay wherever they land, not only from the left. That is how
+           the machine this is modelled on reads: any cherry is two, any two
+           are eight, and three are the line pay. */
         var cherries = 0;
-        for (var i = 0; i < 3; i++) { if (line[i] === 'CHERRY') cherries++; else break; }
-        if (cherries) add('CHERRY', cherries, g.pays.CHERRY[cherries], cherries === 1 ? 'one cherry' : cherries + ' cherries');
+        for (var i = 0; i < 3; i++) if (line[i] === 'CHERRY') cherries++;
+        if (cherries) {
+          add('CHERRY', cherries, g.pays.CHERRY[cherries],
+            cherries === 1 ? 'any cherry' : 'any ' + cherries + ' cherries');
+        }
       }
     }
     var total = wins.reduce(function (a, w) { return a + w.amount; }, 0);

@@ -26,9 +26,39 @@ function symHTML(sym) {
   else if (sym === 'SEVEN') inner = '7';
   else if (sym === 'BELL') inner = '<svg viewBox="0 0 48 48" fill="currentColor"><path d="M24 5a3 3 0 0 1 3 3v1.6c6.3 1.4 10 6.4 10 13.4 0 7 1 10 3.4 12.6.9 1 .2 2.4-1.1 2.4H8.7c-1.3 0-2-1.4-1.1-2.4C10 33 11 30 11 23c0-7 3.7-12 10-13.4V8a3 3 0 0 1 3-3z"/><path d="M19 40h10a5 5 0 0 1-10 0z"/></svg>';
   else if (sym === 'CHERRY') inner = '<svg viewBox="0 0 48 48" fill="currentColor"><path d="M25 8c6 0 11 4 14 10-4-3-8-3-11 0-2 2-3 5-3 8h-2c0-4-1-8-3-11-3-4-8-5-12-3 4-3 9-4 17-4z" opacity=".75"/><circle cx="15" cy="34" r="8"/><circle cx="33" cy="36" r="7"/></svg>';
-  else if (sym === 'BALL') inner = '<svg viewBox="0 0 48 48"><circle cx="24" cy="24" r="14" fill="currentColor"/><circle cx="19" cy="19" r="4.5" fill="#fff" opacity=".85"/></svg>';
+  else if (sym === 'BALL') inner = ballHTML();
   else inner = '&#9670;';
   return '<div class="psym ' + def.cls + '">' + inner + '</div>';
+}
+/* The silver ball is the one symbol on the machine that is not a picture of
+   a prize, it is a picture of what happens next: the ball has come off the
+   flippers and is on its way up the lane, with the shooter spring still
+   uncoiling under it. It is drawn as steel rather than as a grey circle,
+   because it is the only symbol anyone on this machine is waiting for. */
+function ballHTML() {
+  return '<svg viewBox="0 0 48 48">'
+    /* the arc it came in on */
+    + '<path d="M8 30a18 18 0 0 1 9-16" fill="none" stroke="#9fb0bf" stroke-width="2"'
+    + ' stroke-linecap="round" stroke-dasharray="3 4" opacity=".55"/>'
+    + '<path d="M40 30a18 18 0 0 0-9-16" fill="none" stroke="#9fb0bf" stroke-width="2"'
+    + ' stroke-linecap="round" stroke-dasharray="3 4" opacity=".3"/>'
+    /* the ball */
+    + '<circle cx="24" cy="21" r="13" fill="url(#pbSteel)"/>'
+    + '<circle cx="24" cy="21" r="13" fill="none" stroke="#2b3741" stroke-width="1" opacity=".45"/>'
+    + '<ellipse cx="19.4" cy="15.8" rx="4.4" ry="3" fill="#fff" opacity=".92"'
+    + ' transform="rotate(-30 19.4 15.8)"/>'
+    + '<path d="M14.5 26.5a10.6 10.6 0 0 0 16 3.2" fill="none" stroke="#fff" stroke-width="1.6"'
+    + ' stroke-linecap="round" opacity=".38"/>'
+    /* the flippers it came off, cocked up the way they are when you hold them */
+    + '<g stroke-linecap="round">'
+    + '<path d="M7.5 44.5L18 39" stroke="#7d0f0c" stroke-width="7.6"/>'
+    + '<path d="M7.5 44.5L18 39" stroke="#e03a32" stroke-width="5.2"/>'
+    + '<path d="M40.5 44.5L30 39" stroke="#7d0f0c" stroke-width="7.6"/>'
+    + '<path d="M40.5 44.5L30 39" stroke="#e03a32" stroke-width="5.2"/>'
+    + '</g>'
+    + '<circle cx="7.5" cy="44.5" r="2.1" fill="#f0d98a"/>'
+    + '<circle cx="40.5" cy="44.5" r="2.1" fill="#f0d98a"/>'
+    + '</svg>';
 }
 function column(reel, stop, rows) {
   var out = '';
@@ -197,7 +227,15 @@ function spin() {
   var stops = S.spinStops(g), grid = S.gridAt(g, stops);
   var res = G.pinballWin(g, grid, st.bet, st.credits);
   spinReels(stops, function () {
-    if (res.bonus) return runBonus(res);
+    if (res.bonus) {
+      /* a beat on the ball itself before the board opens, so the thing you
+         were waiting for is the thing you get to look at */
+      var cell = $('reels').querySelector('[data-reel="2"] .p-ball');
+      if (cell) cell.classList.add('lit');
+      fx('ratchet');
+      K.setText($('headline'), 'Silver ball');
+      return later(function () { runBonus(res); }, 820);
+    }
     payOut(res, 0);
   });
 }

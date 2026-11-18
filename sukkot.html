@@ -196,9 +196,66 @@ body.sk{background:radial-gradient(1200px 640px at 50% -18%, #22365a 0%, #070c16
 .hint{text-align:center;margin:10px 0 0;font:500 12px Inter,sans-serif;color:rgba(255,243,220,.55)}
 .go-btn.sk-go{background:linear-gradient(180deg,#ffe9b0,#d9a63a)}
 
+
+/* ---- the stage: ways plate, glass, and what the spin paid ---- */
+.stage{display:flex;align-items:stretch;justify-content:center;gap:10px;
+  width:100%;max-width:calc(var(--cell) * 5.75 + 272px);margin:0 auto}
+.stage>.glass{flex:1 1 auto;min-width:0}
+
+/* the plate down the side of the cabinet, read bottom to top like the real one */
+.wayrail{flex:0 0 44px;border-radius:14px;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:10px;padding:10px 0;
+  background:linear-gradient(180deg,rgba(240,196,96,.22),rgba(0,0,0,.42));
+  border:1px solid rgba(240,196,96,.42);box-shadow:inset 0 1px 0 rgba(255,235,200,.25)}
+.wayrail span{writing-mode:vertical-rl;transform:rotate(180deg);
+  font:600 13px Oswald,sans-serif;letter-spacing:.42em;text-transform:uppercase;color:var(--gold);
+  text-shadow:0 0 14px rgba(240,196,96,.5)}
+.wayrail b{writing-mode:vertical-rl;transform:rotate(180deg);
+  font:700 19px Oswald,sans-serif;letter-spacing:.1em;color:var(--cream);
+  font-variant-numeric:tabular-nums}
+
+/* the paid table */
+.paypanel{flex:0 0 218px;border-radius:16px;padding:10px 11px;overflow:hidden;
+  background:linear-gradient(180deg,rgba(23,37,61,.92),rgba(8,14,25,.92));
+  border:1px solid rgba(240,196,96,.26);color:var(--cream);font-size:12px}
+.paypanel h4{margin:0 0 7px;font:600 10px Oswald,sans-serif;letter-spacing:.2em;
+  text-transform:uppercase;color:rgba(240,196,96,.85)}
+.prow{display:flex;align-items:center;gap:7px;padding:4px 0;border-top:1px solid rgba(255,243,220,.08)}
+.prow:first-of-type{border-top:0}
+.prow .ic{width:20px;height:20px;flex:none}
+.prow .ic svg{width:100%;height:100%;display:block}
+.prow .lb{flex:1;min-width:0;line-height:1.2}
+.prow .lb b{display:block;font:600 11px Oswald,sans-serif;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--cream)}
+.prow .lb small{display:block;font-size:10px;color:rgba(255,243,220,.6);
+  font-variant-numeric:tabular-nums}
+.prow .am{font:700 13px Oswald,sans-serif;color:#ffe3ac;font-variant-numeric:tabular-nums}
+.prow.feat{background:rgba(219,224,79,.08);border-radius:8px;padding-left:5px;padding-right:5px}
+.prow.feat .am{color:var(--citron)}
+.prow.jp .am{color:#fff0c4}
+.prow.none .lb b{color:rgba(255,243,220,.5)}
+.ptotal{margin-top:8px;padding-top:7px;border-top:1px solid rgba(240,196,96,.42);
+  display:flex;justify-content:space-between;align-items:baseline}
+.ptotal b{font:600 10px Oswald,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:var(--gold)}
+.ptotal span{font:700 16px Oswald,sans-serif;color:var(--cream);font-variant-numeric:tabular-nums}
+
+/* ---- buy a feature ---- */
+.tool.buy{border-color:rgba(240,196,96,.6);color:#ffe3ac}
+.buylist{display:flex;flex-direction:column;gap:8px}
+.buyrow{display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:12px;cursor:pointer;
+  background:rgba(0,0,0,.3);border:1px solid rgba(240,196,96,.3);text-align:left;color:inherit}
+.buyrow:hover{border-color:var(--gold)}
+.buyrow b{display:block;font:600 13px Oswald,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:#ffd9a6}
+.buyrow small{display:block;font-size:11px;color:rgba(255,243,220,.62)}
+.buyrow .cost{margin-left:auto;font:700 15px Oswald,sans-serif;color:#fff2d2;font-variant-numeric:tabular-nums}
+.buyrow[disabled]{opacity:.45;cursor:not-allowed}
+.buyrow[disabled]:hover{border-color:rgba(240,196,96,.3)}
+
 /* ---- sizes ---- */
 @media (min-width:1100px){.sk{--cell:96px}}
 @media (max-width:900px){.sk{--cell:68px}}
+@media (max-width:1040px){ .paypanel{display:none} }
+@media (max-width:760px){ .wayrail{display:none} }
 @media (max-width:620px){
   .meters{grid-template-columns:repeat(2,1fr)}
   .reels{gap:4px}
@@ -223,6 +280,9 @@ html.framed .lights{left:26px;right:26px}
 html.framed .hint,html.framed .rules{display:none}
 html.framed .sk{--cell:clamp(84px, calc((100vh - 360px) / 3), 190px)}
 html.framed .glass{max-width:calc(var(--cell) * 5.75)}
+html.framed .stage{max-width:calc(var(--cell) * 5.75 + 300px)}
+html.framed .wayrail{flex-basis:54px}
+html.framed .paypanel{flex-basis:240px}
 html.framed .glass{border-radius:12px}
 html.framed .wordmark{font-size:clamp(22px,2.4vw,34px)}
 </style>
@@ -426,15 +486,22 @@ html.framed .wordmark{font-size:clamp(22px,2.4vw,34px)}
     <div class="lights" id="lights"></div>
     <div class="topbar">
       <div class="wordmark">SUKKAH <i>NIGHTS</i></div>
-      <div class="ways">243 ways</div>
     </div>
 
     <div class="meters" id="meters"></div>
 
-    <div class="glass" id="glass">
-      <div class="sky"></div>
-      <div class="behind" id="behind"></div>
-      <div class="reels" id="reels"></div>
+    <div class="stage">
+      <!-- the plate down the side of the real cabinet -->
+      <div class="wayrail" aria-hidden="true"><span>REEL WAYS</span><b id="wayCount">243</b></div>
+
+      <div class="glass" id="glass">
+        <div class="sky"></div>
+        <div class="behind" id="behind"></div>
+        <div class="reels" id="reels"></div>
+      </div>
+
+      <!-- what this spin actually paid, way by way -->
+      <aside class="paypanel" id="paid"></aside>
     </div>
 
     <div class="status" id="status">Six lulavim build a street. Three etrogim spin the wheel.</div>
@@ -448,6 +515,7 @@ html.framed .wordmark{font-size:clamp(22px,2.4vw,34px)}
   <div class="wrap">
     <div class="chips" id="chips"></div>
     <div class="tools">
+      <button class="tool buy" id="buy">Buy a feature</button>
       <button class="tool" id="sound">Audio: All</button>
     </div>
     <div class="dockstats">
@@ -458,6 +526,13 @@ html.framed .wordmark{font-size:clamp(22px,2.4vw,34px)}
     <button class="go-btn sk-go" id="spin">SPIN</button>
   </div>
 </div>
+<dialog id="buyDlg" class="dlg">
+  <h2>Buy a feature</h2>
+  <div class="buylist" id="buyList"></div>
+  <p class="note">Each one costs about what it returns, so buying one is the same wager as waiting for it.</p>
+  <div class="dlg-actions"><button type="button" class="tool" id="buyCancel">Close</button></div>
+</dialog>
+
 <div class="toast" id="toast"></div>
 
 <dialog id="resetDlg" class="dlg">
@@ -477,7 +552,7 @@ html.framed .wordmark{font-size:clamp(22px,2.4vw,34px)}
     <p class="note">Shared with every other table.</p>
     <div class="dlg-actions">
       <button type="button" class="tool" id="resetCancel">Cancel</button>
-      <button type="submit" class="go">Reset</button>
+      <button type="submit" class="go" id="resetGo">Reset</button>
     </div>
   </form>
 </dialog>

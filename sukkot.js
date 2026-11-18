@@ -8,6 +8,11 @@
   var SYM = ['sukkah', 'ushpizin', 'feast', 'grape', 'fig', 'date', 'pomegranate', 'olive', 'barley', 'wheat'];
   var ALL = SYM.concat([K.WILD, K.BUILD, K.SAW, K.GOLD]);
   var JPNAME = { chai: 'Chai', simcha: 'Simcha', hoshana: 'Hoshana', shalom: 'Shalom' };
+  var NAME = {
+    sukkah: 'Sukkah', ushpizin: 'Ushpizin', feast: 'Feast', grape: 'Grapes', fig: 'Figs',
+    date: 'Dates', pomegranate: 'Pomegranate', olive: 'Olives', barley: 'Barley', wheat: 'Wheat',
+    wind: 'Wind', lulav: 'Lulav', etrog: 'Etrog', pitom: 'Pitom etrog'
+  };
   var MODE = {
     frames: ['Ushpizin Nights', 'Six nights to build the street'],
     etrog: ['Etrog Nights', 'The etrogim stay out and keep laying frames'],
@@ -68,24 +73,32 @@
       later(function () { if (done) done(); }, 60);
       return;
     }
+    /* The strip reads, top to bottom: one spare cell, the three the engine
+       picked, then the filler the reel runs through on the way down. So the
+       three that are showing when it stops are the three it was always going
+       to stop on, which is the whole point. Getting this backwards is what
+       made the symbols change after the reel had already come to rest. */
     var pad = 16 + i * 3, h = '', k, y;
-    for (k = 0; k < pad; k++) h += cell(randomSym());
+    h += cell(randomSym());                           /* the spare, for the bounce */
     for (y = 0; y < 3; y++) h += cell(final[y]);
+    for (k = 0; k < pad; k++) h += cell(randomSym());
     C.setHTML(strip, h);
     var cellH = cellHeight();
+    var rest = -cellH;                                /* where the three sit square */
     strip.style.transition = 'none';
-    strip.style.transform = 'translateY(' + (-pad * cellH) + 'px)';
+    strip.style.transform = 'translateY(' + (rest - pad * cellH) + 'px)';
     strip.offsetHeight;                               /* take the start pose */
     /* out past the stop and back: the band of a real reel settling */
     var over = Math.round(cellH * 0.16);
     strip.style.transition = 'transform ' + dur + 'ms cubic-bezier(.2,.56,.24,1)';
-    strip.style.transform = 'translateY(' + over + 'px)';
+    strip.style.transform = 'translateY(' + (rest + over) + 'px)';
     later(function () {
       strip.style.transition = 'transform 190ms cubic-bezier(.3,1.5,.5,1)';
-      strip.style.transform = 'translateY(0)';
+      strip.style.transform = 'translateY(' + rest + 'px)';
       C.play('handle', 0, 0.2, 1.5 + i * 0.05);
     }, dur);
     later(function () {
+      /* trim the strip back to the three on show, without moving them */
       strip.style.transition = 'none';
       var hh = '';
       for (var y2 = 0; y2 < 3; y2++) hh += cell(final[y2], 'drop');
@@ -149,10 +162,12 @@
     }).join('');
     C.setHTML($('meters'), h);
   }
-  function bumpMeters() {
-    /* the two that climb do so out of the hold, a little every spin */
-    St.jp.hoshana += 0.03;
-    St.jp.shalom += 0.12;
+  /* The two that climb do so out of the hold, a little every spin. A bought
+     feature is a larger wager, so it feeds them in the same proportion. */
+  function bumpMeters(mult) {
+    var m = mult || 1;
+    St.jp.hoshana += 0.03 * m;
+    St.jp.shalom += 0.12 * m;
     C.save();
   }
   function resetMeter(tier) { St.jp[tier] = K.SEED[tier]; C.save(); }
@@ -451,23 +466,32 @@
     });
   }
 
-  function spin() {
+  /* `buy` is one of K.BUY, or null for an ordinary spin. `free` skips the
+     charge, which is what the code on the glass door unlocks. */
+  function spin(buy, free) {
     if (busy) return;
     var bet = totalBet();
-    if (bet > C.bank()) { C.toast('Not enough in the bankroll'); return; }
+    var cost = free ? 0 : Math.round((buy ? buy.price : 1) * bet);
+    if (cost > C.bank()) {
+      C.toast(buy ? 'That feature costs ' + C.money(cost) : 'Not enough in the bankroll');
+      return;
+    }
     busy = true;
     clearTimers();
     closeBoard();
-    C.addBank(-bet);
-    bumpMeters();
+    C.addBank(-cost);
+    bumpMeters(cost / bet);
     paintMeters();
     paint();
-    C.setText($('status'), '');
+    C.setText($('status'), buy ? (free ? 'On the house' : 'Bought: ' + buy.label) : '');
     C.play('handle', 0, 0.7);
 
-    var res = K.play({ totalBet: bet, meters: St.jp });
+    var res = buy
+      ? K.buyFeature({ buy: buy.key, totalBet: bet, meters: St.jp })
+      : K.play({ totalBet: bet, meters: St.jp });
     spinReels(res.grid, function () {
       markFeatures(res);
+      paintPaid(res, true);
       if (res.wheel) {
         later(function () { runWheel(res); }, 400);
       } else if (res.build) {
@@ -536,6 +560,7 @@
       countTo($('winline'), res.total, res.total > totalBet() * 20 ? 1500 : 620, C.money);
     }
     if (res.total > 0) C.play(res.total > totalBet() * 10 ? 'stack' : 'lay', 0, 0.7);
+    paintPaid(res, false);
     busy = false;
     paint();
   }
@@ -554,6 +579,61 @@
       if (k < 1) requestAnimationFrame(frame);
     }
     requestAnimationFrame(frame);
+  }
+
+  /* ---------------- the table down the right ----------------
+     A ways game has no paylines to draw, so the panel says in words what the
+     reels just did: which symbol ran, how far it got, how many ways that came
+     to, and what each of those was worth. */
+  function prow(cls, icon, title, sub, amount) {
+    return '<div class="prow' + (cls ? ' ' + cls : '') + '">'
+      + (icon ? '<span class="ic">' + art(icon) + '</span>' : '<span class="ic"></span>')
+      + '<span class="lb"><b>' + C.esc(title) + '</b>'
+      + (sub ? '<small>' + C.esc(sub) + '</small>' : '') + '</span>'
+      + (amount == null ? '' : '<span class="am">' + C.money(amount) + '</span>') + '</div>';
+  }
+  function paintPaid(res, pending) {
+    var el = $('paid');
+    if (!el) return;
+    var rows = '', waysPaid = 0;
+    (res.ways || []).slice().sort(function (a, b) { return b.amount - a.amount; }).forEach(function (w) {
+      waysPaid += w.ways;
+      rows += prow('', w.sym, (NAME[w.sym] || w.sym) + '  x' + w.count,
+        w.ways + (w.ways === 1 ? ' way' : ' ways') + '  at ' + w.perWay + 'x', w.amount);
+    });
+    if (!pending) {
+      if (res.build) {
+        rows += prow('feat', K.BUILD, 'Ushpizin Nights', res.build.round.nights + ' nights', res.build.guests.total);
+      }
+      if (res.wheel) {
+        var w2 = res.wheel;
+        if (w2.mode) {
+          rows += prow('feat', w2.superMode ? K.GOLD : K.SAW, w2.label,
+            (w2.superMode ? 'Six rows' : 'Three rows') + ', ' + w2.build.nights + ' nights', w2.guests.total);
+        } else if (!w2.jackpots.length) {
+          rows += prow('feat', K.SAW, w2.label, 'Straight off the wheel', w2.total);
+        }
+      }
+      (res.jackpots || []).forEach(function (j) {
+        rows += prow('jp', 'sukkah', JPNAME[j.tier] + ' jackpot', 'Paid in full', j.amount);
+      });
+    }
+    if (!rows) rows = prow('none', null, pending ? 'Spinning' : 'No win', '', null);
+    C.setHTML(el, '<h4>' + (pending ? 'This spin' : 'What it paid') + '</h4>' + rows
+      + '<div class="ptotal"><b>' + (pending ? 'Ways' : 'Total') + '</b><span>'
+      + (pending ? waysPaid : C.money(res.total)) + '</span></div>');
+    var wc = $('wayCount');
+    if (wc) C.setText(wc, String(K.WAYS));
+  }
+  function paidIdle() {
+    var el = $('paid');
+    if (!el) return;
+    C.setHTML(el, '<h4>How it pays</h4>'
+      + prow('', K.WILD, 'Wind', 'Stands in for the harvest', null)
+      + prow('', K.BUILD, 'Six lulavim', 'The street goes up', null)
+      + prow('', K.SAW, 'Three etrogim', 'The wheel turns', null)
+      + prow('', K.GOLD, 'Pitom etrog', 'Both wheels, six rows', null)
+      + '<div class="ptotal"><b>Reel ways</b><span>' + K.WAYS + '</span></div>');
   }
 
   /* ---------------- chrome ---------------- */
@@ -616,18 +696,121 @@
     }
     showGrid(g);
     paintBehind();
-    C.renderChips($('chips'), St.chip, function (c) {
+    paidIdle();
+    /* The handler has to be able to name itself to redraw the rail, and
+       arguments.callee is a TypeError under strict mode, which is what was
+       stopping the chips from changing the denomination at all. */
+    function pickChip(c) {
       St.chip = c; C.save();
-      C.renderChips($('chips'), St.chip, arguments.callee);
+      C.renderChips($('chips'), St.chip, pickChip);
       paint();
-    });
+    }
+    C.renderChips($('chips'), St.chip, pickChip);
     paint();
     rules();
-    $('spin').addEventListener('click', spin);
-    addEventListener('keydown', function (e) {
-      if (e.code === 'Space' && !/input|textarea/i.test((e.target.tagName || ''))) {
-        e.preventDefault(); spin();
+    $('spin').addEventListener('click', function () { spin(null); });
+
+    /* ---- audio ---- */
+    var sound = $('sound');
+    function paintSound() { C.setText(sound, St.sound === false ? 'Audio: Off' : 'Audio: All'); }
+    paintSound();
+    sound.addEventListener('click', function () {
+      St.sound = St.sound === false; C.save(); paintSound();
+    });
+
+    /* ---- buying a feature ---- */
+    function buyHTML() {
+      var bet = totalBet();
+      return K.BUY.map(function (o) {
+        var cost = Math.round(o.price * bet);
+        return '<button class="buyrow" type="button" data-buy="' + o.key + '"'
+          + (cost > C.bank() ? ' disabled' : '') + '>'
+          + '<span><b>' + C.esc(o.label) + '</b><small>' + C.esc(o.note) + '</small></span>'
+          + '<span class="cost">' + C.money(cost) + '</span></button>';
+      }).join('');
+    }
+    function openBuy() {
+      if (busy) return C.toast('Wait for the spin to finish');
+      C.setHTML($('buyList'), buyHTML());
+      var d = $('buyDlg'); if (d.showModal) d.showModal(); else d.setAttribute('open', '');
+    }
+    $('buy').addEventListener('click', openBuy);
+    $('buyCancel').addEventListener('click', function () { $('buyDlg').close(); });
+    $('buyList').addEventListener('click', function (e) {
+      var el = e.target.closest('[data-buy]');
+      if (!el || el.disabled) return;
+      var opt = K.BUY.filter(function (x) { return x.key === el.dataset.buy; })[0];
+      $('buyDlg').close();
+      if (opt) spin(opt);
+    });
+
+    /* ---- the bankroll ---- */
+    function parseDollars(v) {
+      var n = parseFloat(String(v).replace(/[$,\s]/g, ''));
+      return isFinite(n) ? Math.round(n * 100) : NaN;
+    }
+    function openReset() {
+      if (busy) return C.toast('Wait for the spin to finish');
+      $('resetAmt').value = ((St.startAmt || 100000) / 100).toLocaleString('en-US');
+      $('resetErr').textContent = '';
+      var d = $('resetDlg'); if (d.showModal) d.showModal(); else d.setAttribute('open', '');
+    }
+    $('reset').addEventListener('click', openReset);
+    $('bankBtn').addEventListener('click', openReset);
+    $('resetCancel').addEventListener('click', function () { $('resetDlg').close(); });
+    $('resetPresets').addEventListener('click', function (e) {
+      var b = e.target.closest('[data-amt]');
+      if (b) { $('resetAmt').value = (+b.dataset.amt).toLocaleString('en-US'); $('resetErr').textContent = ''; }
+    });
+    $('resetGo').addEventListener('click', function (e) {
+      var c = parseDollars($('resetAmt').value);
+      if (isNaN(c) || c < 100) {
+        e.preventDefault();
+        $('resetErr').textContent = 'Enter an amount of at least $1.';
+        return;
       }
+      C.setBank(c);
+      St.startAmt = c;
+      C.save();
+      $('resetDlg').close();
+      paint();
+      C.setText($('status'), 'Bankroll reset. Pick a chip and spin.');
+    });
+
+    /* ---- the code on the glass door ----
+       Up up down down left right left right B A, the way it has been since
+       1986, and the pitom etrog comes round on the house. */
+    var CODE = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown',
+      'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a'];
+    var at = 0;
+    /* 'done' when the whole thing has been typed, 'part' while it is still
+       going. Part matters: the b in the code must not also open the bankroll
+       dialog, or the sequence can never be finished. */
+    function konami(e) {
+      var got = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+      if (got !== CODE[at]) { at = (got === CODE[0]) ? 1 : 0; return at ? 'part' : 'no'; }
+      at++;
+      if (at < CODE.length) return 'part';
+      at = 0;
+      return 'done';
+    }
+
+    addEventListener('keydown', function (e) {
+      if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName || '')) return;
+      if ($('resetDlg').open || $('buyDlg').open) return;
+      var code = konami(e);
+      if (code === 'done') {
+        e.preventDefault();
+        if (busy) return;
+        var sup = K.BUY.filter(function (x) { return x.key === 'super'; })[0];
+        C.toast('The pitom etrog, on the house');
+        spin(sup, true);
+        return;
+      }
+      if (code === 'part') return;
+      if (e.code === 'Space') { e.preventDefault(); spin(null); }
+      else if (e.key === 'b' || e.key === 'B') { e.preventDefault(); openReset(); }
+      else if (e.key === 'f' || e.key === 'F') { e.preventDefault(); openBuy(); }
     });
   }
   if (document.readyState === 'loading') addEventListener('DOMContentLoaded', boot);

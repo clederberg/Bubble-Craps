@@ -77,9 +77,13 @@ eq(line('SEVEN','SEVEN','SEVEN', 2).total, p.pays.SEVEN.max * 100, 'three sevens
 eq(line('BELL','BELL','BELL', 2).total, p.pays.BELL[3] * 200, 'ordinary wins double on two credits');
 eq(line('BAR3','BAR3','BAR3').total, p.pays.BAR3[3] * 100);
 eq(line('BAR1','BAR3','BAR2').total, p.anyBar * 100, 'mixed bars pay the consolation');
-eq(line('CHERRY','BELL','BELL').total, p.pays.CHERRY[1] * 100, 'one cherry from the left');
+eq(line('CHERRY','BELL','BELL').total, p.pays.CHERRY[1] * 100, 'one cherry pays on the first reel');
+eq(line('BELL','CHERRY','BELL').total, p.pays.CHERRY[1] * 100, 'and on the middle reel');
+eq(line('BELL','BELL','CHERRY').total, p.pays.CHERRY[1] * 100, 'and on the last reel');
 eq(line('CHERRY','CHERRY','BELL').total, p.pays.CHERRY[2] * 100);
-eq(line('BELL','CHERRY','CHERRY').total, 0, 'cherries must start on reel one');
+eq(line('BELL','CHERRY','CHERRY').total, p.pays.CHERRY[2] * 100, 'two cherries pay wherever they sit');
+eq(line('CHERRY','BELL','CHERRY').total, p.pays.CHERRY[2] * 100, 'split cherries still pay the pair');
+eq(line('CHERRY','CHERRY','CHERRY').total, p.pays.CHERRY[3] * 100, 'three cherries pay the line');
 eq(line('BELL','BELL','BALL').bonus, true, 'one ball on the last reel starts the bonus');
 eq(line('BALL','BALL','BELL').bonus, false, 'the ball only counts on the third reel');
 eq(p.reels[0].filter(s => s === 'BALL').length, 0, 'no balls on the first two reels');

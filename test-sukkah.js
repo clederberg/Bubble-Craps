@@ -349,4 +349,43 @@ const RATE = (() => {
   console.log('  jackpots ' + order.map(t => t + ' 1 in ' + Math.round(1 / jpRate[t])).join(' | '));
 }
 
+/* ---------------- buying a feature ----------------
+   A bought feature has to be the one that was paid for, has to come off a
+   board the reels could actually have dealt, and has to return about what it
+   costs. A buy that returns more than a spin does is a hole in the machine. */
+{
+  const BET = 2500, SEED = { chai: 18, simcha: 60, hoshana: 300, shalom: 2500 };
+  ok(K.BUY.length === 3, 'three features are for sale');
+  const names = {};
+  K.BUY.forEach(o2 => {
+    ok(o2.price > 0 && o2.label && o2.note, o2.key + ' is priced and described');
+    names[o2.key] = o2;
+  });
+  const TRIALS = +(process.env.BUY_TRIALS || 12000);
+  K.BUY.forEach(opt => {
+    let paid = 0, wrong = 0, offStrip = 0;
+    for (let i = 0; i < TRIALS; i++) {
+      const r = K.buyFeature({ buy: opt.key, totalBet: BET, meters: Object.assign({}, SEED) });
+      if (r.bought !== opt.key || K.triggerOf(r.grid, 3) !== opt.key) wrong++;
+      /* the grid has to be a real window on the real strips */
+      for (let x = 0; x < 5; x++) {
+        for (let y = 0; y < 3; y++) {
+          const strip = K.reels[x];
+          if (strip[(r.stops[x] + y) % strip.length] !== r.grid[x][y]) offStrip++;
+        }
+      }
+      paid += r.total;
+    }
+    eq(wrong, 0, 'every ' + opt.key + ' buy lands the feature it was sold');
+    eq(offStrip, 0, 'a bought board still comes off the reels');
+    const back = paid / TRIALS / BET / opt.price;
+    /* a wide band: the Shalom alone is 2500x the bet, so a sample this size
+       swings a couple of points either way run to run */
+    ok(back > 0.9 && back < 1.02,
+      'buying the ' + opt.key + ' returns about what it costs (' + (100 * back).toFixed(1) + '%)');
+    console.log('  buy ' + opt.key.padEnd(6) + ' at ' + String(opt.price).padStart(4)
+      + 'x bet returns ' + (100 * back).toFixed(1) + '%');
+  });
+}
+
 console.log('sukkah: all passed ' + n + ' asserts');

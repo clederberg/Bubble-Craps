@@ -375,7 +375,55 @@
 
   var REELS = strips();
 
+  /* ---------------- buying one ----------------
+     A bought feature comes off a real board: the reels are turned over until
+     they land on the trigger the player paid for, so the grid behind it is one
+     the machine could have dealt on its own, and the spin still pays its own
+     ways on top. Prices are set from the measured return of each feature, held
+     a shade under it the way a real buy is. */
+  var BUY = [
+    { key: 'build', label: 'Ushpizin Nights', price: 51, note: 'Six lulavim land and the street goes up' },
+    { key: 'wheel', label: 'The Wheel', price: 57, note: 'Three etrogim land and the wheel turns' },
+    { key: 'super', label: 'The Pitom Etrog', price: 115, note: 'Both wheels, the larger prizes, six rows' }
+  ];
+  function triggerOf(grid, rows) {
+    var saws = S.positionsOf(grid, SAW), golds = S.positionsOf(grid, GOLD);
+    var hats = S.positionsOf(grid, BUILD), all = saws.concat(golds);
+    if (all.length >= SAW_TRIGGER) return golds.length ? 'super' : 'wheel';
+    if (hats.length >= BUILD_TRIGGER) return 'build';
+    return null;
+  }
+  /* The pitom lives on one reel only, so for the super buy that reel is parked
+     on a window holding it first and the other four are turned over normally.
+     Rejection sampling the whole board would take millions of spins. */
+  function goldStops(reels, rows) {
+    var mid = reels[2], at = [];
+    for (var i = 0; i < mid.length; i++) if (mid[i] === GOLD) at.push(i);
+    if (!at.length) return null;
+    var hit = at[Math.floor(Math.random() * at.length)];
+    return (hit - Math.floor(Math.random() * rows) + mid.length) % mid.length;
+  }
+  function buyFeature(opt) {
+    opt = opt || {};
+    var which = opt.buy, reels = opt.reels || REELS, rows = 3;
+    var shape = { reels: reels, rows: rows };
+    var stops = null, i;
+    for (i = 0; i < 400000; i++) {
+      var st = S.spinStops(shape, reels);
+      if (which === 'super') {
+        var g3 = goldStops(reels, rows);
+        if (g3 === null) break;
+        st[2] = g3;
+      }
+      if (triggerOf(S.gridAt(shape, st, reels), rows) === which) { stops = st; break; }
+    }
+    var res = play({ totalBet: opt.totalBet, meters: opt.meters, reels: reels, stops: stops || undefined });
+    res.bought = which;
+    return res;
+  }
+
   var api = {
+    BUY: BUY, buyFeature: buyFeature, triggerOf: triggerOf, WAYS: 243,
     WILD: WILD, BUILD: BUILD, SAW: SAW, GOLD: GOLD, SYMS: SYMS, PAYS: PAYS,
     FRAME: FRAME, WALLS: WALLS, SCHACH: SCHACH, TIER_NAME: TIER_NAME, JP: JP, SEED: SEED,
     WHEEL: WHEEL, SUPER_WHEEL: SUPER_WHEEL, FILL: FILL,
