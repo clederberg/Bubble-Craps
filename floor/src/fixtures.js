@@ -603,7 +603,7 @@ export function buildFixtures(scene, M, solids, screens, book) {
   bank(-14.6, -7.0, Math.PI / 2, 7, 'lights');
   bank(-14.6, 7.0, Math.PI / 2, 7, 'purim');
   bank(14.6, -7.0, -Math.PI / 2, 7, 'pinball');
-  bank(14.6, 7.0, -Math.PI / 2, 7, 'lights');
+  bank(14.6, 7.0, -Math.PI / 2, 7, 'sukkot');
 
   const cage = new THREE.Group();
   cage.add(box(7.2, 1.1, 1.0, M.marbleMat, 0, 0.55, 0));

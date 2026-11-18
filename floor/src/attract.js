@@ -26,10 +26,53 @@ const GAMES = {
     name: 'PINBALL CLASSIC', bg: '#14100c', frame: '#ff5a3c', ink: '#ffd0a8',
     symbols: ['bar', 'seven', 'cherry', 'bell'],
     colours: ['#f4efe4', '#ff5a3c', '#c0392b', '#ffcf6a']
+  },
+  sukkot: {
+    name: 'SUKKAH NIGHTS', bg: '#111c2e', frame: '#f0c460', ink: '#ffe3ac',
+    symbols: ['frond', 'citron', 'hut', 'bunch'],
+    colours: ['#3f7d4a', '#dbe04f', '#c98b4c', '#8a5bb5']
   }
 };
 
 function drawSymbol(x, kind, cx, cy, r, colour) {
+  if (kind === 'frond') {
+    /* a lulav: a stem with fronds either side */
+    x.strokeStyle = colour; x.lineWidth = r * 0.2; x.lineCap = 'round';
+    x.beginPath(); x.moveTo(cx, cy + r); x.lineTo(cx, cy - r); x.stroke();
+    x.lineWidth = r * 0.16;
+    for (let i = 0; i < 3; i++) {
+      const y = cy - r * 0.5 + i * r * 0.55;
+      x.beginPath(); x.moveTo(cx, y); x.lineTo(cx - r * 0.6, y + r * 0.34); x.stroke();
+      x.beginPath(); x.moveTo(cx, y); x.lineTo(cx + r * 0.6, y + r * 0.34); x.stroke();
+    }
+    return;
+  }
+  if (kind === 'citron') {
+    x.fillStyle = colour;
+    x.beginPath(); x.ellipse(cx, cy + r * 0.12, r * 0.72, r * 0.95, 0, 0, Math.PI * 2); x.fill();
+    x.strokeStyle = colour; x.lineWidth = r * 0.16;
+    x.beginPath(); x.moveTo(cx, cy - r * 0.8); x.lineTo(cx, cy - r * 1.15); x.stroke();
+    return;
+  }
+  if (kind === 'hut') {
+    /* a sukkah: two posts, a wall and the schach over the top */
+    x.fillStyle = colour;
+    x.fillRect(cx - r * 0.8, cy - r * 0.5, r * 1.6, r * 0.18);
+    x.fillRect(cx - r * 0.8, cy - r * 0.32, r * 0.26, r * 1.1);
+    x.fillRect(cx + r * 0.54, cy - r * 0.32, r * 0.26, r * 1.1);
+    x.globalAlpha = 0.6;
+    x.fillRect(cx - r * 0.54, cy - r * 0.2, r * 1.08, r * 0.95);
+    x.globalAlpha = 1;
+    return;
+  }
+  if (kind === 'bunch') {
+    x.fillStyle = colour;
+    const pts = [[0, -0.55], [-0.42, -0.1], [0.42, -0.1], [0, 0.3], [-0.42, 0.65], [0.42, 0.65]];
+    pts.forEach(([dx, dy]) => {
+      x.beginPath(); x.arc(cx + dx * r, cy + dy * r, r * 0.3, 0, Math.PI * 2); x.fill();
+    });
+    return;
+  }
   x.fillStyle = colour;
   x.strokeStyle = colour;
   x.lineWidth = r * 0.26;
