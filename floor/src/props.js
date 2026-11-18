@@ -8,22 +8,51 @@ import { tune } from './materials.js';
 
 const CHIP_COLOURS = { 1: 0xf2efe6, 5: 0xc0392b, 25: 0x1f7a44, 100: 0x1b1b22, 500: 0x6b3fa0, 1000: 0xd4a62a };
 
+/* The face of a chip, drawn large enough that the top of a stack still reads
+   as a chip when you lean over it: the edge spots cut into the rim, a milled
+   ring inside them and a recessed centre, rather than a flat disc of colour. */
 function chipTexture(hex) {
-  const s = 128, c = document.createElement('canvas');
+  const s = 512, c = document.createElement('canvas');
   c.width = c.height = s;
   const x = c.getContext('2d');
   const col = '#' + hex.toString(16).padStart(6, '0');
+  const m = s / 2;
   x.fillStyle = col;
   x.fillRect(0, 0, s, s);
-  /* the edge spots a chip has, read as a ring of dashes from above */
-  x.strokeStyle = 'rgba(255,255,255,.85)';
-  x.lineWidth = s * 0.12;
+  /* the clay darkens toward the rim, the way a pressed chip does */
+  const sh = x.createRadialGradient(m * 0.86, m * 0.78, s * 0.04, m, m, m);
+  sh.addColorStop(0, 'rgba(255,255,255,.2)');
+  sh.addColorStop(0.62, 'rgba(255,255,255,0)');
+  sh.addColorStop(1, 'rgba(0,0,0,.34)');
+  x.fillStyle = sh;
+  x.fillRect(0, 0, s, s);
+  /* eight spots cut through the rim */
+  x.strokeStyle = 'rgba(255,255,255,.92)';
+  x.lineWidth = s * 0.115;
   for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2;
     x.beginPath();
-    x.arc(s / 2, s / 2, s * 0.42, (i / 8) * Math.PI * 2, (i / 8) * Math.PI * 2 + 0.26);
+    x.arc(m, m, s * 0.425, a - 0.17, a + 0.17);
+    x.stroke();
+  }
+  /* the milled ring and the recessed centre */
+  x.strokeStyle = 'rgba(255,255,255,.4)';
+  x.lineWidth = s * 0.012;
+  x.beginPath(); x.arc(m, m, s * 0.33, 0, Math.PI * 2); x.stroke();
+  x.beginPath(); x.arc(m, m, s * 0.235, 0, Math.PI * 2); x.stroke();
+  x.fillStyle = 'rgba(0,0,0,.14)';
+  x.beginPath(); x.arc(m, m, s * 0.225, 0, Math.PI * 2); x.fill();
+  for (let i = 0; i < 48; i++) {
+    const a = (i / 48) * Math.PI * 2;
+    x.strokeStyle = 'rgba(0,0,0,' + (i % 2 ? 0.16 : 0.05) + ')';
+    x.lineWidth = s * 0.016;
+    x.beginPath();
+    x.moveTo(m + Math.cos(a) * s * 0.335, m + Math.sin(a) * s * 0.335);
+    x.lineTo(m + Math.cos(a) * s * 0.385, m + Math.sin(a) * s * 0.385);
     x.stroke();
   }
   const t = tune(new THREE.CanvasTexture(c));
+  t.anisotropy = 8;
   return t;
 }
 const chipMats = {};

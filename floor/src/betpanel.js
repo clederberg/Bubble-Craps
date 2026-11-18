@@ -51,6 +51,8 @@ export function createBetPanel(handlers) {
 
   /* one cell as a fraction of the window, for sizing the highlight */
   const CW = (GEO.cw / GEO.W) / CROP.du, CH = (GEO.ch / GEO.H) / CROP.dv;
+  /* the chips are drawn off the cell, so they scale with the window */
+  wrap.style.setProperty('--ch', (CH * 100).toFixed(3));
 
   /* The window is shaped like the cloth, not like the canvas the cloth was
      painted on: the artwork is drawn tall and then stretched onto a table that
@@ -119,9 +121,12 @@ export function createBetPanel(handlers) {
       el.className = 'bp-chip';
       el.style.left = px(a[0]);
       el.style.top = py(a[1]);
-      el.style.background = col[0];
+      el.style.setProperty('--col', col[0]);
       el.style.color = col[1];
-      el.textContent = textOf(amt);
+      el.textContent = '';
+      const v = document.createElement('span');
+      v.textContent = textOf(amt);
+      el.appendChild(v);
       marks.appendChild(el);
     });
   }
