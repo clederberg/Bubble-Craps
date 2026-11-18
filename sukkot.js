@@ -256,49 +256,106 @@
   }
 
   /* ---------------- the wheel ---------------- */
-  /* The face is cut by weight, not into equal slices, so a segment is as wide
-     on the wheel as it is likely on the spin. The Shalom really is a hairline
-     of gold, which is the honest way to draw a one in a thousand. */
-  function arcs(segs) {
-    var MIN = 1.3, total = 0, i;
+  /* ---------------- the wheel face ----------------
+     Every segment is the same size, the way it is on a real wheel. A prize
+     that is likelier simply appears on more of them, spread around the ring
+     rather than bunched, so the face reads as a wheel and not as a pie chart.
+     What it lands on is not decided by the face though: the engine draws the
+     prize on its own schedule, and the pointer is sent to one of the segments
+     carrying it. The counts below are only how the thing looks. */
+  var FACE_N = 24;
+  function faceFor(segs) {
+    var total = 0, i;
     for (i = 0; i < segs.length; i++) total += segs[i].w;
-    /* give the slivers a visible width and take it back off the rest */
-    var spans = segs.map(function (s) { return Math.max(MIN, s.w / total * 360); });
-    var sum = spans.reduce(function (a, b) { return a + b; }, 0);
-    var over = sum - 360;
-    if (over > 0) {
-      var big = spans.reduce(function (a, v) { return v > MIN ? a + v : a; }, 0);
-      spans = spans.map(function (v) { return v > MIN ? v - over * (v / big) : v; });
+    /* every prize gets at least one segment, the rest go by weight */
+    var counts = segs.map(function (sg) {
+      return Math.max(1, Math.round(sg.w / total * FACE_N));
+    });
+    var sum = counts.reduce(function (a, b) { return a + b; }, 0);
+    /* trim or pad against the most common prize until it comes to FACE_N */
+    while (sum !== FACE_N) {
+      var at = 0, best = sum > FACE_N ? -1 : Infinity;
+      for (i = 0; i < counts.length; i++) {
+        if (sum > FACE_N ? counts[i] > best && counts[i] > 1 : counts[i] < best) { best = counts[i]; at = i; }
+      }
+      counts[at] += sum > FACE_N ? -1 : 1;
+      sum += sum > FACE_N ? -1 : 1;
     }
-    var out = [], at = -90;
-    spans.forEach(function (sp, k) { out.push({ a0: at, a1: at + sp, span: sp, seg: segs[k] }); at += sp; });
-    return out;
+    /* Lay them round the ring so that each prize's segments are as evenly
+       spaced as they can be. Dealing a pass at a time puts everything with a
+       single segment next to everything else with a single segment, which
+       leaves the four jackpots sitting together in one gold block. */
+    var face = new Array(FACE_N).fill(null);
+    var order = segs.map(function (sg, k) { return k; }).sort(function (a, b) {
+      return counts[b] - counts[a];
+    });
+    order.forEach(function (k, rank) {
+      var n = counts[k], phase = rank * 0.37;        /* so they do not stack up */
+      for (var j = 0; j < n; j++) {
+        var want = Math.round((j + phase) * FACE_N / n) % FACE_N;
+        /* the nearest free segment to where it wants to be */
+        for (var d = 0; d < FACE_N; d++) {
+          var at = (want + (d % 2 ? -(d + 1) / 2 | 0 : d / 2)) % FACE_N;
+          if (at < 0) at += FACE_N;
+          if (!face[at]) { face[at] = segs[k]; break; }
+        }
+      }
+    });
+    for (i = 0; i < FACE_N; i++) if (!face[i]) face[i] = segs[0];
+    return face;
   }
-  function wheelSVG(segs, id) {
-    var R = 100, p = '';
-    arcs(segs).forEach(function (a) {
-      var rad = Math.PI / 180;
-      var x0 = 100 + R * Math.cos(a.a0 * rad), y0 = 100 + R * Math.sin(a.a0 * rad);
-      var x1 = 100 + R * Math.cos(a.a1 * rad), y1 = 100 + R * Math.sin(a.a1 * rad);
-      var big = a.span > 180 ? 1 : 0;
-      var seg = a.seg;
-      var fill = seg.jackpot ? '#f0c460' : seg.mode ? '#3f7d4a' : '#1b2d4a';
+  var FACES = {};
+  function face(segs, key) {
+    if (!FACES[key]) FACES[key] = faceFor(segs);
+    return FACES[key];
+  }
+
+  /* the little picture that says which prize a segment is */
+  var SEG_ICON = { frames: 'ushpizin', etrog: 'etrog', mega: 'lulav', schach: 'schach' };
+  var SEG_SHORT = {
+    'Ushpizin Nights': 'USHPIZIN', 'Etrog Nights': 'ETROG', 'Mega Lulav': 'MEGA LULAV',
+    'Schach Nights': 'SCHACH', 'Super Ushpizin': 'USHPIZIN', 'Super Etrog': 'ETROG',
+    'Super Mega Lulav': 'MEGA LULAV', 'Super Schach': 'SCHACH'
+  };
+
+  function wheelSVG(segs, id, key) {
+    var list = face(segs, key), step = 360 / FACE_N, R = 100, rad = Math.PI / 180, p = '';
+    list.forEach(function (seg, i) {
+      var a0 = -90 + i * step, a1 = a0 + step, mid = a0 + step / 2;
+      var x0 = 100 + R * Math.cos(a0 * rad), y0 = 100 + R * Math.sin(a0 * rad);
+      var x1 = 100 + R * Math.cos(a1 * rad), y1 = 100 + R * Math.sin(a1 * rad);
+      var fill = seg.jackpot ? (seg.jackpot === 'shalom' ? '#e8b63f' : '#f0c460')
+        : seg.mode ? (i % 2 ? '#3f7d4a' : '#356b40') : '#1b2d4a';
       p += '<path d="M100 100 L' + x0.toFixed(2) + ' ' + y0.toFixed(2)
-        + ' A100 100 0 ' + big + ' 1 ' + x1.toFixed(2) + ' ' + y1.toFixed(2) + ' Z" fill="' + fill
-        + '" stroke="#0a1220" stroke-width="0.9"/>';
-      if (a.span < 13) return;                       /* no room to letter it */
-      var mid = (a.a0 + a.a1) / 2;
-      var tx = 100 + 64 * Math.cos(mid * rad), ty = 100 + 64 * Math.sin(mid * rad);
-      var size = a.span > 30 ? 8.5 : 6.6;
-      p += '<text x="' + tx.toFixed(1) + '" y="' + ty.toFixed(1) + '" fill="'
-        + (seg.jackpot ? '#2a1205' : '#fff3dc') + '" font-size="' + size + '" font-family="Oswald, sans-serif"'
-        + ' text-anchor="middle" dominant-baseline="central" transform="rotate('
-        + (mid + 90).toFixed(1) + ' ' + tx.toFixed(1) + ' ' + ty.toFixed(1) + ')">'
-        + C.esc(seg.label) + '</text>';
+        + ' A100 100 0 0 1 ' + x1.toFixed(2) + ' ' + y1.toFixed(2) + ' Z" fill="' + fill
+        + '" stroke="#0a1220" stroke-width="1"/>';
+      var ink = seg.jackpot ? '#2a1205' : '#fff3dc';
+      /* the name runs out along the radius, flipped on the left half so it is
+         never upside down */
+      var flip = mid > 90 || mid < -90;
+      var tr = 44, tx = 100 + tr * Math.cos(mid * rad), ty = 100 + tr * Math.sin(mid * rad);
+      var label = SEG_SHORT[seg.label] || seg.label;
+      p += '<text x="' + tx.toFixed(1) + '" y="' + ty.toFixed(1) + '" fill="' + ink
+        + '" font-size="6.4" font-family="Oswald, sans-serif" letter-spacing=".4"'
+        + ' text-anchor="' + (flip ? 'end' : 'start') + '" dominant-baseline="central"'
+        + ' transform="rotate(' + (flip ? mid + 180 : mid).toFixed(1) + ' '
+        + tx.toFixed(1) + ' ' + ty.toFixed(1) + ')">' + C.esc(label) + '</text>';
+      /* and the picture sits out by the rim */
+      var icon = SEG_ICON[seg.mode];
+      if (icon) {
+        var ir = 82, ix = 100 + ir * Math.cos(mid * rad), iy = 100 + ir * Math.sin(mid * rad);
+        p += '<use href="#s-' + icon + '" x="' + (ix - 7).toFixed(1) + '" y="' + (iy - 7).toFixed(1)
+          + '" width="14" height="14" transform="rotate(' + (mid + 90).toFixed(1) + ' '
+          + ix.toFixed(1) + ' ' + iy.toFixed(1) + ')"/>';
+      } else if (seg.jackpot) {
+        var jr = 84, jx = 100 + jr * Math.cos(mid * rad), jy = 100 + jr * Math.sin(mid * rad);
+        p += '<circle cx="' + jx.toFixed(1) + '" cy="' + jy.toFixed(1) + '" r="5" fill="#2a1205" opacity=".3"/>';
+      }
     });
     return '<g class="wheel-face ' + id + '" id="face-' + id + '" style="transform-origin:100px 100px">'
       + p + '</g>';
   }
+
   /* the furniture round the face: a brass rim, the lamps that chase while it
      turns, a hub and the pointer that gets knocked by every segment */
   function wheelFurniture(id, accent) {
@@ -323,19 +380,21 @@
         + '<stop offset="0" stop-color="#fff3c8"/><stop offset=".5" stop-color="#b8832c"/>'
         + '<stop offset="1" stop-color="#6b4a12"/></linearGradient>';
     }).join('');
-    var one = function (id, segs, accent) {
+    var one = function (id, segs, key, accent) {
       return '<svg viewBox="-8 -8 216 216"><defs>' + defs + '</defs>'
-        + wheelSVG(segs, id) + wheelFurniture(id, accent) + '</svg>';
+        + wheelSVG(segs, id, key) + wheelFurniture(id, accent) + '</svg>';
     };
-    if (!pair) return one('a', segsA, '#f0c460');
-    return one('a', segsA, '#f0c460') + one('b', segsB, '#dbe04f');
+    if (!pair) return one('a', segsA, 'plain', '#f0c460');
+    return one('a', segsA, 'plain', '#f0c460') + one('b', segsB, 'super', '#dbe04f');
   }
-  /* Land the chosen segment under the pointer. `dir` of -1 turns it the other
-     way, which is what the pair of wheels do against each other. */
-  function landOn(id, segs, label, turns, dir, ms) {
-    var list = arcs(segs), hit = list[0];
-    for (var k = 0; k < list.length; k++) if (list[k].seg.label === label) { hit = list[k]; break; }
-    var mid = (hit.a0 + hit.a1) / 2;
+  /* Land on the prize the engine drew. It may sit on several segments, so one
+     of them is chosen at random and brought round to the pointer. */
+  function landOn(id, segs, key, label, turns, dir, ms) {
+    var list = face(segs, key), step = 360 / FACE_N, hits = [], i;
+    for (i = 0; i < list.length; i++) if (list[i].label === label) hits.push(i);
+    if (!hits.length) hits = [0];
+    var at = hits[Math.floor(Math.random() * hits.length)];
+    var mid = -90 + at * step + step / 2;
     var target = (dir < 0 ? -1 : 1) * turns * 360 - (mid + 90);
     var el = $('face-' + id);
     if (!el) return;
@@ -343,12 +402,16 @@
     el.style.transform = 'rotate(' + target + 'deg)';
     /* the pointer is knocked by each segment as it goes past, slowing with it */
     if (reduced()) return;
-    var ptr = $('ptr-' + id), total = ms || 5000, t = 0, i = 0;
-    while (t < total - 150 && i < 90) {
-      (function (at) { later(function () { if (ptr) { ptr.classList.remove('tick'); void ptr.offsetWidth; ptr.classList.add('tick'); } }, at); })(t);
-      /* the gaps stretch as it slows: the sound of a wheel giving up */
-      t += 70 + Math.pow(t / total, 2.1) * 620;
-      i++;
+    var ptr = $('ptr-' + id), total = ms || 5000, t = 0, n = 0;
+    while (t < total - 150 && n < 110) {
+      (function (att) {
+        later(function () {
+          if (!ptr) return;
+          ptr.classList.remove('tick'); void ptr.offsetWidth; ptr.classList.add('tick');
+        }, att);
+      })(t);
+      t += 60 + Math.pow(t / total, 2.2) * 640;
+      n++;
     }
   }
 
@@ -369,8 +432,8 @@
     later(function () {
       /* The pair turn against each other, the way they do behind the glass.
          The second is the one that carries the result. */
-      landOn('a', segsA, pair ? segsA[0].label : res.label, 4, 1, run - (pair ? 700 : 0));
-      if (pair) landOn('b', segsB, res.label, 5, -1, run);
+      landOn('a', segsA, 'plain', pair ? segsA[0].label : res.label, 4, 1, run - (pair ? 700 : 0));
+      if (pair) landOn('b', segsB, 'super', res.label, 5, -1, run);
       later(function () {
         C.setHTML($('tally'), C.esc(res.label));
         C.play(res.jackpots && res.jackpots.length ? 'stack' : 'place', 0, 0.8);
@@ -517,9 +580,16 @@
       + 'on a walled one. You get six nights, and three lulavim in a night buys another. On the last '
       + 'night the ushpizin come through and pay out what is in each sukkah, frames first and finished '
       + 'ones last. A street where every sukkah is roofed pays the Shalom.</p>'
-      + '<p><b>Three etrogim</b> spin the wheel, which either pays outright or picks the kind of night '
-      + 'you are about to have. The <b>pitom etrog</b>, the one with its crown tip unbroken, turns it '
-      + 'into both wheels and opens the sukkah from three rows to six.</p>'
+      + '<p><b>Three etrogim</b> spin the wheel. It either pays a jackpot outright or picks which '
+      + 'kind of night you are about to have: <b>Ushpizin Nights</b> is the plain build, '
+      + '<b>Etrog Nights</b> leaves etrogim on the grid laying frames of their own, '
+      + '<b>Mega Lulav</b> puts up a whole block at once, and <b>Schach Nights</b> starts every '
+      + 'etrog as a finished sukkah. The <b>pitom etrog</b>, the one with its crown tip unbroken, '
+      + 'turns it into both wheels, gives you the larger version of all four, and opens the sukkah '
+      + 'from three rows to six.</p>'
+      + '<p class="note">Every segment on the wheel is the same size, and a prize that comes up more '
+      + 'often simply sits on more of them. What it lands on is drawn on the game\'s own schedule '
+      + 'rather than by counting segments, so the face is not the odds.</p>'
       + '<table class="pay"><tr><th>Symbol</th><th>3</th><th>4</th><th>5</th></tr>' + rowsFor() + '</table>'
       + '<p class="note">Pays are multiples of a twenty-fifth of the total bet, times the ways. '
       + 'Everything in a night is a multiple of the whole bet. Play money only.</p>');
