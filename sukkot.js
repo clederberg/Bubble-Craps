@@ -52,39 +52,91 @@
   }
   function randomSym() { return ALL[Math.floor(Math.random() * ALL.length)]; }
 
-  /* A reel spins by running a tall strip of filler past the window and landing
-     on the three the engine picked. */
+  /* A reel runs a tall strip of filler past the window and lands on the three
+     the engine picked. It overshoots by a fraction of a cell and settles back,
+     which is the whole difference between a reel stopping and a reel being
+     switched off. */
+  function cellHeight() {
+    var probe = $('s0') && $('s0').firstChild;
+    return probe ? probe.getBoundingClientRect().height : 84;
+  }
   function spinReel(i, final, dur, done) {
     var strip = $('s' + i), reel = $('r' + i);
-    var pad = reduced() ? 3 : 14, h = '';
-    for (var k = 0; k < pad; k++) h += cell(randomSym());
-    for (var y = 0; y < 3; y++) h += cell(final[y]);
+    if (reduced()) {
+      C.setHTML(strip, final.map(function (sy) { return cell(sy, 'drop'); }).join(''));
+      strip.style.transform = 'translateY(0)';
+      later(function () { if (done) done(); }, 60);
+      return;
+    }
+    var pad = 16 + i * 3, h = '', k, y;
+    for (k = 0; k < pad; k++) h += cell(randomSym());
+    for (y = 0; y < 3; y++) h += cell(final[y]);
     C.setHTML(strip, h);
-    var cellH = reel.clientHeight / 3;
-    reel.classList.add('blur');
+    var cellH = cellHeight();
     strip.style.transition = 'none';
     strip.style.transform = 'translateY(' + (-pad * cellH) + 'px)';
-    /* let the browser take the start position before the run begins */
-    strip.offsetHeight;
-    strip.style.transition = 'transform ' + dur + 'ms cubic-bezier(.16,.62,.2,1)';
-    strip.style.transform = 'translateY(0)';
+    strip.offsetHeight;                               /* take the start pose */
+    /* out past the stop and back: the band of a real reel settling */
+    var over = Math.round(cellH * 0.16);
+    strip.style.transition = 'transform ' + dur + 'ms cubic-bezier(.2,.56,.24,1)';
+    strip.style.transform = 'translateY(' + over + 'px)';
     later(function () {
-      reel.classList.remove('blur');
+      strip.style.transition = 'transform 190ms cubic-bezier(.3,1.5,.5,1)';
+      strip.style.transform = 'translateY(0)';
+      C.play('handle', 0, 0.2, 1.5 + i * 0.05);
+    }, dur);
+    later(function () {
       strip.style.transition = 'none';
       var hh = '';
-      for (var y = 0; y < 3; y++) hh += cell(final[y]);
+      for (var y2 = 0; y2 < 3; y2++) hh += cell(final[y2], 'drop');
       C.setHTML(strip, hh);
       strip.style.transform = 'translateY(0)';
-      C.play('handle', 0, 0.22, 1.4);
       if (done) done();
-    }, dur + 40);
+    }, dur + 200);
   }
+  /* All five start together and stop left to right. If what has already come
+     down could still turn into a feature, the reel that would settle it is
+     held back and lit, which is the part of a slot machine that makes you
+     lean in. The grid is known before the first one moves, so the hold is
+     worked out up front rather than chased frame by frame. */
   function spinReels(grid, done) {
+    var dur = [], hold = [], i, x, y;
+    for (i = 0; i < 5; i++) {
+      dur.push(reduced() ? 60 + i * 30 : 700 + i * 250);
+      hold.push(false);
+    }
+    if (!reduced()) {
+      var extra = 0;
+      for (i = 2; i < 5; i++) {
+        var hats = 0, saws = 0;
+        for (x = 0; x < i; x++) {
+          for (y = 0; y < 3; y++) {
+            if (grid[x][y] === K.BUILD) hats++;
+            else if (grid[x][y] === K.SAW || grid[x][y] === K.GOLD) saws++;
+          }
+        }
+        /* two etrogim down with reels to come, or four lulavim: still live */
+        var live = (saws >= 2 && saws + (5 - i) >= K.SAW_TRIGGER)
+          || (hats >= 4 && hats + (5 - i) * 3 >= K.BUILD_TRIGGER);
+        if (live) { hold[i] = true; extra += 1250; }
+        dur[i] += extra;
+      }
+    }
     var left = 5;
-    for (var i = 0; i < 5; i++) {
+    for (i = 0; i < 5; i++) {
       (function (i) {
-        var dur = (reduced() ? 180 : 620) + i * (reduced() ? 40 : 190);
-        spinReel(i, grid[i], dur, function () { if (--left === 0 && done) done(); });
+        var reel = $('r' + i);
+        if (hold[i] && reel) {
+          /* light it only once the reel before it has actually stopped */
+          later(function () {
+            if (reel) reel.classList.add('anticip');
+            C.play('shuffle', 0, 0.35, 1.7);
+          }, dur[i - 1] + 220);
+        }
+        spinReel(i, grid[i], dur[i], function () {
+          if (reel) reel.classList.remove('anticip');
+          if (--left === 0 && done) done();
+        });
       })(i);
     }
   }
@@ -135,27 +187,32 @@
       for (var x = 0; x < 5; x++) {
         var i = x * rows + y, v = board[i];
         var pop = popAt && popAt.indexOf(i) >= 0 ? ' up' : '';
-        h += '<div class="plot' + pop + '" id="p' + i + '">'
+        h += '<div class="plot' + (v ? ' t' + v : '') + pop + '" id="p' + i + '">'
           + (v ? art(K.TIER_NAME[v]) : '') + '</div>';
       }
     }
     C.forceHTML(st, h);
   }
-  function nightLine(n, of) {
-    C.setHTML($('nightline'), 'Night <b>' + n + '</b> of <b>' + of + '</b>');
+  function nightLine(n, of, base) {
+    var pips = '';
+    for (var k = 1; k <= of; k++) {
+      pips += '<i class="' + (k <= n ? 'on' : '') + (k > (base || 6) ? ' extra' : '') + '"></i>';
+    }
+    C.setHTML($('nightline'), 'Night <b>' + n + '</b> of <b>' + of
+      + '</b><span class="pips">' + pips + '</span>');
   }
 
   /* run the build back, a night at a time */
   function playBuild(round, rows, after) {
     var step = 0, pace = reduced() ? 90 : 620;
     paintStreet(round.log[0].board, rows, null);
-    nightLine(0, round.nights);
+    nightLine(0, round.nights, 6);
     function next() {
       step++;
       if (step >= round.log.length) { later(after, pace / 2); return; }
       var L = round.log[step];
       paintStreet(L.board, rows, L.hits || []);
-      nightLine(L.night, L.nights);
+      nightLine(L.night, L.nights, 6);
       if (L.landed) C.play('place', 0, 0.5, 1 + Math.min(L.landed, 4) * 0.06);
       if (L.landed >= 3) C.toast('Another night');
       later(next, pace);
@@ -173,8 +230,8 @@
           C.toast('The whole street finished');
           C.play('stack', 0, 1);
         }
-        C.setHTML($('tally'), C.money(guests.total));
-        later(after, 1200);
+        countTo($('tally'), guests.total, 700, C.money);
+        later(after, 1400);
         return;
       }
       var w = guests.waves[wave++];
@@ -185,10 +242,11 @@
           el.classList.add('paid');
           var v = c.value;
           var label = v.jackpot ? JPNAME[v.jackpot] : C.money(v.amount);
+          if (v.jackpot) el.classList.add('jackpot');
           el.insertAdjacentHTML('beforeend',
             '<span class="val' + (v.jackpot ? ' jp' : '') + '">' + C.esc(label) + '</span>');
           total += v.amount;
-          C.setHTML($('tally'), C.money(total));
+          countTo($('tally'), total, 260, C.money);
           C.play(v.jackpot ? 'stack' : 'lay', 0, v.jackpot ? 0.9 : 0.45, 1 + k * 0.03);
         }, k * (reduced() ? 30 : 110));
       });
@@ -241,28 +299,57 @@
     return '<g class="wheel-face ' + id + '" id="face-' + id + '" style="transform-origin:100px 100px">'
       + p + '</g>';
   }
-  function showWheel(pair, segsA, segsB) {
-    var h = '<svg viewBox="0 0 ' + (pair ? 420 : 220) + ' 220" class="' + (pair ? 'pair' : '') + '">';
-    h += '<g transform="translate(10,10)">' + wheelSVG(segsA, 'a')
-      + '<circle cx="100" cy="100" r="16" fill="#0a1220" stroke="#f0c460" stroke-width="2"/>'
-      + '<path d="M100 -4 L94 12 L106 12 Z" fill="#f0c460"/></g>';
-    if (pair) {
-      h += '<g transform="translate(210,10)">' + wheelSVG(segsB, 'b')
-        + '<circle cx="100" cy="100" r="16" fill="#0a1220" stroke="#dbe04f" stroke-width="2"/>'
-        + '<path d="M100 -4 L94 12 L106 12 Z" fill="#dbe04f"/></g>';
+  /* the furniture round the face: a brass rim, the lamps that chase while it
+     turns, a hub and the pointer that gets knocked by every segment */
+  function wheelFurniture(id, accent) {
+    var h = '<circle cx="100" cy="100" r="104" fill="none" stroke="url(#wrim-' + id + ')" stroke-width="9"/>'
+      + '<circle cx="100" cy="100" r="100" fill="none" stroke="#0a1220" stroke-width="1.5"/>';
+    for (var i = 0; i < 24; i++) {
+      var a = (i / 24) * Math.PI * 2 - Math.PI / 2;
+      var x = 100 + 104 * Math.cos(a), y = 100 + 104 * Math.sin(a);
+      h += '<circle class="lamp" style="animation-delay:' + (i * 0.042).toFixed(2) + 's" cx="'
+        + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="2.6" fill="#ffe3ac"/>';
     }
-    h += '</svg>';
+    h += '<circle cx="100" cy="100" r="19" fill="#0a1220" stroke="' + accent + '" stroke-width="2.5"/>'
+      + '<circle cx="100" cy="100" r="7" fill="' + accent + '" opacity=".8"/>'
+      + '<g class="ptr" id="ptr-' + id + '">'
+      + '<path d="M100 -2 L91 16 L109 16 Z" fill="' + accent + '" stroke="#0a1220" stroke-width="1.4"/>'
+      + '</g>';
     return h;
   }
-  /* land the chosen segment under the pointer at the top */
-  function landOn(id, segs, label, turns) {
+  function showWheel(pair, segsA, segsB) {
+    var defs = ['a', 'b'].map(function (id) {
+      return '<linearGradient id="wrim-' + id + '" x1="0" y1="0" x2="0" y2="1">'
+        + '<stop offset="0" stop-color="#fff3c8"/><stop offset=".5" stop-color="#b8832c"/>'
+        + '<stop offset="1" stop-color="#6b4a12"/></linearGradient>';
+    }).join('');
+    var one = function (id, segs, accent) {
+      return '<svg viewBox="-8 -8 216 216"><defs>' + defs + '</defs>'
+        + wheelSVG(segs, id) + wheelFurniture(id, accent) + '</svg>';
+    };
+    if (!pair) return one('a', segsA, '#f0c460');
+    return one('a', segsA, '#f0c460') + one('b', segsB, '#dbe04f');
+  }
+  /* Land the chosen segment under the pointer. `dir` of -1 turns it the other
+     way, which is what the pair of wheels do against each other. */
+  function landOn(id, segs, label, turns, dir, ms) {
     var list = arcs(segs), hit = list[0];
     for (var k = 0; k < list.length; k++) if (list[k].seg.label === label) { hit = list[k]; break; }
-    /* bring the middle of that arc round to the pointer at the top */
     var mid = (hit.a0 + hit.a1) / 2;
-    var target = turns * 360 - (mid + 90);
+    var target = (dir < 0 ? -1 : 1) * turns * 360 - (mid + 90);
     var el = $('face-' + id);
-    if (el) el.style.transform = 'rotate(' + target + 'deg)';
+    if (!el) return;
+    if (ms) el.style.transitionDuration = ms + 'ms';
+    el.style.transform = 'rotate(' + target + 'deg)';
+    /* the pointer is knocked by each segment as it goes past, slowing with it */
+    if (reduced()) return;
+    var ptr = $('ptr-' + id), total = ms || 5000, t = 0, i = 0;
+    while (t < total - 150 && i < 90) {
+      (function (at) { later(function () { if (ptr) { ptr.classList.remove('tick'); void ptr.offsetWidth; ptr.classList.add('tick'); } }, at); })(t);
+      /* the gaps stretch as it slows: the sound of a wheel giving up */
+      t += 70 + Math.pow(t / total, 2.1) * 620;
+      i++;
+    }
   }
 
   function playWheel(res, after) {
@@ -272,22 +359,24 @@
     o.className = 'board';
     o.id = 'ov';
     o.innerHTML = '<div class="boardin"><h2></h2><p class="sub"></p>'
-      + '<div class="wheelwrap">' + showWheel(pair, segsA, segsB) + '</div>'
+      + '<div class="wheelwrap' + (pair ? '' : ' solo') + '">' + showWheel(pair, segsA, segsB) + '</div>'
       + '<div class="tally" id="tally"></div></div>';
     document.body.appendChild(o);
     C.setText(o.querySelector('h2'), pair ? 'The pitom etrog' : 'The wheel');
     C.setText(o.querySelector('.sub'), pair ? 'Both wheels turn' : 'Three etrogim');
     C.play('shuffle', 0, 0.6);
+    var run = reduced() ? 400 : (pair ? 5600 : 4800);
     later(function () {
-      /* the plain wheel decides it; on the pair, the second is the one that
-         carries the result and the first keeps turning behind it */
-      landOn('a', segsA, pair ? segsA[0].label : res.label, 4);
-      if (pair) landOn('b', segsB, res.label, 5);
+      /* The pair turn against each other, the way they do behind the glass.
+         The second is the one that carries the result. */
+      landOn('a', segsA, pair ? segsA[0].label : res.label, 4, 1, run - (pair ? 700 : 0));
+      if (pair) landOn('b', segsB, res.label, 5, -1, run);
       later(function () {
         C.setHTML($('tally'), C.esc(res.label));
-        later(after, 900);
-      }, pair ? 5300 : 4700);
-    }, 80);
+        C.play(res.jackpots && res.jackpots.length ? 'stack' : 'place', 0, 0.8);
+        later(after, 1000);
+      }, run + 120);
+    }, 90);
   }
 
   /* ---------------- a spin ---------------- */
@@ -374,14 +463,34 @@
     St.lastWin = res.total;
     C.save();
     settleJackpots(res.jackpots);
-    var msg;
-    if (res.total <= 0) msg = 'No win';
-    else if (res.wheel || res.build) msg = '<span class="hit">' + C.esc(C.money(res.total)) + '</span> for the night';
-    else msg = '<span class="hit">' + C.esc(C.money(res.total)) + '</span>';
-    C.setHTML($('status'), msg);
+    var st = $('status');
+    st.classList.toggle('big', res.total > totalBet() * 20);
+    if (res.total <= 0) {
+      C.setHTML(st, 'No win');
+    } else {
+      C.setHTML(st, '<span class="hit" id="winline">$0</span>'
+        + (res.wheel || res.build ? ' for the night' : ''));
+      countTo($('winline'), res.total, res.total > totalBet() * 20 ? 1500 : 620, C.money);
+    }
     if (res.total > 0) C.play(res.total > totalBet() * 10 ? 'stack' : 'lay', 0, 0.7);
     busy = false;
     paint();
+  }
+
+  /* a figure that climbs to its number, because a win that simply appears
+     reads as a label rather than as money arriving */
+  function countTo(el, to, ms, fmt) {
+    if (!el) return;
+    if (reduced() || to <= 0) { C.setText(el, fmt(to)); return; }
+    var from = 0, t0 = 0;
+    function frame(ts) {
+      if (!t0) t0 = ts;
+      var k = Math.min(1, (ts - t0) / ms);
+      var e = 1 - Math.pow(1 - k, 3);
+      C.setText(el, fmt(Math.round(from + (to - from) * e)));
+      if (k < 1) requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
   }
 
   /* ---------------- chrome ---------------- */
@@ -416,8 +525,18 @@
       + 'Everything in a night is a multiple of the whole bet. Play money only.</p>');
   }
 
+  /* a ghost of the wheel behind the reels, the way the cabinet has one */
+  function paintBehind() {
+    var el = $('behind');
+    if (!el) return;
+    C.setHTML(el, showWheel(false, K.WHEEL, K.SUPER_WHEEL));
+  }
+
   function boot() {
     C.setHTML($('nav'), C.nav('sukkah'));
+    var lamps = '';
+    for (var L = 0; L < 26; L++) lamps += '<i style="animation-delay:' + (L * 0.17).toFixed(2) + 's"></i>';
+    C.setHTML($('lights'), lamps);
     buildReels();
     var g = [];
     for (var r = 0; r < 5; r++) {
@@ -426,6 +545,7 @@
       g.push(colm);
     }
     showGrid(g);
+    paintBehind();
     C.renderChips($('chips'), St.chip, function (c) {
       St.chip = c; C.save();
       C.renderChips($('chips'), St.chip, arguments.callee);
